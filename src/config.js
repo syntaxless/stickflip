@@ -8,13 +8,12 @@ export const WORLD = Object.freeze({
 });
 
 export const PHYS = Object.freeze({
-  ROLL_SPEED: 250, // px/s while rolling and in the air
-  GRIND_SPEED: 235, // px/s while grinding (a little friction)
+  ROLL_SPEED: 300, // px/s while rolling and in the air
+  GRIND_SPEED: 285, // px/s while grinding (a little friction)
   GRAVITY: 2400, // px/s^2
   OLLIE_V: 900, // take-off speed of an ollie from the ground
   POP_V: 780, // take-off speed when popping out of a grind
-  FLIP_TIME: 0.38, // seconds a kickflip takes to rotate the board
-  FLIP_MARGIN: 0.06, // extra time a flip needs before a grind to count as "room for a flip"
+  GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
   EXIT_X: 1000, // rolling past this x finishes the level
@@ -33,11 +32,11 @@ export const SCORE = Object.freeze({
 //          shove (spins flat), treflip (flip + flat 360), hardflip (flip + flat 180)
 //   body:  'spin' turns the rider (and board) a full 360
 export const TRICKS = Object.freeze({
-  tap: { name: 'KICKFLIP', dur: 0.38, points: 150, board: 'flip' },
-  down: { name: 'HEELFLIP', dur: 0.38, points: 150, board: 'flipRev' },
-  up: { name: 'POP SHOVE-IT', dur: 0.32, points: 100, board: 'shove' },
-  right: { name: 'FS 360', dur: 0.45, points: 200, body: 'spin', dirSign: 1 },
-  left: { name: 'BS 360', dur: 0.45, points: 200, body: 'spin', dirSign: -1 },
-  'down-right': { name: '360 FLIP', dur: 0.5, points: 300, board: 'treflip' },
-  'down-left': { name: 'HARDFLIP', dur: 0.45, points: 250, board: 'hardflip' },
+  tap: { name: 'KICKFLIP', dur: 0.44, points: 150, board: 'flip' },
+  down: { name: 'HEELFLIP', dur: 0.44, points: 150, board: 'flipRev' },
+  up: { name: 'POP SHOVE-IT', dur: 0.37, points: 100, board: 'shove' },
+  right: { name: 'FS 360', dur: 0.52, points: 200, body: 'spin', dirSign: 1 },
+  left: { name: 'BS 360', dur: 0.52, points: 200, body: 'spin', dirSign: -1 },
+  'down-right': { name: '360 FLIP', dur: 0.575, points: 300, board: 'treflip' },
+  'down-left': { name: 'HARDFLIP', dur: 0.52, points: 250, board: 'hardflip' },
 });

@@ -24,10 +24,9 @@ export function rail({ x, length, height, trick = '50-50 GRIND' }) {
     draw(g, fx = {}) {
       const P = (v) => Math.round(v / 3);
       const [x1, x2p, y, ground] = [P(x), P(x2), P(top), P(WORLD.GROUND)];
-      // Flashes red when a tap right now would lock a grind; solid red once locked in.
+      // Turns red once a grind is locked in. No advance warning: timing is on you.
       let bar = PAL.ink;
       if (fx.hint === 'primed') bar = PAL.red;
-      else if (fx.hint === 'ready') bar = Math.floor((fx.time || 0) * 10) % 2 ? PAL.red : PAL.ink;
       for (const px of [P(x + 22), P(x2 - 22)]) {
         g.line(px, y + 2, px, ground - 1, PAL.ink);
         g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);

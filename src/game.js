@@ -8,8 +8,8 @@ import { WORLD, PHYS, SCORE, TRICKS } from './config.js';
 //
 // One input, "tap", means whatever makes sense right now:
 //   rolling        -> ollie
-//   in the air     -> kickflip, or prime a grind if about to come down on a rail
-//                     without time left for a flip
+//   in the air     -> kickflip, or lock a grind if a rail is less than
+//                     PHYS.GRIND_WINDOW seconds away (tap any earlier and it's a kickflip)
 //   grinding       -> pop off the rail (and you can flip again on the way down)
 //
 // Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
@@ -17,7 +17,7 @@ import { WORLD, PHYS, SCORE, TRICKS } from './config.js';
 
 export const BAIL_MESSAGES = {
   slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
-  clipped: 'CLIPPED THE RAIL. TAP WHEN IT FLASHES!',
+  clipped: 'CLIPPED THE RAIL. TAP JUST BEFORE IT!',
   flip: 'LANDED MID-TRICK. START IT EARLIER!',
 };
 
@@ -46,7 +46,6 @@ export class Game {
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
       flip: null, // { t, key, trick } while an air trick is in progress
-      buffered: null, // 'tap' or a swipe pressed during a trick, used when it finishes
       primed: false, // ready to lock a grind on contact
       grind: null, // { surface, dist }
       bail: null, // ragdoll state after a bail
@@ -123,21 +122,13 @@ export class Game {
     const key = TRICKS[dir] ? dir : dir.split('-')[0];
     if (!TRICKS[key]) return this.airTap();
     const s = this.sk;
-    if (s.flip) {
-      s.buffered = key;
-      return;
-    }
-    if (s.primed) return;
+    if (s.flip || s.primed) return; // one thing at a time: input during a trick is ignored
     this.startTrick(key);
   }
 
   airTap() {
     const s = this.sk;
-    if (s.flip) {
-      s.buffered = 'tap';
-      return;
-    }
-    if (s.primed) return;
+    if (s.flip || s.primed) return;
     if (this.grindHint() === 'ready') {
       s.primed = true;
       this.emit('prime');
@@ -163,7 +154,7 @@ export class Game {
       if (surf.y <= s.y + 0.5) continue; // already at or below this top
       const t = timeToY(surf.y);
       const xHit = s.x + s.vx * t;
-      if (xHit >= surf.x1 - 10 && xHit <= surf.x2 && (!best || t < best.t)) {
+      if (xHit >= surf.x1 && xHit <= surf.x2 && (!best || t < best.t)) {
         best = { t, surface: surf };
       }
     }
@@ -179,7 +170,7 @@ export class Game {
     if (s.mode === 'grind' || s.primed) return 'primed';
     if (s.mode !== 'air' || s.flip) return null;
     const c = this.predictContact();
-    if (c.surface && c.surface.grindable && c.t <= PHYS.FLIP_TIME + PHYS.FLIP_MARGIN) return 'ready';
+    if (c.surface && c.surface.grindable && c.t <= PHYS.GRIND_WINDOW) return 'ready';
     return null;
   }
 
@@ -233,16 +224,12 @@ export class Game {
       if (s.flip.t >= trick.dur) {
         s.flip = null;
         this.addTrick(trick.name, trick.points);
-        const next = s.buffered;
-        s.buffered = null;
-        if (next === 'tap') this.airTap();
-        else if (next) this.swipe(next);
       }
     }
 
     // Touching the top of an obstacle from above.
     for (const surf of this.surfaces) {
-      if (prevY <= surf.y + 0.01 && s.y >= surf.y && s.x >= surf.x1 - 10 && s.x <= surf.x2) {
+      if (prevY <= surf.y + 0.01 && s.y >= surf.y && s.x >= surf.x1 && s.x <= surf.x2) {
         s.y = surf.y;
         if (surf.grindable && s.primed) return this.startGrind(surf);
         if (s.flip) return this.bail('flip');
@@ -300,7 +287,6 @@ export class Game {
     s.support = surface;
     s.y = surface ? surface.y : WORLD.GROUND;
     s.primed = false;
-    s.buffered = null;
     this.emit('land');
     this.bankCombo();
   }

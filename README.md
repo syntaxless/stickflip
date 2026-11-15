@@ -30,7 +30,7 @@ One input, **tap**, means whatever makes sense at that moment:
 | ------------------------------- | --------------------------------------------------------------------- |
 | waiting at the start            | roll in                                                               |
 | rolling                         | **ollie**                                                             |
-| in the air, rail flashing       | **lock a grind** (the skater lands on the rail in a 50-50)            |
+| in the air, < 0.2 s from a rail | **lock a grind** (the skater lands on the rail in a 50-50)            |
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
@@ -49,17 +49,21 @@ One input, **tap**, means whatever makes sense at that moment:
 Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
 `src/config.js`, and gesture reading is in `src/gesture.js`.
 
-A tap or swipe pressed during a trick is remembered and used the moment the flip
-finishes, so mashing doesn't eat inputs.
+**It's meant to be hard**, like the shareware games it's inspired by:
+* A grind only locks if you tap in the last 0.2 s before touching the rail.
+  Tap any earlier and you get a kickflip, which won't finish in time.
+* Input during a trick is ignored. One trick at a time, no mashing.
+* There's no take-off marker and no warning flash on the rail. It only turns red
+  once a grind is locked.
+* Any trick still turning when you land is a bail.
 
 ## Level 1: First Rail
 
 A low rail, 260 px long and 64 px high. An ollie only carries you about
-190 px, so you can't clear it. You have to grind it. That makes it a good
+225 px, so you can't clear it. You have to grind it. That makes it a good
 first lesson: it teaches both taps (ollie, then grind) in one obstacle.
 
-* A dashed **POP** mark shows the take-off window that lands you on the rail.
-* The rail **flashes red** when a tap would lock a grind, and stays **red** once it's locked.
+* The rail turns **red** once a grind is locked.
 * Bails explain what went wrong: slammed the rail (popped too late), clipped the
   rail (didn't tap to grind), or landed mid-flip (flipped too late).
 
@@ -118,7 +122,8 @@ Write a builder in `src/obstacles/` that returns:
   grinded, `landable` tops (a box or ledge) can be landed on and rolled across,
   and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels). `fx.hint` is `'ready'`, `'primed'` or `null` for the grind flash.
+* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels). `fx.hint` is `'ready'`, `'primed'` or `null`. Levels can also set
+  `takeoffHint: { x1, x2 }` to draw a POP marker on the ground, for easier levels.
 
 The engine handles everything else. Slopes (kickers, quarter pipes) and gaps
 would need small engine additions.
