@@ -4,34 +4,17 @@ import { PAL, RES } from './pixel.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
 
 // DOS-style renderer. The game world is 960x540 units; it is drawn into a
-// 320x180 framebuffer (1 pixel = 3 units) using 4 colours, then scaled up
+// 320x180 framebuffer (1 pixel = 3 units) using 3 colours, then scaled up
 // with nearest-neighbour so every pixel stays chunky.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, far, ink, red } = PAL;
+const { sky, ink, red } = PAL;
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
-
-// Deterministic skyline so the background never flickers between frames.
-function skyline() {
-  const out = [];
-  let seed = 7;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let x = -2; x < RES.W; ) {
-    const w = 14 + Math.floor(rnd() * 22);
-    const h = 10 + Math.floor(rnd() * 26);
-    const windows = [];
-    for (let wy = 4; wy < h - 4; wy += 5) for (let wx = 3; wx < w - 3; wx += 4) if (rnd() < 0.2) windows.push([wx, wy]);
-    out.push({ x, w, h, windows });
-    x += w + 3;
-  }
-  return out;
-}
 
 export class Renderer {
   constructor(pix) {
     this.g = pix;
-    this.skyline = skyline();
     this.reset();
   }
 
@@ -134,13 +117,6 @@ export class Renderer {
   drawBackground(game) {
     const g = this.g;
     const G = P(WORLD.GROUND);
-
-    // skyline: dark navy blocks with lit windows in the sky colour
-    for (const b of this.skyline) {
-      const top = G - b.h;
-      g.fill(b.x, top, b.w + 1, b.h, far);
-      for (const [wx, wy] of b.windows) g.pset(b.x + wx, top + wy, sky);
-    }
 
     // ground: solid black
     g.fill(0, G, RES.W, RES.H - G, ink);
