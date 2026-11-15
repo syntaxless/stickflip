@@ -22,7 +22,22 @@ export const PHYS = Object.freeze({
 });
 
 export const SCORE = Object.freeze({
-  KICKFLIP: 150,
   GRIND_BASE: 100,
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
+});
+
+// Air tricks. The key is the input that triggers it: a tap, a one-direction
+// swipe, or a two-direction swipe pattern ("down-right" = swipe down, then
+// right without lifting). Screen directions; the skater rides to the right.
+//   board: how the board moves  -> flip (around its long axis), flipRev (heelflip),
+//          shove (spins flat), treflip (flip + flat 360), hardflip (flip + flat 180)
+//   body:  'spin' turns the rider (and board) a full 360
+export const TRICKS = Object.freeze({
+  tap: { name: 'KICKFLIP', dur: 0.38, points: 150, board: 'flip' },
+  down: { name: 'HEELFLIP', dur: 0.38, points: 150, board: 'flipRev' },
+  up: { name: 'POP SHOVE-IT', dur: 0.32, points: 100, board: 'shove' },
+  right: { name: 'FS 360', dur: 0.45, points: 200, body: 'spin', dirSign: 1 },
+  left: { name: 'BS 360', dur: 0.45, points: 200, body: 'spin', dirSign: -1 },
+  'down-right': { name: '360 FLIP', dur: 0.5, points: 300, board: 'treflip' },
+  'down-left': { name: 'HARDFLIP', dur: 0.45, points: 250, board: 'hardflip' },
 });

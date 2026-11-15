@@ -58,7 +58,7 @@ function setGrind(on) {
 const SOUNDS = {
   push: () => beep(220, 0.05),
   pop: () => beep(330, 0.07, { to: 880 }),
-  flip: () => beep(660, 0.04),
+  flip: (e) => (e.key === 'left' || e.key === 'right' ? beep(300, 0.12, { to: 900 }) : e.key === 'tap' ? beep(660, 0.04) : beep(760, 0.06, { to: 520 })),
   prime: () => beep(990, 0.03),
   grind: () => beep(1320, 0.03),
   land: () => beep(160, 0.05),
@@ -69,6 +69,6 @@ const SOUNDS = {
 
 // Called once per frame with that frame's game events.
 export function play(events, game) {
-  for (const e of events) SOUNDS[e.type]?.();
+  for (const e of events) SOUNDS[e.type]?.(e);
   setGrind(game.phase === 'playing' && game.sk.mode === 'grind');
 }

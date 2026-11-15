@@ -4,6 +4,7 @@ import { LEVELS } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES } from './render/pixel.js';
 import * as audio from './audio.js';
+import { classifyStroke } from './gesture.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -82,7 +83,6 @@ function toWorld(clientX, clientY) {
 }
 
 function press(clientX, clientY) {
-  audio.unlock();
   if (game.phase === 'complete') {
     if (game.phaseTime < 0.35) return;
     const p = clientX == null ? null : toWorld(clientX, clientY);
@@ -94,11 +94,44 @@ function press(clientX, clientY) {
   game.tap();
 }
 
+// Taps act on touch-down for the lowest latency. In the air, a touch is
+// followed until the finger lifts so it can be read as a tap or a swipe.
+let stroke = null; // { id, points } while following an air gesture
+
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   if (e.isPrimary === false) return; // ignore extra fingers
-  press(e.clientX, e.clientY);
+  audio.unlock();
+  const inAir = game.phase === 'playing' && game.sk.mode === 'air';
+  // A tap that would lock a grind can't wait for the finger to lift.
+  if (!inAir || game.grindHint() === 'ready') {
+    stroke = null;
+    press(e.clientX, e.clientY);
+    return;
+  }
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }] };
+  canvas.setPointerCapture?.(e.pointerId);
 });
+
+canvas.addEventListener('pointermove', (e) => {
+  if (stroke && e.pointerId === stroke.id) stroke.points.push({ x: e.clientX, y: e.clientY });
+});
+
+function endStroke(e) {
+  if (!stroke || e.pointerId !== stroke.id) return;
+  stroke.points.push({ x: e.clientX, y: e.clientY });
+  const gesture = classifyStroke(stroke.points);
+  stroke = null;
+  // Landed while the finger was down: don't turn the gesture into an ollie.
+  if (game.phase !== 'playing' || game.sk.mode !== 'air') return;
+  if (gesture === 'tap') game.tap();
+  else game.swipe(gesture);
+}
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', (e) => {
+  if (stroke && e.pointerId === stroke.id) stroke = null;
+});
+
 // Stop iOS from treating quick taps as zoom/scroll gestures.
 canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -109,9 +142,19 @@ window.addEventListener('keydown', (e) => {
     audio.toggleMute();
     return;
   }
-  if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') {
+  if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault();
+    audio.unlock();
     press();
+    return;
+  }
+  // Arrow keys act as swipes (and as a tap when not in the air).
+  const dir = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[e.code];
+  if (dir) {
+    e.preventDefault();
+    audio.unlock();
+    if (game.phase === 'complete') press();
+    else game.swipe(dir);
   }
 });
 

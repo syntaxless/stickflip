@@ -185,16 +185,34 @@ export class Renderer {
     this.pose.update(target, dt);
 
     const pitch = s.mode === 'air' ? boardPitch(s.vy) : 0;
-    const tf = makeTransform(s.x, s.y, pitch);
-    let spin = 0;
+    const base = makeTransform(s.x, s.y, pitch);
+    // Side view, so turning around the vertical axis is drawn by squashing x:
+    // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1.
+    const squashX = (tf, sx) => (p) => tf({ x: p.x * sx, y: p.y });
+    let spin = 0; // board roll around its long axis
     let lift = 0;
+    let boardSx = 1;
+    let bodySx = 1;
     if (s.flip) {
-      const p = s.flip.t / PHYS.FLIP_TIME;
-      spin = p * Math.PI * 2;
+      const { trick } = s.flip;
+      const p = Math.min(1, s.flip.t / trick.dur);
+      const turn = (n) => Math.cos(p * Math.PI * n);
       lift = Math.sin(p * Math.PI) * 12;
+      switch (trick.board) {
+        case 'flip': spin = p * Math.PI * 2; break;
+        case 'flipRev': spin = -p * Math.PI * 2; break;
+        case 'shove': boardSx = turn(1); break;
+        case 'treflip': spin = p * Math.PI * 2; boardSx = turn(2); break;
+        case 'hardflip': spin = p * Math.PI * 2; boardSx = turn(1); break;
+      }
+      if (trick.body === 'spin') {
+        bodySx = turn(2);
+        boardSx = bodySx;
+        lift = 0;
+      }
     }
-    drawBoard(g, tf, spin, lift);
-    drawFigure(g, tf, this.pose.pose);
+    drawBoard(g, squashX(base, boardSx), spin, lift);
+    drawFigure(g, squashX(base, bodySx), this.pose.pose);
   }
 
   drawParticles() {
@@ -234,8 +252,9 @@ export class Renderer {
     if (game.phase === 'ready') {
       g.text('STICKFLIP', cx + 1, 37, magenta, 4, 'center');
       g.text('STICKFLIP', cx, 36, white, 4, 'center');
-      g.text(game.level.hint, cx, 74, white, 1, 'center');
-      if (this.blink()) g.text('TAP TO START', cx, 90, cyan, 1, 'center');
+      g.text(game.level.hint, cx, 70, white, 1, 'center');
+      g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 80, white, 1, 'center');
+      if (this.blink()) g.text('TAP TO START', cx, 94, cyan, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx, 36, magenta, 3, 'center');
       g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 64, white, 1, 'center');
@@ -248,7 +267,7 @@ export class Renderer {
   drawComplete(game) {
     const g = this.g;
     const cx = RES.W / 2;
-    const [x, y, w, h] = [50, 26, 220, 104];
+    const [x, y, w, h] = [36, 26, 248, 104];
     g.fill(x, y, w, h, black);
     g.rect(x, y, w, h, white);
     g.rect(x + 2, y + 2, w - 4, h - 4, white);
@@ -258,7 +277,7 @@ export class Renderer {
     const stars = [0, 1, 2].map((i) => (i < game.stars ? '*' : '-')).join(' ');
     g.text(stars, cx, y + 41, game.stars === 3 ? cyan : magenta, 2, 'center');
     const s = game.level.stars;
-    const tip = game.stars < 3 ? `NEXT STAR: ${s[game.stars]} PTS. TRY A KICKFLIP!` : 'PERFECT RUN!';
+    const tip = game.stars < 3 ? `NEXT STAR: ${s[game.stars]} PTS. TRY SOME FLIPS!` : 'PERFECT RUN!';
     g.text(tip, cx, y + 60, white, 1, 'center');
 
     this.button('retry', 'RIDE AGAIN', x + 12, y + 78, 92, true);

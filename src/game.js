@@ -1,4 +1,4 @@
-import { WORLD, PHYS, SCORE } from './config.js';
+import { WORLD, PHYS, SCORE, TRICKS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -11,11 +11,14 @@ import { WORLD, PHYS, SCORE } from './config.js';
 //   in the air     -> kickflip, or prime a grind if about to come down on a rail
 //                     without time left for a flip
 //   grinding       -> pop off the rail (and you can flip again on the way down)
+//
+// Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
+// anywhere else acts like a tap, so it can never get you stuck.
 
 export const BAIL_MESSAGES = {
   slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
   clipped: 'CLIPPED THE RAIL. TAP WHEN IT FLASHES!',
-  flip: 'LANDED MID-FLIP. FLIP EARLIER!',
+  flip: 'LANDED MID-TRICK. START IT EARLIER!',
 };
 
 export class Game {
@@ -42,8 +45,8 @@ export class Game {
       vy: 0,
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
-      flip: null, // { t } while the board is flipping
-      bufferedTap: false, // tap pressed during a flip, used when it finishes
+      flip: null, // { t, key, trick } while an air trick is in progress
+      buffered: null, // 'tap' or a swipe pressed during a trick, used when it finishes
       primed: false, // ready to lock a grind on contact
       grind: null, // { surface, dist }
       bail: null, // ragdoll state after a bail
@@ -114,10 +117,24 @@ export class Game {
     this.emit('pop');
   }
 
+  // A swipe: 'up' | 'down' | 'left' | 'right' or a pattern like 'down-right'.
+  swipe(dir) {
+    if (this.phase !== 'playing' || this.sk.mode !== 'air') return this.tap();
+    const key = TRICKS[dir] ? dir : dir.split('-')[0];
+    if (!TRICKS[key]) return this.airTap();
+    const s = this.sk;
+    if (s.flip) {
+      s.buffered = key;
+      return;
+    }
+    if (s.primed) return;
+    this.startTrick(key);
+  }
+
   airTap() {
     const s = this.sk;
     if (s.flip) {
-      s.bufferedTap = true;
+      s.buffered = 'tap';
       return;
     }
     if (s.primed) return;
@@ -125,9 +142,13 @@ export class Game {
       s.primed = true;
       this.emit('prime');
     } else {
-      s.flip = { t: 0 };
-      this.emit('flip');
+      this.startTrick('tap');
     }
+  }
+
+  startTrick(key) {
+    this.sk.flip = { t: 0, key, trick: TRICKS[key] };
+    this.emit('flip', { key });
   }
 
   // ------------------------------------------------------------ prediction
@@ -208,13 +229,14 @@ export class Game {
 
     if (s.flip) {
       s.flip.t += dt;
-      if (s.flip.t >= PHYS.FLIP_TIME) {
+      const { trick } = s.flip;
+      if (s.flip.t >= trick.dur) {
         s.flip = null;
-        this.addTrick('KICKFLIP', SCORE.KICKFLIP);
-        if (s.bufferedTap) {
-          s.bufferedTap = false;
-          this.airTap();
-        }
+        this.addTrick(trick.name, trick.points);
+        const next = s.buffered;
+        s.buffered = null;
+        if (next === 'tap') this.airTap();
+        else if (next) this.swipe(next);
       }
     }
 
@@ -278,7 +300,7 @@ export class Game {
     s.support = surface;
     s.y = surface ? surface.y : WORLD.GROUND;
     s.primed = false;
-    s.bufferedTap = false;
+    s.buffered = null;
     this.emit('land');
     this.bankCombo();
   }

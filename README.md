@@ -34,7 +34,22 @@ One input, **tap**, means whatever makes sense at that moment:
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
-A tap pressed during a kickflip is remembered and used the moment the flip
+**Swipe in the air** for other tricks. A swipe anywhere else counts as a tap.
+
+| Swipe (in the air)            | Trick         | Points |
+| ----------------------------- | ------------- | ------ |
+| tap                           | KICKFLIP      | 150    |
+| down                          | HEELFLIP      | 150    |
+| up                            | POP SHOVE-IT  | 100    |
+| right (forward)               | FS 360 spin   | 200    |
+| left (backward)               | BS 360 spin   | 200    |
+| down, then right (one stroke) | 360 FLIP      | 300    |
+| down, then left (one stroke)  | HARDFLIP      | 250    |
+
+Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
+`src/config.js`, and gesture reading is in `src/gesture.js`.
+
+A tap or swipe pressed during a trick is remembered and used the moment the flip
 finishes, so mashing doesn't eat inputs.
 
 ## Level 1: First Rail
@@ -48,7 +63,7 @@ first lesson: it teaches both taps (ollie, then grind) in one obstacle.
 * Bails explain what went wrong: slammed the rail (popped too late), clipped the
   rail (didn't tap to grind), or landed mid-flip (flipped too late).
 
-Scoring: kickflip 150, grind 100 + 1 per px ground. Tricks chain into a combo
+Scoring: tricks as above, grind 100 + 1 per px ground. Tricks chain into a combo
 until you land on the ground, and the combo is multiplied by the number of tricks.
 Stars: finish (1), 700 pts (2, any kickflip + grind), 1400 pts (3, kickflip in,
 grind, pop and kickflip out).

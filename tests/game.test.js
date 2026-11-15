@@ -93,3 +93,52 @@ test('retry after a bail restarts the run', () => {
   assert.equal(game.phase, 'playing');
   assert.equal(game.score, 0);
 });
+
+// ------------------------------------------------------------ swipe tricks
+
+// Like play(), but each input is [time, 'tap' | swipe direction].
+function playInputs(level, inputs, maxTime = 8) {
+  const game = new Game(level);
+  game.tap();
+  const queue = [...inputs].sort((a, b) => a[0] - b[0]);
+  const names = [];
+  let t = 0;
+  while (t < maxTime && game.phase === 'playing') {
+    while (queue.length && queue[0][0] <= t + 1e-9) {
+      const [, input] = queue.shift();
+      if (input === 'tap') game.tap();
+      else game.swipe(input);
+    }
+    game.update(STEP);
+    t += STEP;
+    for (const e of game.drainEvents()) if (e.type === 'trick') names.push(e.name);
+  }
+  return { game, names };
+}
+
+test('swipes in the air do their tricks and still allow the grind', () => {
+  for (const [dir, name] of [
+    ['down', 'HEELFLIP'],
+    ['up', 'POP SHOVE-IT'],
+    ['right', 'FS 360'],
+    ['left', 'BS 360'],
+    ['down-right', '360 FLIP'],
+    ['down-left', 'HARDFLIP'],
+  ]) {
+    const { game, names } = playInputs(level1, [[0.9, 'tap'], [0.92, dir], [1.45, 'tap']]);
+    assert.ok(names.includes(name), `${dir} -> ${names}`);
+    assert.equal(game.phase, 'complete', `${dir}: bailed ${game.bailReason}`);
+  }
+});
+
+test('a swipe on the ground ollies and an unknown pattern falls back to its first direction', () => {
+  const { game, names } = playInputs(level1, [[0.9, 'right'], [0.92, 'down-up'], [1.45, 'tap']]);
+  assert.ok(names.includes('HEELFLIP'), String(names));
+  assert.equal(game.phase, 'complete');
+});
+
+test('a long trick started too late is a bail', () => {
+  const { game } = playInputs(level1, [[0.2, 'tap'], [0.75, 'down-right']]);
+  assert.equal(game.phase, 'bailed');
+  assert.equal(game.bailReason, 'flip');
+});
