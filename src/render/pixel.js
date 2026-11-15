@@ -1,14 +1,12 @@
-// A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 4-colour
+// A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: navy sky, a darker navy for the distant skyline, black for
-// everything solid (ground, obstacles, board, rider) and red for all text.
+// Palette: navy sky, black for everything solid (ground, obstacles, board, rider) and red for all text.
 
 export const RES = { W: 320, H: 180 };
 
 export const PAL = {
   sky: [0, 0, 128],
-  far: [0, 0, 80],
   ink: [0, 0, 0],
   red: [255, 85, 85],
 };
@@ -79,8 +77,6 @@ export class Pix {
     this.h = h;
     this.img = ctx.createImageData(w, h);
     this.data = this.img.data;
-    this.ox = 0; // whole-screen offset, used for screen shake
-    this.oy = 0;
   }
 
   clear(c = PAL.sky) {
@@ -98,8 +94,8 @@ export class Pix {
   }
 
   pset(x, y, c) {
-    x = Math.round(x + this.ox);
-    y = Math.round(y + this.oy);
+    x = Math.round(x);
+    y = Math.round(y);
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = (y * this.w + x) * 4;
     this.data[i] = c[0];

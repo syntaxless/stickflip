@@ -25,7 +25,7 @@ export class PoseBlender {
     this.set(name);
   }
   set(name) {
-    this.pose = structuredClone(POSES[name]);
+    this.pose = JSON.parse(JSON.stringify(POSES[name])); // deep copy; works on older iOS too
   }
   update(name, dt, rate = 18) {
     const target = POSES[name];

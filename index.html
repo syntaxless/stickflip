@@ -27,10 +27,35 @@
         cursor: pointer;
         image-rendering: pixelated;
       }
+      #err {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        padding: 8px;
+        background: #000;
+        color: #ff5555;
+        font: 14px monospace;
+      }
     </style>
   </head>
   <body>
     <canvas id="game" aria-label="Stickflip game. Tap or press space to play."></canvas>
-    <script type="module" src="src/main.js"></script>
+    <div id="err" hidden></div>
+    <script>
+      // If the game fails to start, show why instead of a blank screen.
+      function showError(msg) {
+        var el = document.getElementById('err');
+        el.hidden = false;
+        el.textContent = 'STICKFLIP ERROR: ' + msg + ' (try reloading)';
+      }
+      window.addEventListener('error', function (e) {
+        showError(e.message || (e.target && e.target.src ? 'could not load ' + e.target.src : 'unknown'));
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) {
+        showError(String(e.reason));
+      });
+    </script>
+    <script type="module" src="src/main.js" onerror="showError('could not load the game code')"></script>
   </body>
 </html>
