@@ -23,7 +23,6 @@ export class Renderer {
     this.particles = [];
     this.popups = [];
     this.squash = 0;
-    this.shake = 0;
     this.buttons = [];
     this.time = 0;
   }
@@ -49,7 +48,6 @@ export class Renderer {
           this.popup(e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`, e.x, e.y - 160, red);
           break;
         case 'bail':
-          this.shake = 0.3;
           this.dust(e.x, e.y, 10);
           break;
       }
@@ -81,15 +79,12 @@ export class Renderer {
     this.frameDt = dt;
     this.step(game, dt);
 
-    g.ox = this.shake > 0 ? Math.round((Math.random() - 0.5) * 4) : 0;
-    g.oy = this.shake > 0 ? Math.round((Math.random() - 0.5) * 4) : 0;
     g.clear(sky);
     this.drawBackground(game);
     const hint = game.grindHint();
     for (const o of game.level.obstacles) o.draw(g, { hint, time: this.time });
     this.drawSkater(game);
     this.drawParticles();
-    g.ox = g.oy = 0;
     this.drawPopups();
     this.drawHud(game, opts);
     this.drawOverlay(game);
@@ -98,7 +93,6 @@ export class Renderer {
 
   step(game, dt) {
     this.squash = Math.max(0, this.squash - dt);
-    this.shake = Math.max(0, this.shake - dt);
     if (game.sk.mode === 'grind' && Math.random() < 0.6) this.sparks(game.sk.x, game.sk.y, 1);
     for (const p of this.particles) {
       p.life -= dt;
