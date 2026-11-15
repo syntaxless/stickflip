@@ -30,7 +30,7 @@ One input, **tap**, means whatever makes sense at that moment:
 | ------------------------------- | --------------------------------------------------------------------- |
 | waiting at the start            | roll in                                                               |
 | rolling                         | **ollie**                                                             |
-| in the air, rail glowing yellow | **lock a grind** (the skater lands on the rail in a 50-50)            |
+| in the air, rail flashing       | **lock a grind** (the skater lands on the rail in a 50-50)            |
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
