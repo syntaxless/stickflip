@@ -55,22 +55,21 @@ function poly(g, tf, pts, color) {
   }
 }
 
-// Draws the stick figure (no board): 1-pixel white limbs, a round head and a
-// magenta cap.
+// Draws the stick figure (no board) as a black silhouette: 1-pixel limbs,
+// a solid round head and a cap.
 export function drawFigure(g, tf, p) {
-  const W = PAL.white;
+  const W = PAL.ink;
   poly(g, tf, [p.footB, p.kneeB, p.hip], W);
   poly(g, tf, [p.footF, p.kneeF, p.hip], W);
   poly(g, tf, [p.hip, p.neck], W);
   poly(g, tf, [p.neck, p.elbowB, p.handB], W);
   poly(g, tf, [p.neck, p.elbowF, p.handF], W);
   const h = tf(p.head);
-  g.circle(h.x, h.y, 3, PAL.black, true);
-  g.circle(h.x, h.y, 3, W);
+  g.circle(h.x, h.y, 3, W, true);
   // cap: crown + peak, following the body's rotation
-  poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.magenta);
-  poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.magenta);
-  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17, p.head.y - 4)], PAL.magenta);
+  poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
+  poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);
+  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17, p.head.y - 4)], PAL.ink);
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle
@@ -81,13 +80,13 @@ export function drawBoard(g, tf, spin = 0, lift = 0) {
   const y = -8 - lift;
   if (thick > 4) {
     const t = thick / 2;
-    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.magenta);
+    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.ink);
     return;
   }
-  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.magenta);
+  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.ink);
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));
-    g.pset(w.x, w.y, PAL.cyan);
+    g.pset(w.x, w.y, PAL.ink);
   }
 }
 

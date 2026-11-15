@@ -1,14 +1,16 @@
 // A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 4-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
+// Palette: navy sky, a darker navy for the distant skyline, black for
+// everything solid (ground, obstacles, board, rider) and red for all text.
 
 export const RES = { W: 320, H: 180 };
 
 export const PAL = {
-  black: [0, 0, 0],
-  cyan: [85, 255, 255],
-  magenta: [255, 85, 255],
-  white: [255, 255, 255],
+  sky: [0, 0, 128],
+  far: [0, 0, 80],
+  ink: [0, 0, 0],
+  red: [255, 85, 85],
 };
 
 // 5x7 glyphs, one 5-bit row per number (MSB = leftmost pixel).
@@ -81,7 +83,7 @@ export class Pix {
     this.oy = 0;
   }
 
-  clear(c = PAL.black) {
+  clear(c = PAL.sky) {
     const d = this.data;
     for (let i = 0; i < d.length; i += 4) {
       d[i] = c[0];

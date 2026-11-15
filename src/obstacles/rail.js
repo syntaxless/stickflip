@@ -24,13 +24,13 @@ export function rail({ x, length, height, trick = '50-50 GRIND' }) {
     draw(g, fx = {}) {
       const P = (v) => Math.round(v / 3);
       const [x1, x2p, y, ground] = [P(x), P(x2), P(top), P(WORLD.GROUND)];
-      // Flashes when a tap right now would lock a grind; cyan once locked in.
-      let bar = PAL.white;
-      if (fx.hint === 'primed') bar = PAL.cyan;
-      else if (fx.hint === 'ready') bar = Math.floor((fx.time || 0) * 10) % 2 ? PAL.magenta : PAL.white;
+      // Flashes red when a tap right now would lock a grind; solid red once locked in.
+      let bar = PAL.ink;
+      if (fx.hint === 'primed') bar = PAL.red;
+      else if (fx.hint === 'ready') bar = Math.floor((fx.time || 0) * 10) % 2 ? PAL.red : PAL.ink;
       for (const px of [P(x + 22), P(x2 - 22)]) {
-        g.line(px, y + 2, px, ground - 1, PAL.white);
-        g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.white);
+        g.line(px, y + 2, px, ground - 1, PAL.ink);
+        g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);
       }
       g.line(x1, y, x2p, y, bar);
       g.line(x1, y + 1, x2p, y + 1, bar);

@@ -184,8 +184,12 @@ function frame(now) {
   renderer.draw(game, dt, { portrait: view.portrait });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // Letterbox: navy sky above the ground line, black ground below it.
+  const groundY = Math.round((view.oy + (WORLD.GROUND / (WORLD.W / RES.W)) * view.scale) * view.dpr);
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(0, 0, canvas.width, groundY);
   ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
   requestAnimationFrame(frame);

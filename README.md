@@ -59,7 +59,7 @@ A low rail, 260 px long and 64 px high. An ollie only carries you about
 first lesson: it teaches both taps (ollie, then grind) in one obstacle.
 
 * A dashed **POP** mark shows the take-off window that lands you on the rail.
-* The rail **flashes** when a tap would lock a grind, and turns **cyan** once it's locked.
+* The rail **flashes red** when a tap would lock a grind, and stays **red** once it's locked.
 * Bails explain what went wrong: slammed the rail (popped too late), clipped the
   rail (didn't tap to grind), or landed mid-flip (flipped too late).
 
@@ -71,7 +71,8 @@ grind, pop and kickflip out).
 ## Design choices
 
 * **DOS look.** The game draws into a 320×180 framebuffer with a 4-colour
-  CGA-style palette (black, cyan, magenta, white), Bresenham lines and a
+  palette: navy sky, darker navy skyline, black for everything solid
+  (ground, rail, board, rider) and red for all text, Bresenham lines and a
   built-in 5×7 bitmap font, so there's no anti-aliasing anywhere. The frame is then
   scaled up by a whole number of device pixels for chunky, even pixels.
   Sound is PC-speaker style square-wave beeps (press M to mute on desktop).

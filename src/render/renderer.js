@@ -9,7 +9,7 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { black, cyan, magenta, white } = PAL;
+const { sky, far, ink, red } = PAL;
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 // Deterministic skyline so the background never flickers between frames.
@@ -60,10 +60,10 @@ export class Renderer {
           this.sparks(e.x, e.y, 10);
           break;
         case 'trick':
-          this.popup(e.name, e.x, e.y - 130, white);
+          this.popup(e.name, e.x, e.y - 130, red);
           break;
         case 'bank':
-          this.popup(e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`, e.x, e.y - 160, cyan);
+          this.popup(e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`, e.x, e.y - 160, red);
           break;
         case 'bail':
           this.shake = 0.3;
@@ -100,7 +100,7 @@ export class Renderer {
 
     g.ox = this.shake > 0 ? Math.round((Math.random() - 0.5) * 4) : 0;
     g.oy = this.shake > 0 ? Math.round((Math.random() - 0.5) * 4) : 0;
-    g.clear(black);
+    g.clear(sky);
     this.drawBackground(game);
     const hint = game.grindHint();
     for (const o of game.level.obstacles) o.draw(g, { hint, time: this.time });
@@ -135,27 +135,21 @@ export class Renderer {
     const g = this.g;
     const G = P(WORLD.GROUND);
 
-    // skyline: magenta outlines with cyan windows
+    // skyline: dark navy blocks with lit windows in the sky colour
     for (const b of this.skyline) {
       const top = G - b.h;
-      g.line(b.x, top, b.x + b.w, top, magenta);
-      g.line(b.x, top, b.x, G - 1, magenta);
-      g.line(b.x + b.w, top, b.x + b.w, G - 1, magenta);
-      for (const [wx, wy] of b.windows) g.pset(b.x + wx, top + wy, cyan);
+      g.fill(b.x, top, b.w + 1, b.h, far);
+      for (const [wx, wy] of b.windows) g.pset(b.x + wx, top + wy, sky);
     }
 
-    // ground: cyan line, dithered pavement below
-    g.line(0, G, RES.W - 1, G, cyan);
-    for (let y = G + 3; y < RES.H; y += 3) {
-      for (let x = (y / 3) % 2 ? 0 : 3; x < RES.W; x += 6) g.pset(x, y, magenta);
-    }
+    // ground: solid black
+    g.fill(0, G, RES.W, RES.H - G, ink);
 
     // take-off mark (tutorial levels)
     const th = game.level.takeoffHint;
     if (th && game.phase !== 'complete') {
-      for (let x = P(th.x1); x <= P(th.x2); x += 3) g.line(x, G + 3, x + 1, G + 3, white);
-      g.fill(P((th.x1 + th.x2) / 2) - 12, G + 7, 25, 9, black);
-      g.text('POP', P((th.x1 + th.x2) / 2), G + 8, white, 1, 'center');
+      for (let x = P(th.x1); x <= P(th.x2); x += 3) g.line(x, G + 3, x + 1, G + 3, red);
+      g.text('POP', P((th.x1 + th.x2) / 2), G + 8, red, 1, 'center');
     }
   }
 
@@ -217,7 +211,7 @@ export class Renderer {
 
   drawParticles() {
     for (const p of this.particles) {
-      const c = p.kind === 'spark' ? (Math.random() < 0.5 ? white : cyan) : magenta;
+      const c = p.kind === 'spark' ? red : ink;
       this.g.pset(P(p.x), P(p.y), c);
     }
   }
@@ -231,13 +225,13 @@ export class Renderer {
 
   drawHud(game, opts) {
     const g = this.g;
-    g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, 4, 4, white);
-    g.text(`SCORE ${pad(game.score)}`, RES.W - 4, 4, white, 1, 'right');
-    g.text(`HI ${pad(game.best || 0)}`, RES.W - 4, 13, cyan, 1, 'right');
+    g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, 4, 4, red);
+    g.text(`SCORE ${pad(game.score)}`, RES.W - 4, 4, red, 1, 'right');
+    g.text(`HI ${pad(game.best || 0)}`, RES.W - 4, 13, red, 1, 'right');
     if (game.combo.length && game.phase === 'playing') {
-      g.text(game.combo.map((t) => t.name).join(' + '), 4, 13, cyan);
+      g.text(game.combo.map((t) => t.name).join(' + '), 4, 13, red);
     }
-    if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 22, magenta, 1, 'center');
+    if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 22, red, 1, 'center');
   }
 
   blink(rate = 3) {
@@ -250,15 +244,16 @@ export class Renderer {
     const cx = RES.W / 2;
 
     if (game.phase === 'ready') {
-      g.text('STICKFLIP', cx + 1, 37, magenta, 4, 'center');
-      g.text('STICKFLIP', cx, 36, white, 4, 'center');
-      g.text(game.level.hint, cx, 70, white, 1, 'center');
-      g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 80, white, 1, 'center');
-      if (this.blink()) g.text('TAP TO START', cx, 94, cyan, 1, 'center');
+      g.text('STICKFLIP', cx + 1, 37, ink, 4, 'center');
+      g.text('STICKFLIP', cx, 36, red, 4, 'center');
+      g.text(game.level.hint, cx, 70, red, 1, 'center');
+      g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 80, red, 1, 'center');
+      if (this.blink()) g.text('TAP TO START', cx, 94, red, 1, 'center');
     } else if (game.phase === 'bailed') {
-      g.text('BAIL!', cx, 36, magenta, 3, 'center');
-      g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 64, white, 1, 'center');
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 80, cyan, 1, 'center');
+      g.text('BAIL!', cx + 1, 37, ink, 3, 'center');
+      g.text('BAIL!', cx, 36, red, 3, 'center');
+      g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 64, red, 1, 'center');
+      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 80, red, 1, 'center');
     } else if (game.phase === 'complete' && game.phaseTime > 0.35) {
       this.drawComplete(game);
     }
@@ -268,17 +263,17 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const [x, y, w, h] = [36, 26, 248, 104];
-    g.fill(x, y, w, h, black);
-    g.rect(x, y, w, h, white);
-    g.rect(x + 2, y + 2, w - 4, h - 4, white);
+    g.fill(x, y, w, h, ink);
+    g.rect(x, y, w, h, red);
+    g.rect(x + 2, y + 2, w - 4, h - 4, red);
 
-    g.text('LANDED IT!', cx, y + 9, cyan, 2, 'center');
-    g.text(`SCORE ${pad(game.score)}`, cx, y + 29, white, 1, 'center');
+    g.text('LANDED IT!', cx, y + 9, red, 2, 'center');
+    g.text(`SCORE ${pad(game.score)}`, cx, y + 29, red, 1, 'center');
     const stars = [0, 1, 2].map((i) => (i < game.stars ? '*' : '-')).join(' ');
-    g.text(stars, cx, y + 41, game.stars === 3 ? cyan : magenta, 2, 'center');
+    g.text(stars, cx, y + 41, red, 2, 'center');
     const s = game.level.stars;
     const tip = game.stars < 3 ? `NEXT STAR: ${s[game.stars]} PTS. TRY SOME FLIPS!` : 'PERFECT RUN!';
-    g.text(tip, cx, y + 60, white, 1, 'center');
+    g.text(tip, cx, y + 60, red, 1, 'center');
 
     this.button('retry', 'RIDE AGAIN', x + 12, y + 78, 92, true);
     this.button('next', game.hasNext ? 'NEXT LEVEL' : 'MORE SOON', x + w - 104, y + 78, 92, game.hasNext);
@@ -288,13 +283,13 @@ export class Renderer {
     const g = this.g;
     const h = 15;
     if (enabled) {
-      g.fill(x, y, w, h, id === 'next' ? cyan : white);
-      g.text(label, x + w / 2, y + 4, black, 1, 'center');
+      g.fill(x, y, w, h, red);
+      g.text(label, x + w / 2, y + 4, ink, 1, 'center');
       // hit box in world units
       this.buttons.push({ id, x: x * S, y: y * S, w: w * S, h: h * S });
     } else {
-      g.rect(x, y, w, h, magenta);
-      g.text(label, x + w / 2, y + 4, magenta, 1, 'center');
+      g.rect(x, y, w, h, red);
+      g.text(label, x + w / 2, y + 4, red, 1, 'center');
     }
   }
 
