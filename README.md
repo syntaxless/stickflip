@@ -30,34 +30,59 @@ One input, **tap**, means whatever makes sense at that moment:
 | ------------------------------- | --------------------------------------------------------------------- |
 | waiting at the start            | roll in                                                               |
 | rolling                         | **ollie**                                                             |
-| in the air, rail glowing yellow | **lock a grind** (the skater lands on the rail in a 50-50)            |
+| in the air, < 0.2 s from a rail | **lock a grind** (the skater lands on the rail in a 50-50)            |
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
-A tap pressed during a kickflip is remembered and used the moment the flip
-finishes, so mashing doesn't eat inputs.
+**Swipe in the air** for other tricks. A swipe anywhere else counts as a tap.
+
+| Swipe (in the air)            | Trick         | Points |
+| ----------------------------- | ------------- | ------ |
+| tap                           | KICKFLIP      | 150    |
+| down                          | HEELFLIP      | 150    |
+| up                            | POP SHOVE-IT  | 100    |
+| right (forward)               | FS 360 spin   | 200    |
+| left (backward)               | BS 360 spin   | 200    |
+| down, then right (one stroke) | 360 FLIP      | 300    |
+| down, then left (one stroke)  | HARDFLIP      | 250    |
+
+Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
+`src/config.js`, and gesture reading is in `src/gesture.js`.
+
+**It's meant to be hard**, like the shareware games it's inspired by:
+* A grind only locks if you tap in the last 0.2 s before touching the rail.
+  Tap any earlier and you get a kickflip, which won't finish in time.
+* Input during a trick is ignored. One trick at a time, no mashing.
+* There's no take-off marker and no warning flash on the rail. It only turns red
+  once a grind is locked.
+* Any trick still turning when you land is a bail.
 
 ## Level 1: First Rail
 
 A low rail, 260 px long and 64 px high. An ollie only carries you about
-190 px, so you can't clear it. You have to grind it. That makes it a good
+225 px, so you can't clear it. You have to grind it. That makes it a good
 first lesson: it teaches both taps (ollie, then grind) in one obstacle.
 
-* A chalk **POP HERE** mark shows the take-off window that lands you on the rail.
-* The rail **glows yellow** when a tap would lock a grind, and **green** once it's locked.
+* The rail turns **red** once a grind is locked.
 * Bails explain what went wrong: slammed the rail (popped too late), clipped the
   rail (didn't tap to grind), or landed mid-flip (flipped too late).
 
-Scoring: kickflip 150, grind 100 + 1 per px ground. Tricks chain into a combo
+Scoring: tricks as above, grind 100 + 1 per px ground. Tricks chain into a combo
 until you land on the ground, and the combo is multiplied by the number of tricks.
 Stars: finish (1), 700 pts (2, any kickflip + grind), 1400 pts (3, kickflip in,
 grind, pop and kickflip out).
 
 ## Design choices
 
-* **Fixed 960×540 stage** scaled to fit the screen. The background extends to
-  fill any extra space instead of showing black bars. Landscape is the intended
-  orientation, and portrait shows a hint to rotate.
+* **DOS look.** The game draws into a 320×180 framebuffer with a 3-colour
+  palette: plain navy sky, black for everything solid
+  (ground, rail, board, rider) and red for all text, Bresenham lines and a
+  built-in 5×7 bitmap font, so there's no anti-aliasing anywhere. The frame is then
+  scaled up by a whole number of device pixels for chunky, even pixels.
+  Sound is PC-speaker style square-wave beeps (press M to mute on desktop).
+
+* **Fixed stage, no scrolling.** Physics runs in 960×540 world units (3 units
+  per pixel). Landscape is the intended orientation, and portrait shows a hint to rotate.
 * **Fixed 120 Hz physics step** so jump heights and timing windows are identical
   on 60 Hz and 120 Hz phones.
 * **Tap meaning is decided by prediction.** In the air the game works out where
@@ -78,7 +103,8 @@ src/config.js           physics + scoring constants
 src/game.js             game logic: skater state machine, collisions, scoring
 src/obstacles/          obstacle builders (rail.js), each with surfaces, solids and draw()
 src/levels/             one file per level + the ordered LEVELS list
-src/render/             stick figure poses, board, background, HUD, effects
+src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
+src/audio.js            PC-speaker style beeps
 tests/game.test.js      plays level 1 with scripted taps
 ```
 
@@ -96,7 +122,8 @@ Write a builder in `src/obstacles/` that returns:
   grinded, `landable` tops (a box or ledge) can be landed on and rolled across,
   and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `draw(ctx, fx)`: render it. `fx.hint` is `'ready'`, `'primed'` or `null` for grind glow.
+* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels). `fx.hint` is `'ready'`, `'primed'` or `null`. Levels can also set
+  `takeoffHint: { x1, x2 }` to draw a POP marker on the ground, for easier levels.
 
 The engine handles everything else. Slopes (kickers, quarter pipes) and gaps
 would need small engine additions.

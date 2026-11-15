@@ -1,6 +1,6 @@
 import { PHYS } from '../config.js';
 
-export const INK = '#1b1b1f';
+import { PAL } from './pixel.js';
 
 // Key poses in skater-local coordinates: origin at the wheels' contact point,
 // x points the way the skater rides, negative y is up. Joints are blended
@@ -25,7 +25,7 @@ export class PoseBlender {
     this.set(name);
   }
   set(name) {
-    this.pose = structuredClone(POSES[name]);
+    this.pose = JSON.parse(JSON.stringify(POSES[name])); // deep copy; works on older iOS too
   }
   update(name, dt, rate = 18) {
     const target = POSES[name];
@@ -37,95 +37,57 @@ export class PoseBlender {
   }
 }
 
-function line(ctx, pts) {
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.stroke();
+// A transform from skater-local world units to framebuffer pixels.
+// (x, y) is the anchor in world units, `ang` a rotation in radians.
+export function makeTransform(x, y, ang = 0, scale = 1 / 3) {
+  const c = Math.cos(ang);
+  const s = Math.sin(ang);
+  return (p) => ({ x: (x + c * p.x - s * p.y) * scale, y: (y + s * p.x + c * p.y) * scale });
 }
 
-// Draws the stick figure (no board) in local coordinates.
-export function drawFigure(ctx, p) {
-  ctx.save();
-  ctx.strokeStyle = INK;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 5;
-  line(ctx, [p.footB, p.kneeB, p.hip]);
-  line(ctx, [p.footF, p.kneeF, p.hip]);
-  line(ctx, [p.hip, p.neck]);
-  line(ctx, [p.neck, p.elbowB, p.handB]);
-  line(ctx, [p.neck, p.elbowF, p.handF]);
+const pt = (x, y) => ({ x, y });
 
-  // head + cap
-  const h = p.head;
-  ctx.fillStyle = '#fffaf0';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(h.x, h.y, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#e4572e';
-  ctx.beginPath();
-  ctx.arc(h.x, h.y - 2, 11.5, Math.PI * 1.02, Math.PI * 1.98);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(h.x + 4, h.y - 3);
-  ctx.lineTo(h.x + 19, h.y - 1);
-  ctx.stroke();
-  ctx.restore();
+function poly(g, tf, pts, color) {
+  for (let i = 1; i < pts.length; i++) {
+    const a = tf(pts[i - 1]);
+    const b = tf(pts[i]);
+    g.line(a.x, a.y, b.x, b.y, color);
+  }
 }
 
-// Draws the board centred at the contact point. `spin` is the kickflip angle
-// (0 = grip side up); the board is seen side-on, so a flip shows its width.
-export function drawBoard(ctx, spin = 0) {
+// Draws the stick figure (no board) as a black silhouette: 1-pixel limbs,
+// a solid round head and a cap.
+export function drawFigure(g, tf, p) {
+  const W = PAL.ink;
+  poly(g, tf, [p.footB, p.kneeB, p.hip], W);
+  poly(g, tf, [p.footF, p.kneeF, p.hip], W);
+  poly(g, tf, [p.hip, p.neck], W);
+  poly(g, tf, [p.neck, p.elbowB, p.handB], W);
+  poly(g, tf, [p.neck, p.elbowF, p.handF], W);
+  const h = tf(p.head);
+  g.circle(h.x, h.y, 3, W, true);
+  // cap: crown + peak, following the body's rotation
+  poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
+  poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);
+  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17, p.head.y - 4)], PAL.ink);
+}
+
+// Draws the board at the contact point. `spin` is the kickflip angle
+// (0 = grip side up); seen side-on, so mid-flip it shows its width.
+export function drawBoard(g, tf, spin = 0, lift = 0) {
   const c = Math.cos(spin);
-  const sN = Math.sin(spin);
-  const half = 26;
-  const deckY = -8;
-  ctx.save();
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = INK;
-
-  // wheels sit under the deck when grip side is up, over it when upside down
-  const wy = deckY + 5 * c;
-  ctx.fillStyle = INK;
-  if (Math.abs(c) > 0.15) {
-    for (const wx of [-16, 16]) {
-      ctx.beginPath();
-      ctx.arc(wx, wy, 3.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  const thick = Math.abs(Math.sin(spin)) * 18;
+  const y = -8 - lift;
+  if (thick > 4) {
+    const t = thick / 2;
+    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.ink);
+    return;
   }
-
-  const thick = Math.abs(sN) * 16;
-  if (thick > 2) {
-    // deck seen from top or bottom while it rotates
-    ctx.fillStyle = sN > 0 ? '#2b2b30' : '#2f8fd8';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.roundRect(-half, deckY - thick / 2, half * 2, thick, thick / 2);
-    ctx.fill();
-    ctx.stroke();
-  } else {
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-half - 2, deckY - 4 * c);
-    ctx.lineTo(-half + 6, deckY);
-    ctx.lineTo(half - 6, deckY);
-    ctx.lineTo(half + 2, deckY - 4 * c);
-    ctx.stroke();
-    ctx.strokeStyle = '#2f8fd8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-half + 7, deckY + 2.5 * c);
-    ctx.lineTo(half - 7, deckY + 2.5 * c);
-    ctx.stroke();
+  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.ink);
+  for (const wx of [-16, 16]) {
+    const w = tf(pt(wx, y + 5 * c));
+    g.pset(w.x, w.y, PAL.ink);
   }
-  ctx.restore();
 }
 
 // Board pitch from vertical speed: nose up while rising, level when falling.

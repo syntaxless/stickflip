@@ -42,10 +42,22 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site/unstable
-          copy() { for f in index.html src CNAME; do if [ -e "$1/$f" ]; then cp -r "$1/$f" "$2/"; fi; done; }
+          # Copy each branch, putting its code in a folder named after the commit
+          # (src-<sha>/) so phones never mix cached old files with new ones.
+          copy() {
+            local from=$1 to=$2 v
+            v=$(git -C "$from" rev-parse --short HEAD)
+            [ -e "$from/index.html" ] || return 0
+            cp "$from/index.html" "$to/"
+            if [ -d "$from/src" ]; then
+              cp -r "$from/src" "$to/src-$v"
+              sed -i "s#src=\"src/main.js\"#src=\"src-$v/main.js\"#" "$to/index.html"
+            fi
+          }
           copy main _site
           copy unstable _site/unstable
-          rm -f _site/unstable/CNAME
+          cp main/CNAME _site/ 2>/dev/null || true
+          grep -o 'src-[0-9a-f]*/main.js' _site/index.html _site/unstable/index.html
           find _site -maxdepth 2 | sort
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

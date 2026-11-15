@@ -1,4 +1,5 @@
 import { WORLD } from '../config.js';
+import { PAL } from '../render/pixel.js';
 
 // A flat, low grind rail standing on two posts.
 //
@@ -10,7 +11,7 @@ import { WORLD } from '../config.js';
 //             landable  -> the skater can land and roll on top (boxes, ledges)
 //             otherwise touching it from above is a bail
 //   solids:   rectangles { x, y, w, h } that cause a slam when hit from the side
-//   draw(ctx, fx): renders the obstacle. fx.hint is 'ready' | 'primed' | null
+//   draw(g, fx): renders the obstacle into the pixel framebuffer. fx.hint is 'ready' | 'primed' | null
 export function rail({ x, length, height, trick = '50-50 GRIND' }) {
   const top = WORLD.GROUND - height;
   const x2 = x + length;
@@ -19,53 +20,19 @@ export function rail({ x, length, height, trick = '50-50 GRIND' }) {
     surfaces: [{ x1: x, x2, y: top, grindable: true, landable: false, trick }],
     solids: [{ x, y: top, w: length, h: height }],
 
-    draw(ctx, fx = {}) {
-      const posts = [x + 22, x2 - 22];
-      ctx.save();
-      ctx.lineCap = 'round';
-
-      // Glow when a tap right now would lock a grind (or one is locked in).
-      if (fx.hint) {
-        const pulse = 0.55 + 0.45 * Math.sin((fx.time || 0) * 14);
-        ctx.strokeStyle = fx.hint === 'primed' ? 'rgba(80, 200, 120, 0.55)' : `rgba(255, 196, 0, ${0.35 + 0.4 * pulse})`;
-        ctx.lineWidth = 18;
-        ctx.beginPath();
-        ctx.moveTo(x, top);
-        ctx.lineTo(x2, top);
-        ctx.stroke();
+    // g is the pixel framebuffer (see render/pixel.js); world units / 3 = pixels.
+    draw(g, fx = {}) {
+      const P = (v) => Math.round(v / 3);
+      const [x1, x2p, y, ground] = [P(x), P(x2), P(top), P(WORLD.GROUND)];
+      // Turns red once a grind is locked in. No advance warning: timing is on you.
+      let bar = PAL.ink;
+      if (fx.hint === 'primed') bar = PAL.red;
+      for (const px of [P(x + 22), P(x2 - 22)]) {
+        g.line(px, y + 2, px, ground - 1, PAL.ink);
+        g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);
       }
-
-      // Posts
-      ctx.strokeStyle = '#1b1b1f';
-      ctx.lineWidth = 6;
-      for (const px of posts) {
-        ctx.beginPath();
-        ctx.moveTo(px, top + 2);
-        ctx.lineTo(px, WORLD.GROUND);
-        ctx.stroke();
-        // base plate
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(px - 9, WORLD.GROUND - 1);
-        ctx.lineTo(px + 9, WORLD.GROUND - 1);
-        ctx.stroke();
-        ctx.lineWidth = 6;
-      }
-
-      // Bar
-      ctx.strokeStyle = '#1b1b1f';
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.moveTo(x, top);
-      ctx.lineTo(x2, top);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + 4, top - 2);
-      ctx.lineTo(x2 - 4, top - 2);
-      ctx.stroke();
-      ctx.restore();
+      g.line(x1, y, x2p, y, bar);
+      g.line(x1, y + 1, x2p, y + 1, bar);
     },
   };
 }
