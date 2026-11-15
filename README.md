@@ -11,6 +11,9 @@ npm start        # serves the game at http://localhost:8080 (and on your LAN for
 npm test         # runs the game-logic tests (Node 18+)
 ```
 
+Live at **https://stickflip.itschefff.com**. Every push to `main` runs the
+tests and deploys to GitHub Pages (`.github/workflows/pages.yml`, custom domain in `CNAME`).
+
 No build step and no dependencies. It's plain HTML, a `<canvas>` and ES
 modules, so any static host (GitHub Pages, Netlify...) can serve the repo as is.
 Space, Enter and the up arrow work as a tap on desktop.
