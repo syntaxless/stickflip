@@ -44,37 +44,42 @@ test('doing nothing slams into the rail', () => {
 });
 
 test('ollie onto the rail without a grind tap clips it', () => {
-  const { game } = play(level1, [0.9]);
+  const { game } = play(level1, [0.75]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'clipped');
 });
 
 test('ollie then a late tap locks a grind and finishes the level', () => {
-  const { game, seen } = play(level1, [0.9, 1.4]);
+  const { game, seen } = play(level1, [0.75, 1.32]);
   assert.ok(seen.has('grind'));
   assert.equal(game.phase, 'complete');
-  assert.ok(game.score > 300, `score ${game.score}`);
+  assert.ok(game.score > 250, `score ${game.score}`);
   assert.equal(game.stars, 1);
 });
 
 test('kickflip into the grind scores a 2x combo', () => {
-  const { game, seen } = play(level1, [0.9, 0.92, 1.32]);
+  const { game, seen } = play(level1, [0.75, 0.77, 1.32]);
   assert.ok(seen.has('KICKFLIP') && seen.has('grind'));
   assert.equal(game.phase, 'complete');
   assert.equal(game.stars, 2);
 });
 
 test('kickflip in, grind, pop and kickflip out gets three stars', () => {
-  const { game } = play(level1, [0.9, 0.92, 1.32, 2.3, 2.35]);
+  const { game } = play(level1, [0.75, 0.77, 1.32, 1.8, 1.82]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.equal(game.stars, 3, `score ${game.score}`);
 });
 
-test('a tap during a flip is buffered and primes the grind', () => {
-  // second and third taps both land during the flip; the buffered one primes.
-  const { game, seen } = play(level1, [0.9, 1.0, 1.2]);
-  assert.ok(seen.has('prime'));
-  assert.equal(game.phase, 'complete');
+test('a tap during a flip is ignored, so the rail is clipped', () => {
+  const { game, seen } = play(level1, [0.75, 0.77, 1.0]);
+  assert.ok(!seen.has('prime'));
+  assert.equal(game.bailReason, 'clipped');
+});
+
+test('tapping for the grind too early starts a kickflip that lands on the rail', () => {
+  const { game } = play(level1, [0.75, 1.1]);
+  assert.equal(game.phase, 'bailed');
+  assert.equal(game.bailReason, 'flip');
 });
 
 test('flipping too late before the ground is a bail', () => {
@@ -92,4 +97,53 @@ test('retry after a bail restarts the run', () => {
   game.tap();
   assert.equal(game.phase, 'playing');
   assert.equal(game.score, 0);
+});
+
+// ------------------------------------------------------------ swipe tricks
+
+// Like play(), but each input is [time, 'tap' | swipe direction].
+function playInputs(level, inputs, maxTime = 8) {
+  const game = new Game(level);
+  game.tap();
+  const queue = [...inputs].sort((a, b) => a[0] - b[0]);
+  const names = [];
+  let t = 0;
+  while (t < maxTime && game.phase === 'playing') {
+    while (queue.length && queue[0][0] <= t + 1e-9) {
+      const [, input] = queue.shift();
+      if (input === 'tap') game.tap();
+      else game.swipe(input);
+    }
+    game.update(STEP);
+    t += STEP;
+    for (const e of game.drainEvents()) if (e.type === 'trick') names.push(e.name);
+  }
+  return { game, names };
+}
+
+test('swipes in the air do their tricks and still allow the grind', () => {
+  for (const [dir, name] of [
+    ['down', 'HEELFLIP'],
+    ['up', 'POP SHOVE-IT'],
+    ['right', 'FS 360'],
+    ['left', 'BS 360'],
+    ['down-right', '360 FLIP'],
+    ['down-left', 'HARDFLIP'],
+  ]) {
+    const { game, names } = playInputs(level1, [[0.75, 'tap'], [0.77, dir], [1.36, 'tap']]);
+    assert.ok(names.includes(name), `${dir} -> ${names}`);
+    assert.equal(game.phase, 'complete', `${dir}: bailed ${game.bailReason}`);
+  }
+});
+
+test('a swipe on the ground ollies and an unknown pattern falls back to its first direction', () => {
+  const { game, names } = playInputs(level1, [[0.75, 'right'], [0.77, 'down-up'], [1.32, 'tap']]);
+  assert.ok(names.includes('HEELFLIP'), String(names));
+  assert.equal(game.phase, 'complete');
+});
+
+test('a long trick started too late is a bail', () => {
+  const { game } = playInputs(level1, [[0.2, 'tap'], [0.75, 'down-right']]);
+  assert.equal(game.phase, 'bailed');
+  assert.equal(game.bailReason, 'flip');
 });
