@@ -2,13 +2,20 @@ import { WORLD } from './config.js';
 import { Game } from './game.js';
 import { LEVELS } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
+import { Pix, RES } from './render/pixel.js';
+import * as audio from './audio.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
+// The game draws into a 320x180 framebuffer, which is then blown up onto the
+// screen canvas with nearest-neighbour scaling for chunky DOS pixels.
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const renderer = new Renderer(ctx);
-const view = { scale: 1, ox: 0, oy: 0, dpr: 1, cw: 0, ch: 0 };
+const low = document.createElement('canvas');
+low.width = RES.W;
+low.height = RES.H;
+const renderer = new Renderer(new Pix(low.getContext('2d')));
+const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false };
 
 // ------------------------------------------------------------ progress
 
@@ -51,17 +58,18 @@ function loadLevel(i, autoStart = false) {
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  view.cw = Math.round(w * view.dpr);
-  view.ch = Math.round(h * view.dpr);
-  canvas.width = view.cw;
-  canvas.height = view.ch;
+  view.dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = Math.round(w * view.dpr);
+  canvas.height = Math.round(h * view.dpr);
   canvas.style.width = `${w}px`;
   canvas.style.height = `${h}px`;
-  // Fit the whole 960x540 stage; the background fills any extra space.
-  view.scale = Math.min(w / WORLD.W, h / WORLD.H);
-  view.ox = (w - WORLD.W * view.scale) / 2;
-  view.oy = (h - WORLD.H * view.scale) / 2;
+  // Whole device pixels per game pixel keeps every pixel the same size.
+  const fit = Math.min(w / RES.W, h / RES.H) * view.dpr;
+  const k = fit >= 1 ? Math.floor(fit) : fit;
+  view.scale = k / view.dpr; // CSS px per game pixel
+  view.ox = Math.round(((w - RES.W * view.scale) / 2) * view.dpr) / view.dpr;
+  view.oy = Math.round(((h - RES.H * view.scale) / 2) * view.dpr) / view.dpr;
+  view.portrait = h > w;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
@@ -69,10 +77,12 @@ window.addEventListener('orientationchange', resize);
 // ------------------------------------------------------------ input
 
 function toWorld(clientX, clientY) {
-  return { x: (clientX - view.ox) / view.scale, y: (clientY - view.oy) / view.scale };
+  const u = WORLD.W / RES.W; // world units per game pixel
+  return { x: ((clientX - view.ox) / view.scale) * u, y: ((clientY - view.oy) / view.scale) * u };
 }
 
 function press(clientX, clientY) {
+  audio.unlock();
   if (game.phase === 'complete') {
     if (game.phaseTime < 0.35) return;
     const p = clientX == null ? null : toWorld(clientX, clientY);
@@ -95,6 +105,10 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
+  if (e.code === 'KeyM') {
+    audio.toggleMute();
+    return;
+  }
   if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') {
     e.preventDefault();
     press();
@@ -122,8 +136,15 @@ function frame(now) {
       store.set(`best:${game.level.id}`, e.score);
     }
   }
+  audio.play(events, game);
   renderer.consume(events);
-  renderer.draw(game, dt, view);
+  renderer.draw(game, dt, { portrait: view.portrait });
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
   requestAnimationFrame(frame);
 }
 

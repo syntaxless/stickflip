@@ -13,9 +13,9 @@ import { WORLD, PHYS, SCORE } from './config.js';
 //   grinding       -> pop off the rail (and you can flip again on the way down)
 
 export const BAIL_MESSAGES = {
-  slam: 'Slammed into the rail. Ollie a bit earlier!',
-  clipped: 'Clipped the rail. Tap mid-air when it glows to grind.',
-  flip: 'Landed mid-flip. Flip earlier!',
+  slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
+  clipped: 'CLIPPED THE RAIL. TAP WHEN IT FLASHES!',
+  flip: 'LANDED MID-FLIP. FLIP EARLIER!',
 };
 
 export class Game {

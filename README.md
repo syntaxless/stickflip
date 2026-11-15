@@ -43,8 +43,8 @@ A low rail, 260 px long and 64 px high. An ollie only carries you about
 190 px, so you can't clear it. You have to grind it. That makes it a good
 first lesson: it teaches both taps (ollie, then grind) in one obstacle.
 
-* A chalk **POP HERE** mark shows the take-off window that lands you on the rail.
-* The rail **glows yellow** when a tap would lock a grind, and **green** once it's locked.
+* A dashed **POP** mark shows the take-off window that lands you on the rail.
+* The rail **flashes** when a tap would lock a grind, and turns **cyan** once it's locked.
 * Bails explain what went wrong: slammed the rail (popped too late), clipped the
   rail (didn't tap to grind), or landed mid-flip (flipped too late).
 
@@ -55,9 +55,14 @@ grind, pop and kickflip out).
 
 ## Design choices
 
-* **Fixed 960×540 stage** scaled to fit the screen. The background extends to
-  fill any extra space instead of showing black bars. Landscape is the intended
-  orientation, and portrait shows a hint to rotate.
+* **DOS look.** The game draws into a 320×180 framebuffer with a 4-colour
+  CGA-style palette (black, cyan, magenta, white), Bresenham lines and a
+  built-in 5×7 bitmap font, so there's no anti-aliasing anywhere. The frame is then
+  scaled up by a whole number of device pixels for chunky, even pixels.
+  Sound is PC-speaker style square-wave beeps (press M to mute on desktop).
+
+* **Fixed stage, no scrolling.** Physics runs in 960×540 world units (3 units
+  per pixel). Landscape is the intended orientation, and portrait shows a hint to rotate.
 * **Fixed 120 Hz physics step** so jump heights and timing windows are identical
   on 60 Hz and 120 Hz phones.
 * **Tap meaning is decided by prediction.** In the air the game works out where
@@ -78,7 +83,8 @@ src/config.js           physics + scoring constants
 src/game.js             game logic: skater state machine, collisions, scoring
 src/obstacles/          obstacle builders (rail.js), each with surfaces, solids and draw()
 src/levels/             one file per level + the ordered LEVELS list
-src/render/             stick figure poses, board, background, HUD, effects
+src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
+src/audio.js            PC-speaker style beeps
 tests/game.test.js      plays level 1 with scripted taps
 ```
 
@@ -96,7 +102,7 @@ Write a builder in `src/obstacles/` that returns:
   grinded, `landable` tops (a box or ledge) can be landed on and rolled across,
   and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `draw(ctx, fx)`: render it. `fx.hint` is `'ready'`, `'primed'` or `null` for grind glow.
+* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels). `fx.hint` is `'ready'`, `'primed'` or `null` for the grind flash.
 
 The engine handles everything else. Slopes (kickers, quarter pipes) and gaps
 would need small engine additions.
