@@ -11,11 +11,12 @@ npm start        # serves the game at http://localhost:8080 (and on your LAN for
 npm test         # runs the game-logic tests (Node 18+)
 ```
 
-Live at **https://stickflip.itschefff.com**. Every push to `main` runs the
-tests and deploys to GitHub Pages (`.github/workflows/pages.yml`, custom domain in `CNAME`).
+Live at **https://stickflip.itschefff.com** (`main`) with a preview of the
+`unstable` branch at **https://stickflip.itschefff.com/unstable/**.
 
 Branches: work lands on `unstable` first (via PRs) and is tested there.
-When it's good, `unstable` is merged into `main`, which deploys.
+When it's good, `unstable` is merged into `main`. Every push to either branch
+runs the tests (`ci.yml`), then rebuilds the site from both (`deploy.yml`).
 
 No build step and no dependencies. It's plain HTML, a `<canvas>` and ES
 modules, so any static host (GitHub Pages, Netlify...) can serve the repo as is.

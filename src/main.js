@@ -12,10 +12,12 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, cw: 0, ch: 0 };
 
 // ------------------------------------------------------------ progress
 
+// The /unstable/ preview shares an origin with the live game, so keep its saves apart.
+const SAVE_PREFIX = location.pathname.includes('/unstable') ? 'stickflip-unstable' : 'stickflip';
 const store = {
   get(key, fallback) {
     try {
-      const v = localStorage.getItem(`stickflip:${key}`);
+      const v = localStorage.getItem(`${SAVE_PREFIX}:${key}`);
       return v == null ? fallback : JSON.parse(v);
     } catch {
       return fallback;
@@ -23,7 +25,7 @@ const store = {
   },
   set(key, value) {
     try {
-      localStorage.setItem(`stickflip:${key}`, JSON.stringify(value));
+      localStorage.setItem(`${SAVE_PREFIX}:${key}`, JSON.stringify(value));
     } catch {
       /* private mode etc. Progress just isn't saved. */
     }
