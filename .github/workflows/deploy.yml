@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+# Publishes one site with both branches:
+#   main     -> https://stickflip.itschefff.com/
+#   unstable -> https://stickflip.itschefff.com/unstable/
+# Runs after CI passes on a push to either branch. workflow_run jobs run in the
+# default branch's context, so the github-pages environment accepts the deploy
+# whichever branch triggered it.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, unstable]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: unstable
+          path: unstable
+      - name: Assemble site
+        run: |
+          mkdir -p _site/unstable
+          copy() { for f in index.html src CNAME; do if [ -e "$1/$f" ]; then cp -r "$1/$f" "$2/"; fi; done; }
+          copy main _site
+          copy unstable _site/unstable
+          rm -f _site/unstable/CNAME
+          find _site -maxdepth 2 | sort
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
