@@ -80,10 +80,13 @@ function icon(N, k) {
   g.clear(PAL.sky);
   const gap = Math.max(2, k * 2);
   const top = Math.round((N - (14 * k + gap)) / 2);
-  const cx = N / 2;
+  // Faux bold: each word is stamped `bold` extra times one pixel to the right,
+  // so the strokes stay legible when the icon is shown small.
+  const bold = Math.ceil(k / 2);
+  const cx = N / 2 - bold / 2;
   for (const [word, y] of [['STICK', top], ['FLIP', top + 7 * k + gap]]) {
-    g.text(word, cx + 1, y + 1, PAL.ink, k, 'center');
-    g.text(word, cx, y, PAL.red, k, 'center');
+    for (let d = 0; d <= bold; d++) g.text(word, cx + 1 + d, y + 1, PAL.ink, k, 'center');
+    for (let d = 0; d <= bold; d++) g.text(word, cx + d, y, PAL.red, k, 'center');
   }
   return g;
 }
