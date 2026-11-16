@@ -2,7 +2,7 @@ import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
 import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
-import { Pix, RES, PAL, setPalette, cssColor } from './render/pixel.js';
+import { Pix, RES, setPalette } from './render/pixel.js';
 import * as audio from './audio.js';
 import { readStroke, readChargeStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
@@ -479,68 +479,33 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-// The bars around the game (a screen wider or taller than 16:9) carry the
-// scene on: at each side the ground continues at the height it has at that
-// edge of the screen (sky all the way down over a gap), and below the game
-// every column carries its own ground on down, so a slope or a step that
-// runs off the bottom of the game keeps going instead of turning into a wall.
+// The bars around the game (a screen wider or taller than 16:9) show more of
+// the same scene: the ground and obstacles are drawn again into a bigger
+// framebuffer that covers the whole screen, and the game is drawn on top. So
+// a rail, a ramp or a slope running off the edge of the game carries on.
+const outer = { cv: document.createElement('canvas'), pix: null };
 function drawLetterbox() {
   const k = view.scale * view.dpr; // device px per game pixel
-  const ox = Math.round(view.ox * view.dpr);
-  const oy = Math.round(view.oy * view.dpr);
-  const gw = Math.round(RES.W * k);
-  const gh = Math.round(RES.H * k);
-  ctx.fillStyle = cssColor(PAL.sky);
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const cam = renderer.cam || { x: 0, y: 0 };
-  const u = WORLD.W / RES.W; // world units per game pixel
-  const GAP = WORLD.GROUND + 1000; // gap segments sit far below the ground
-  // ground top of a game column, in framebuffer pixels (Infinity over a gap)
-  const topAt = (px) => {
-    const gy = game.groundAt(px * u + u / 2).y;
-    return gy > GAP ? Infinity : Math.round(gy / u) - cam.y;
-  };
-  const ground = cssColor(PAL.ground);
-  const edge = cssColor(PAL.edge);
-  const line = Math.max(1, Math.round(k));
-  const side = (px, x0, w) => {
-    if (w <= 0) return;
-    const top = topAt(px);
-    if (top === Infinity) return; // a gap at the edge: sky all the way down
-    const y = oy + Math.round(top * k);
-    ctx.fillStyle = ground;
-    ctx.fillRect(x0, y, w, canvas.height - y);
-    ctx.fillStyle = edge;
-    ctx.fillRect(x0, y, w, line);
-  };
-  side(cam.x, 0, ox);
-  side(cam.x + RES.W - 1, ox + gw, canvas.width - ox - gw);
-  // Below the game: the same column-by-column ground the renderer draws
-  // (ground fill, maroon top, maroon side wherever a neighbour is lower).
-  const y0 = oy + gh;
-  if (canvas.height <= y0) return;
-  const rowY = (r) => oy + Math.round(r * k); // device y of a framebuffer row
-  let prev = topAt(cam.x - 1);
-  let top = topAt(cam.x);
-  for (let i = 0; i < RES.W; i++) {
-    const next = topAt(cam.x + i + 1);
-    if (top !== Infinity) {
-      const x = ox + Math.round(i * k);
-      const w = ox + Math.round((i + 1) * k) - x;
-      const yt = Math.max(y0, rowY(top));
-      ctx.fillStyle = ground;
-      ctx.fillRect(x, yt, w, canvas.height - yt);
-      ctx.fillStyle = edge;
-      if (top >= RES.H) ctx.fillRect(x, yt, w, line);
-      const drop = Math.max(prev, next);
-      if (drop > top) {
-        const yd = drop === Infinity ? canvas.height : rowY(drop);
-        if (yd > yt) ctx.fillRect(x, yt, w, yd - yt);
-      }
-    }
-    prev = top;
-    top = next;
+  const ox = view.ox * view.dpr;
+  const oy = view.oy * view.dpr;
+  // game pixels needed on each side of the game to reach the screen's edges
+  const left = Math.max(0, Math.ceil(ox / k));
+  const top = Math.max(0, Math.ceil(oy / k));
+  const right = Math.max(0, Math.ceil((canvas.width - ox) / k - RES.W));
+  const bottom = Math.max(0, Math.ceil((canvas.height - oy) / k - RES.H));
+  if (!left && !top && !right && !bottom) return; // the game fills the screen
+  const W = left + RES.W + right;
+  const H = top + RES.H + bottom;
+  if (!outer.pix || outer.cv.width !== W || outer.cv.height !== H) {
+    outer.cv.width = W;
+    outer.cv.height = H;
+    outer.pix = new Pix(outer.cv.getContext('2d'), W, H);
   }
+  const cam = renderer.cam || { x: 0, y: 0 };
+  renderer.drawScene(outer.pix, game, { x: cam.x - left, y: cam.y - top });
+  outer.pix.flush();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(outer.cv, ox - left * k, oy - top * k, W * k, H * k);
 }
 
 resize();

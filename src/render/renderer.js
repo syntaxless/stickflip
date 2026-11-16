@@ -129,19 +129,31 @@ export class Renderer {
     return { x: Math.round(x / S), y: Math.round(y / S) };
   }
 
-  drawBackground(game, cam = { x: 0, y: 0 }) {
-    const g = this.g;
+  // The scenery only (ground and obstacles, no rider or HUD) into another
+  // framebuffer: main.js uses it to fill the bars around the game, so
+  // whatever runs off the edge of the game (a rail, a ramp) carries on there.
+  drawScene(g, game, cam) {
+    g.clear(sky);
+    g.ox = -cam.x;
+    g.oy = -cam.y;
+    this.drawBackground(game, cam, g);
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    g.ox = 0;
+    g.oy = 0;
+  }
+
+  drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
     const G = P(WORLD.GROUND);
 
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
     // Dark grey ground with a maroon outline along its top and down every
     // step, drop and gap wall.
-    const bottom = RES.H + cam.y;
+    const bottom = g.h + cam.y;
     const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
     let prev = topAt(cam.x - 1);
     let top = topAt(cam.x);
-    for (let x = cam.x; x < cam.x + RES.W; x++) {
+    for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
         g.fill(x, top, 1, bottom - top, groundCol);
