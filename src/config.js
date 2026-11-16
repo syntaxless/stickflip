@@ -24,7 +24,7 @@ export const PHYS = Object.freeze({
 // can only read and add scores (row level security, see the setup SQL). Empty
 // means the table stays on the device.
 export const SCOREBOARD = Object.freeze({
-  url: '',
+  url: 'https://meyzelyllboyuypnmusr.supabase.co',
   key: '',
 });
 
