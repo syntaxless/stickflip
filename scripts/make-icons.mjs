@@ -114,9 +114,10 @@ save('icon-maskable-512.png', png(icon(128, 3), 4));
   const ty = Math.round(H / 2 - 14); // the title is 28 pixels tall
   g.text('STICKFLIP', W / 2 + 1, ty + 1, PAL.ink, 4, 'center');
   g.text('STICKFLIP', W / 2, ty, PAL.red, 4, 'center');
-  // the rider, bigger than in the game, drawn over the middle of the title
+  // the rider, bigger than in the game, low enough that only his head and
+  // hands overlap the title
   const s = 0.5; // pixels per world unit
-  const [fx, fy] = [W / 2, H / 2 + 30];
+  const [fx, fy] = [W / 2, H / 2 + 54];
   drawFigure(g, makeTransform(fx / s, fy / s, 0, s), POSES.flip);
   // the board below the feet, nose tipped up and part way through its flip
   drawBoard(g, makeTransform(fx / s, fy / s, -0.3, s), 0.5, 0);
