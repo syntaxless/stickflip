@@ -20,6 +20,14 @@ export const PHYS = Object.freeze({
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
 });
 
+// The shared high-score table (Supabase). Both values are public: the anon key
+// can only read and add scores (row level security, see the setup SQL). Empty
+// means the table stays on the device.
+export const SCOREBOARD = Object.freeze({
+  url: '',
+  key: '',
+});
+
 export const SCORE = Object.freeze({
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
 });

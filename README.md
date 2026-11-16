@@ -108,9 +108,16 @@ multiplied by the number of tricks.
 in the corner adds up the score of each level you've cleared (ride a level
 again and your latest clear counts). After the last level, FINISH RUN puts the
 total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
-type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too. It's stored on the device
-for now; `src/leaderboard.js` is a small async interface, so it can later be
-backed by a shared database.
+type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too.
+
+**Shared high scores.** With `SCOREBOARD` in `src/config.js` filled in (a
+Supabase project URL and its public anon key), the top 5 is shared by everyone.
+The table is set up by `supabase/scores.sql`: row level security lets the anon
+key only read scores and add new ones, the database checks the initials (1-4
+letters) and score (1-100000), and posting is rate limited (3 a minute per
+address, 30 overall). If the shared table can't be reached, the game falls back
+to the on-device table, and scores are always kept on the device too. Local
+copies (localhost) only use the device table.
 
 ## Design choices
 

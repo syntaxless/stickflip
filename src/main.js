@@ -1,4 +1,4 @@
-import { WORLD } from './config.js';
+import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
 import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
@@ -6,7 +6,7 @@ import { Pix, RES, PAL } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
-import { localLeaderboard, INITIALS } from './leaderboard.js';
+import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
@@ -49,9 +49,12 @@ let game;
 
 // ------------------------------------------------------------ run + high scores
 
-// On-device for now. Swap in another object with the same async interface
-// (see leaderboard.js) to share scores between players.
-const board = localLeaderboard(store);
+// Shared between all players through Supabase when it's set up (see
+// SCOREBOARD in config.js), with the on-device table as the fallback when it
+// can't be reached. Local copies (localhost) only ever use the device table.
+const localBoard = localLeaderboard(store);
+const shared = SCOREBOARD.url && SCOREBOARD.key && !/^(localhost|127\.|\[::1\])/.test(location.hostname);
+const board = shared ? withFallback(supabaseLeaderboard(SCOREBOARD), localBoard) : localBoard;
 let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
 refreshScores();
@@ -118,6 +121,7 @@ function screenPress(clientX, clientY) {
 
 function loadLevel(i, autoStart = false) {
   levelIndex = i;
+  if (i === 0) refreshScores(); // the title screen shows the table
   const secret = i === SECRET_INDEX;
   if (!secret) store.set('level', i);
   const level = secret ? SECRET : LEVELS[i];
