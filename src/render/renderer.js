@@ -273,19 +273,6 @@ export class Renderer {
     }
   }
 
-  // Each new screen (and each retry) names its level (no hints) for a moment, over the
-  // sky, without stopping the ride.
-  drawTitleCard(game) {
-    const g = this.g;
-    const t = game.phaseTime;
-    if (t > 1.8 || (t > 1.4 && Math.floor(t * 20) % 2)) return; // blink out
-    const cx = RES.W / 2;
-    const label = game.levelLabel || `LEVEL ${game.levelNumber || 1}`;
-    g.text(label, cx, 44, red, 1, 'center');
-    g.text(game.level.name, cx + 1, 57, ink, 2, 'center');
-    g.text(game.level.name, cx, 56, red, 2, 'center');
-  }
-
   blink(rate = 3) {
     return Math.floor(this.time * rate * 2) % 2 === 0;
   }
@@ -302,8 +289,7 @@ export class Renderer {
     if (game.phase === 'ready') {
       // Arcade attract mode: on the first level, the title takes turns with the high scores.
       const showTable = opts.attract && opts.highScores?.length && Math.floor(this.time / 4) % 2 === 1;
-      // Rows sit clear of the rider's head and of level 3's handrail; in portrait the
-      // swipe tip makes way for the "turn sideways" notice under TAP TO START.
+      // Rows sit clear of the rider's head and of level 3's handrail.
       let tapY;
       if (showTable) {
         g.text('HIGH SCORES', cx + 1, 39, ink, 2, 'center');
@@ -316,14 +302,11 @@ export class Renderer {
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
-      if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', cx, tapY + 11, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
       if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
-    } else if (game.phase === 'playing') {
-      this.drawTitleCard(game);
     }
   }
 
