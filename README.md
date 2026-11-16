@@ -34,6 +34,11 @@ One input, **tap**, means whatever makes sense at that moment:
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
+**Hold for a higher ollie.** On the ground the ollie pops when you lift your
+finger (or let go of Space). Hold it and the skater crouches lower and lower,
+then pops up to about 1.8x as high after a 0.7 s hold. A quick tap is a normal
+ollie. Tuning: `CHARGE_*` in `src/config.js`.
+
 **Swipe in the air** for other tricks. A swipe anywhere else counts as a tap.
 
 | Swipe (in the air)            | Trick         | Points |
@@ -45,8 +50,15 @@ One input, **tap**, means whatever makes sense at that moment:
 | left (backward)               | BS 360 spin   | 200    |
 | down, then right (one stroke) | 360 FLIP      | 300    |
 | down, then left (one stroke)  | HARDFLIP      | 250    |
+| a counter-clockwise circle    | BACKFLIP      | 1000   |
 
-Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
+The backflip turns the rider and board a full 360 backwards and is slow
+(0.85 s), so it only fits in big air: the quarter pipe or the secret level.
+Land before it comes round and you bail. The circle has to turn at least
+three quarters of the way round, so a curved down-then-left is still a
+hardflip.
+
+Arrow keys work as swipes on desktop, and B is the backflip. The trick list lives in `TRICKS` in
 `src/config.js`, and gesture reading is in `src/gesture.js`.
 
 **It's meant to be hard**, like the shareware games it's inspired by:
@@ -95,10 +107,12 @@ in `src/config.js`.
    in). Then ride back out fakie to the left, ollieing or grinding the rail
    again on the way. Stars: finish, 700, 1500.
 
-**Secret level: Mega Ramp.** Three screens wide and side-scrolling: drop in
-from a high deck, ollie off the kicker and fly the big gap onto the landing
-ramp. It's played after level 6 from your third full run onwards (finished runs
-are counted on the device), and its score counts toward the run total.
+**Secret level: Mega Ramp.** Side-scrolling, three and a half screens wide:
+drop in from a high deck, fly off the kicker onto a deck with a raised rail
+(grind it, or ollie off the kicker to clear it), roll down a long bank and
+finish with a big air out of a tall quarter pipe. It's played after level 6
+from your third full run onwards (finished runs are counted on the device), and
+its score counts toward the run total.
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
   came up short, landed on the stairs or a step, rolled off an edge, or hit

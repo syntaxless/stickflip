@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
+import { WORLD } from '../src/config.js';
 import { LEVELS, SECRET } from '../src/levels/index.js';
 
 const STEP = 1 / 120;
@@ -333,9 +334,57 @@ test('quarter pipe: the air goes up and comes down at a steady riding speed', ()
   assert.equal(Math.abs(game.sk.vy), game.speed);
   assert.equal(game.sk.vx, 0);
 });
-test('secret mega ramp: ollie off the kicker flies the big gap', () => {
-  const { game } = playActs(SECRET, [[1.05, 'tap'], [1.1, 'swipe', 'down-right']]);
-  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.ok(game.score >= 300);
-  assert.equal(play(SECRET, []).game.bailReason, 'rolled');
+test('secret mega ramp: ollie the kicker over the rail, or grind it, then air the quarter', () => {
+  const clear = playActs(SECRET, [[0.85, 'tap']]);
+  assert.equal(clear.game.phase, 'complete', `bailed: ${clear.game.bailReason}`);
+  assert.ok(clear.seen.has('FS AIR'));
+  const grind = playActs(SECRET, [[1.2, 'tap']]);
+  assert.equal(grind.game.phase, 'complete', `bailed: ${grind.game.bailReason}`);
+  assert.ok(grind.seen.has('50-50 GRIND'));
+  assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
+});
+
+test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (capped)', () => {
+  const flat = { id: 'flat', obstacles: [], width: 4000 };
+  const peak = (holdTime) => {
+    const game = new Game(flat);
+    game.tap();
+    game.startCharge();
+    for (let t = 0; t < holdTime; t += STEP) game.update(STEP);
+    assert.ok(game.releaseCharge());
+    let top = Infinity;
+    while (game.sk.mode === 'air') {
+      game.update(STEP);
+      top = Math.min(top, game.sk.y);
+    }
+    return WORLD.GROUND - top;
+  };
+  const tap = peak(0.05);
+  const normal = new Game(LEVELS[0]);
+  assert.ok(Math.abs(tap - 169) < 6, `tap height ${tap}`);
+  assert.ok(peak(0.4) > tap * 1.2);
+  assert.ok(Math.abs(peak(2) - peak(0.8)) < 2, 'capped');
+  assert.ok(peak(2) < tap * 2);
+  assert.equal(normal.chargeLevel(), 0);
+});
+
+test('charged ollie: only from the ground, and the crouch level grows with the hold', () => {
+  const game = new Game(LEVELS[0]);
+  assert.equal(game.startCharge(), false, 'not before the run starts');
+  game.tap();
+  assert.equal(game.startCharge(), true);
+  game.update(0.1);
+  assert.equal(game.chargeLevel(), 0);
+  for (let i = 0; i < 40; i++) game.update(STEP);
+  assert.ok(game.chargeLevel() > 0.3);
+});
+test('backflip: a circle in the quarter pipe air lands, too late is a bail, a normal ollie is too short', () => {
+  const qpActs = [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']];
+  const ok = playActs(quarter, [...qpActs, [2.95, 'swipe', 'circle']], 4.6);
+  assert.ok(ok.seen.has('BACKFLIP') && ok.seen.has('FS AIR'), [...ok.seen].join());
+  assert.equal(ok.game.phase, 'playing');
+  const late = playActs(quarter, [...qpActs, [3.5, 'swipe', 'circle']], 4.6);
+  assert.equal(late.game.bailReason, 'flip');
+  const flat = playActs({ id: 'flat', obstacles: [], width: 4000 }, [[0.3, 'tap'], [0.32, 'swipe', 'circle']], 2);
+  assert.equal(flat.game.bailReason, 'flip', 'an ollie is not enough air for a backflip');
 });

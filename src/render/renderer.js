@@ -121,7 +121,7 @@ export class Renderer {
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
     const x = Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
-    const y = Math.min(0, fy - 200);
+    const y = Math.min(0, fy - 330);
     return { x: Math.round(x / S), y: Math.round(y / S) };
   }
 
@@ -168,6 +168,7 @@ export class Renderer {
     else if (s.mode === 'grind') target = 'grind';
     else if (s.mode === 'air') target = s.flip ? 'flip' : s.primed ? 'prime' : 'air';
     else if (s.mode === 'ramp') target = 'crouch';
+    else if (s.charge) target = game.chargeLevel() > 0.5 ? 'charge' : 'crouch'; // crouch deeper the longer you hold
     else if (this.squash > 0) target = 'crouch';
     this.pose.update(target, dt);
 
@@ -185,7 +186,18 @@ export class Renderer {
     } else if (s.qpAir) {
       pitch = -Math.PI / 2; // straight up and down, just as you left the wall
     }
-    const base = makeTransform(s.x, s.y, pitch);
+    let base = makeTransform(s.x, s.y, pitch);
+    if (s.flip?.trick.body === 'backflip') {
+      // Head over heels, backwards (counter-clockwise when riding right),
+      // turning around the middle of the body.
+      const p = Math.min(1, s.flip.t / s.flip.trick.dur);
+      const a = -p * Math.PI * 2 * face;
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      const mid = -30;
+      const tf = base;
+      base = (q) => tf({ x: c * q.x - sn * (q.y - mid), y: mid + sn * q.x + c * (q.y - mid) });
+    }
     // Side view, so turning around the vertical axis is drawn by squashing x:
     // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1. Mirrored when facing left.
     const squashX = (tf, sx) => (p) => tf({ x: p.x * sx * face, y: p.y });
@@ -205,6 +217,7 @@ export class Renderer {
         case 'treflip': spin = p * Math.PI * 2; boardSx = turn(2); break;
         case 'hardflip': spin = p * Math.PI * 2; boardSx = turn(1); break;
       }
+      if (trick.body === 'backflip') lift = 0;
       if (trick.body === 'spin') {
         bodySx = turn(2);
         boardSx = bodySx;

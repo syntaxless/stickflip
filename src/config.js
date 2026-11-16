@@ -13,6 +13,9 @@ export const PHYS = Object.freeze({
   GRAVITY: 2400, // px/s^2
   OLLIE_V: 900, // take-off speed of an ollie from the ground
   POP_V: 780, // take-off speed when popping out of a grind
+  CHARGE_MIN: 0.12, // a hold shorter than this (s) is a plain ollie
+  CHARGE_TIME: 0.6, // further seconds of holding to reach the highest ollie
+  CHARGE_BOOST: 0.35, // a full charge pops this much faster (0.35 -> about 1.8x as high)
   GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
@@ -47,7 +50,8 @@ export const GRINDS = Object.freeze({
 // right without lifting). Screen directions; the skater rides to the right.
 //   board: how the board moves  -> flip (around its long axis), flipRev (heelflip),
 //          shove (spins flat), treflip (flip + flat 360), hardflip (flip + flat 180)
-//   body:  'spin' turns the rider (and board) a full 360
+//   body:  'spin' turns the rider (and board) a full 360,
+//          'backflip' rotates them a full 360 backwards, head over heels
 export const TRICKS = Object.freeze({
   tap: { name: 'KICKFLIP', dur: 0.44, points: 150, board: 'flip' },
   down: { name: 'HEELFLIP', dur: 0.44, points: 150, board: 'flipRev' },
@@ -56,4 +60,7 @@ export const TRICKS = Object.freeze({
   left: { name: 'BS 360', dur: 0.52, points: 200, body: 'spin', dirSign: -1 },
   'down-right': { name: '360 FLIP', dur: 0.575, points: 300, board: 'treflip' },
   'down-left': { name: 'HARDFLIP', dur: 0.52, points: 250, board: 'hardflip' },
+  // A counter-clockwise circle. Slow, so it needs big air: the quarter pipe
+  // or the secret level. Land before it comes round and you bail.
+  circle: { name: 'BACKFLIP', dur: 0.85, points: 1000, body: 'backflip' },
 });
