@@ -6,7 +6,7 @@
 //   submit(initials, score)   -> the new entry's rank (0-based), or -1
 
 export const TABLE_SIZE = 5;
-export const INITIALS = 5; // letters per name (the database allows up to 5: see supabase/scores.sql)
+export const INITIALS = 6; // letters per name (the database allows up to 6: see supabase/scores.sql)
 
 // `store` is any { get(key, fallback), set(key, value) } (localStorage in the
 // browser, a plain object in tests).
