@@ -366,15 +366,16 @@ export class Renderer {
     this.drawBonus(scr, y);
     g.text(`RUN TOTAL ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     g.text('ENTER YOUR NAME', cx, y + 42, red, 1, 'center');
-    const left = cx - Math.round((INITIALS * 26 + 40) / 2); // letters, then OK
+    // The letters, centred, with OK centred under them.
+    const left = cx - Math.round((INITIALS * 26 - 6) / 2);
     for (let i = 0; i < INITIALS; i++) {
       const lx = left + i * 26;
-      this.button(`up${i}`, '+', lx, y + 56, 20, true);
-      if (i !== scr.pos || this.blink(2)) g.text(scr.letters[i], lx + 10, y + 76, red, 2, 'center');
-      if (i === scr.pos) g.line(lx + 2, y + 92, lx + 17, y + 92, red);
-      this.button(`dn${i}`, '-', lx, y + 96, 20, true);
+      this.button(`up${i}`, '+', lx, y + 54, 20, true);
+      if (i !== scr.pos || this.blink(2)) g.text(scr.letters[i], lx + 10, y + 73, red, 2, 'center');
+      if (i === scr.pos) g.line(lx + 2, y + 89, lx + 17, y + 89, red);
+      this.button(`dn${i}`, '-', lx, y + 92, 20, true);
     }
-    this.button('ok', 'OK', left + INITIALS * 26 + 8, y + 75, 32, true);
+    this.button('ok', 'OK', cx - 24, y + 114, 48, true);
   }
 
   drawScores(scr, list) {
@@ -397,9 +398,14 @@ export class Renderer {
     this.g.text(`NO BAIL BONUS +${scr.bonus}`, cx, panelY - 12, red, 1, 'center');
   }
 
+  // A press inside a button wins; otherwise the nearest button within a
+  // finger's slack (buttons sit close together on the name entry).
   hitButton(lx, ly) {
     const padding = 12;
-    return this.buttons.find((b) => lx >= b.x - padding && lx <= b.x + b.w + padding && ly >= b.y - padding && ly <= b.y + b.h + padding)?.id;
+    const dist = (b) => Math.hypot(Math.max(b.x - lx, 0, lx - b.x - b.w), Math.max(b.y - ly, 0, ly - b.y - b.h));
+    let best = null;
+    for (const b of this.buttons) if (dist(b) <= padding && (!best || dist(b) < dist(best))) best = b;
+    return best?.id;
   }
 }
 
