@@ -39,27 +39,47 @@ finger (or let go of Space). Hold it and the skater crouches lower and lower,
 then pops up to about 1.8x as high after a 0.7 s hold. A quick tap is a normal
 ollie. Tuning: `CHARGE_*` in `src/config.js`.
 
-**Swipe in the air** for other tricks. A swipe anywhere else counts as a tap.
+**Draw a shape in the air** for other tricks. Every shape starts by pulling
+down (like popping the tail), then flicks or hooks back up. "Right" means
+forward, the way the skater rides. Shapes are matched loosely, so a quick,
+rough version works on a phone.
 
-| Swipe (in the air)            | Trick         | Points |
-| ----------------------------- | ------------- | ------ |
-| tap                           | KICKFLIP      | 150    |
-| down                          | HEELFLIP      | 150    |
-| up                            | POP SHOVE-IT  | 100    |
-| right (forward)               | FS 360 spin   | 200    |
-| left (backward)               | BS 360 spin   | 200    |
-| down, then right (one stroke) | 360 FLIP      | 300    |
-| down, then left (one stroke)  | HARDFLIP      | 250    |
-| a counter-clockwise circle    | BACKFLIP      | 1000   |
+| Shape (in the air)                                   | Trick            | Points |
+| ---------------------------------------------------- | ---------------- | ------ |
+| tap                                                  | KICKFLIP         | 150    |
+| down, then flick up-right                            | KICKFLIP         | 150    |
+| down, then flick up-left                             | HEELFLIP         | 150    |
+| down, then hook right and up (a U)                   | POP SHOVE-IT     | 100    |
+| down, then hook left and up                          | FS POP SHOVE-IT  | 100    |
+| down-left, then a wide arc round to the right        | 360 SHOVE-IT     | 200    |
+| down-right, then a wide arc round to the left        | FS 360 SHOVE-IT  | 200    |
+| down-left, then straight back up-right (a V)         | VARIAL KICKFLIP  | 250    |
+| down-right, then straight back up-left               | VARIAL HEELFLIP  | 250    |
+| down-left, a short zig right, then straight up       | HARDFLIP         | 250    |
+| down-right, a short zag left, then straight up       | INWARD HEELFLIP  | 250    |
+| left, curve down and round, then up-right            | 360 FLIP         | 300    |
+| right, curve down and round, then up-left            | LASER FLIP       | 350    |
+| right, curve down and round, then straight up        | 360 HARDFLIP     | 400    |
+| left, curve down and round, then straight up         | 360 INWARD HEEL  | 400    |
+| straight right (forward)                             | FS 360 spin      | 200    |
+| straight left (backward)                             | BS 360 spin      | 200    |
+| a counter-clockwise circle                           | BACKFLIP         | 1000   |
+
+A straight swipe up or down, or down and back up, does nothing in the air.
+
+**Ollie straight into a trick:** on the ground, hold to charge, then draw the
+shape before you lift. The ollie pops as that trick, with the charged height.
+A plain tap or a hold and release is still just an ollie.
 
 The backflip turns the rider and board a full 360 backwards and is slow
 (0.85 s), so it only fits in big air: the quarter pipe or the secret level.
-Land before it comes round and you bail. The circle has to turn at least
-three quarters of the way round, so a curved down-then-left is still a
-hardflip.
+Land before it comes round and you bail. The circle has to go most of the
+way round (about 290 degrees) without cutting through its middle, so none
+of the flip shapes set it off.
 
-Arrow keys work as swipes on desktop, and B is the backflip. The trick list lives in `TRICKS` in
-`src/config.js`, and gesture reading is in `src/gesture.js`.
+On desktop, Up is a pop shove-it, Down a heelflip, Left and Right the 360
+spins, and B the backflip. The trick list lives in `TRICKS` in
+`src/config.js`, and the shapes are `SHAPES` in `src/gesture.js`.
 
 **It's meant to be hard**, like the shareware games it's inspired by:
 * A grind only locks if you tap in the last 0.2 s before touching the rail.

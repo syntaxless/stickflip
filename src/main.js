@@ -203,7 +203,8 @@ function press(clientX, clientY) {
 
 // On the ground a touch charges an ollie: the skater crouches while the
 // finger is down and pops when it lifts, higher the longer it was held (a
-// quick tap is a normal ollie). Other taps act on touch-down for the lowest
+// quick tap is a normal ollie). Drag a trick shape before lifting and the
+// ollie pops straight into that trick. Other taps act on touch-down for the lowest
 // latency. In the air, a touch is followed until the finger lifts so it can
 // be read as a tap or a swipe.
 // Every touch while playing also counts as a hold: if the finger is still
@@ -247,8 +248,14 @@ function endStroke(e) {
   stroke.points.push({ x: e.clientX, y: e.clientY });
   const { read, points, charge } = stroke;
   stroke = null;
-  if (charge) game.releaseCharge();
+  const popped = charge && game.releaseCharge();
   const grinded = game.setHold(false);
+  if (popped) {
+    // Dragged a trick shape while charging: the ollie pops straight into it.
+    const gesture = classifyStroke(points);
+    if (gesture && gesture !== 'tap') game.swipe(gesture);
+    return;
+  }
   if (!read || grinded) return;
   // Landed while the finger was down: don't turn the gesture into an ollie.
   if (game.phase !== 'playing' || game.sk.mode !== 'air') return;
@@ -271,8 +278,10 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Keyboard: Space/Enter is the finger. In the air it acts on release (like a
 // touch), so holding it through a rail grinds; an arrow held with it picks the
-// grind (right: nose grind, left: 5-0). Arrows on their own are swipes.
+// grind (right: nose grind, left: 5-0). Arrows on their own do tricks.
 const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+// Arrow keys on their own do a few of the tricks (the rest need a finger).
+const ARROW_TRICK = { up: 'shove', down: 'heelflip', left: 'bs360', right: 'fs360' };
 let keyHold = null; // { read } while Space/Enter is down
 
 window.addEventListener('keydown', (e) => {
@@ -303,7 +312,7 @@ window.addEventListener('keydown', (e) => {
     if (keyHold && game.hold) {
       if (dir === 'left' || dir === 'right') game.setHold(true, dir);
     } else if (game.phase === 'complete') press();
-    else game.swipe(dir);
+    else game.swipe(ARROW_TRICK[dir]);
   }
 });
 
