@@ -111,45 +111,70 @@ function press(clientX, clientY) {
 
 // Taps act on touch-down for the lowest latency. In the air, a touch is
 // followed until the finger lifts so it can be read as a tap or a swipe.
-let stroke = null; // { id, points } while following an air gesture
+// Every touch while playing also counts as a hold: if the finger is still
+// down when the skater reaches a rail, it locks a grind (drag forward for a
+// nose grind, back for a 5-0), and the lift is then ignored.
+let stroke = null; // { id, points, read } while a finger is down; read = classify on lift
+
+const HOLD_DRAG = 22; // CSS px of sideways drag that picks a 5-0 / nose grind
+
+function holdDir(points) {
+  const a = points[0];
+  const b = points[points.length - 1];
+  const dx = b.x - a.x;
+  if (Math.abs(dx) < HOLD_DRAG || Math.abs(dx) < Math.abs(b.y - a.y)) return null;
+  return dx > 0 ? 'right' : 'left';
+}
 
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  // A tap that would lock a grind can't wait for the finger to lift.
-  if (!inAir || game.grindHint() === 'ready') {
-    stroke = null;
-    press(e.clientX, e.clientY);
-    return;
-  }
-  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }] };
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false };
   canvas.setPointerCapture?.(e.pointerId);
+  // A tap that would lock a grind can't wait for the finger to lift.
+  if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
+  else stroke.read = true;
+  if (game.phase === 'playing') game.setHold(true);
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (stroke && e.pointerId === stroke.id) stroke.points.push({ x: e.clientX, y: e.clientY });
+  if (!stroke || e.pointerId !== stroke.id) return;
+  stroke.points.push({ x: e.clientX, y: e.clientY });
+  if (game.hold) game.setHold(true, holdDir(stroke.points));
 });
 
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY });
-  const gesture = classifyStroke(stroke.points);
+  const { read, points } = stroke;
   stroke = null;
+  const grinded = game.setHold(false);
+  if (!read || grinded) return;
   // Landed while the finger was down: don't turn the gesture into an ollie.
   if (game.phase !== 'playing' || game.sk.mode !== 'air') return;
+  const gesture = classifyStroke(points);
   if (gesture === 'tap') game.tap();
   else game.swipe(gesture);
 }
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', (e) => {
-  if (stroke && e.pointerId === stroke.id) stroke = null;
+  if (stroke && e.pointerId === stroke.id) {
+    stroke = null;
+    game.setHold(false);
+  }
 });
 
 // Stop iOS from treating quick taps as zoom/scroll gestures.
 canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Keyboard: Space/Enter is the finger. In the air it acts on release (like a
+// touch), so holding it through a rail grinds; an arrow held with it picks the
+// grind (right: nose grind, left: 5-0). Arrows on their own are swipes.
+const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+let keyHold = null; // { read } while Space/Enter is down
 
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
@@ -160,16 +185,31 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault();
     audio.unlock();
-    press();
+    const inAir = game.phase === 'playing' && game.sk.mode === 'air';
+    keyHold = { read: inAir && game.grindHint() !== 'ready' };
+    if (!keyHold.read) press();
+    if (game.phase === 'playing') game.setHold(true);
     return;
   }
-  // Arrow keys act as swipes (and as a tap when not in the air).
-  const dir = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[e.code];
+  const dir = ARROWS[e.code];
   if (dir) {
     e.preventDefault();
     audio.unlock();
-    if (game.phase === 'complete') press();
+    if (keyHold && game.hold) {
+      if (dir === 'left' || dir === 'right') game.setHold(true, dir);
+    } else if (game.phase === 'complete') press();
     else game.swipe(dir);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if ((e.code === 'Space' || e.code === 'Enter') && keyHold) {
+    const { read } = keyHold;
+    keyHold = null;
+    const grinded = game.setHold(false);
+    if (read && !grinded && game.phase === 'playing' && game.sk.mode === 'air') game.tap();
+  } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && keyHold && game.hold) {
+    game.setHold(true, null);
   }
 });
 

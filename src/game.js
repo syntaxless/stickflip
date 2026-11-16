@@ -1,4 +1,4 @@
-import { WORLD, PHYS, SCORE, TRICKS } from './config.js';
+import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -12,6 +12,9 @@ import { WORLD, PHYS, SCORE, TRICKS } from './config.js';
 //                     PHYS.GRIND_WINDOW seconds away (tap any earlier and it's a kickflip)
 //   grinding       -> pop off the rail (and you can flip again on the way down)
 //
+// Holding the finger down when you reach a rail also locks a grind, and the
+// direction dragged while holding picks which one (see GRINDS in config.js).
+//
 // Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
 // anywhere else acts like a tap, so it can never get you stuck.
 
@@ -19,13 +22,33 @@ export const BAIL_MESSAGES = {
   slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
   clipped: 'CLIPPED THE RAIL. TAP JUST BEFORE IT!',
   flip: 'LANDED MID-TRICK. START IT EARLIER!',
+  gap: 'CAME UP SHORT. OLLIE CLOSER TO THE EDGE!',
+  stairs: 'LANDED ON THE STAIRS. OLLIE CLOSER TO THE EDGE!',
+  rolled: 'ROLLED OFF THE EDGE. OLLIE BEFORE IT!',
 };
+
+// Anything this far below the ground line has fallen into a gap.
+const PIT_DEPTH = 40;
+
+// Height of a (possibly sloped) surface at x.
+export function surfaceY(surf, x) {
+  if (surf.y1 === undefined) return surf.y;
+  const t = Math.max(0, Math.min(1, (x - surf.x1) / (surf.x2 - surf.x1)));
+  return surf.y1 + (surf.y2 - surf.y1) * t;
+}
+
+const FLAT = Object.freeze({ x1: -Infinity, x2: Infinity, y: WORLD.GROUND, landable: true });
+
+const slopeOf = (surf) => (surf.y1 === undefined ? 0 : (surf.y2 - surf.y1) / (surf.x2 - surf.x1));
 
 export class Game {
   constructor(level) {
     this.level = level;
     this.surfaces = level.obstacles.flatMap((o) => o.surfaces);
     this.solids = level.obstacles.flatMap((o) => o.solids);
+    // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
+    // replaces part of it with its own segments { x1, x2, y, landable, bail }.
+    this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
     this.reset();
   }
 
@@ -38,15 +61,17 @@ export class Game {
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.stars = 0;
+    this.hold = null; // { dir, used } while the finger (or Space) is held down
     this.sk = {
       x: PHYS.START_X,
-      y: WORLD.GROUND,
+      y: this.groundAt(PHYS.START_X).y,
       vx: 0,
       vy: 0,
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
       flip: null, // { t, key, trick } while an air trick is in progress
       primed: false, // ready to lock a grind on contact
+      poppedAt: null, // x where the skater last left the ground (null = rolled off)
       grind: null, // { surface, dist }
       bail: null, // ragdoll state after a bail
     };
@@ -55,6 +80,12 @@ export class Game {
   setPhase(phase) {
     this.phase = phase;
     this.phaseTime = 0;
+  }
+
+  // The ground segment under x: { y, landable, bail }.
+  groundAt(x) {
+    for (const g of this.groundSegs) if (x >= g.x1 && x < g.x2) return g;
+    return FLAT;
   }
 
   emit(type, data = {}) {
@@ -113,7 +144,28 @@ export class Game {
     s.vx = PHYS.ROLL_SPEED;
     s.support = null;
     s.primed = false;
+    s.poppedAt = s.x;
     this.emit('pop');
+  }
+
+  // The finger is held down (dir: null | 'left' | 'right' for a held drag),
+  // or lifted (on = false). Returns whether the hold locked a grind, so the
+  // UI knows not to treat the lift as a tap or swipe.
+  setHold(on, dir = null) {
+    if (on) {
+      if (this.hold) this.hold.dir = dir;
+      else this.hold = { dir, used: false };
+      return false;
+    }
+    const used = !!this.hold?.used;
+    this.hold = null;
+    return used;
+  }
+
+  // Which grind a contact right now would lock.
+  grindKey() {
+    const d = this.hold?.dir;
+    return d === 'right' ? 'nose' : d === 'left' ? '5-0' : '50-50';
   }
 
   // A swipe: 'up' | 'down' | 'left' | 'right' or a pattern like 'down-right'.
@@ -144,21 +196,27 @@ export class Game {
 
   // ------------------------------------------------------------ prediction
 
-  // Where (and how soon) the skater will touch down on the current arc.
+  // Where (and how soon) the skater will next touch something on the current
+  // arc: a surface (flat or sloped, including rails you could pass) or the
+  // ground. Stepped forward in time, so any shape of ground works.
   predictContact() {
     const s = this.sk;
     const g = PHYS.GRAVITY;
-    const timeToY = (y) => (-s.vy + Math.sqrt(s.vy * s.vy + 2 * g * (y - s.y))) / g;
-    let best = null;
-    for (const surf of this.surfaces) {
-      if (surf.y <= s.y + 0.5) continue; // already at or below this top
-      const t = timeToY(surf.y);
-      const xHit = s.x + s.vx * t;
-      if (xHit >= surf.x1 && xHit <= surf.x2 && (!best || t < best.t)) {
-        best = { t, surface: surf };
+    const dt = 1 / 240;
+    let px = s.x;
+    let py = s.y;
+    for (let t = dt; t < 2; t += dt) {
+      const x = s.x + s.vx * t;
+      const y = s.y + s.vy * t + 0.5 * g * t * t;
+      for (const surf of this.surfaces) {
+        if (x < surf.x1 || x > surf.x2) continue;
+        if (py <= surfaceY(surf, px) + 0.01 && y >= surfaceY(surf, x)) return { t, surface: surf };
       }
+      if (y >= this.groundAt(x).y || y > WORLD.GROUND + PIT_DEPTH) return { t, surface: null };
+      px = x;
+      py = y;
     }
-    return best || { t: timeToY(WORLD.GROUND), surface: null };
+    return { t: 2, surface: null };
   }
 
   // 'ready'  -> a tap right now would lock a grind
@@ -170,7 +228,9 @@ export class Game {
     if (s.mode === 'grind' || s.primed) return 'primed';
     if (s.mode !== 'air' || s.flip) return null;
     const c = this.predictContact();
-    if (c.surface && c.surface.grindable && c.t <= PHYS.GRIND_WINDOW) return 'ready';
+    if (!c.surface || !c.surface.grindable) return null;
+    if (this.hold) return 'primed'; // holding: it'll lock on contact
+    if (c.t <= PHYS.GRIND_WINDOW) return 'ready';
     return null;
   }
 
@@ -194,17 +254,30 @@ export class Game {
         s.mode = 'air';
         s.vy = 0;
         s.support = null;
+        s.poppedAt = null;
+      } else if (!s.support) {
+        // follow the ground; a drop (gap, top of the stairs) means falling
+        const gy = this.groundAt(s.x).y;
+        if (gy > s.y + 1) {
+          s.mode = 'air';
+          s.vy = 0;
+          s.poppedAt = null;
+        } else s.y = gy;
       }
       if (this.hitSolid()) return this.bail('slam');
       if (s.x > PHYS.EXIT_X) return this.finish();
     } else if (s.mode === 'grind') {
+      const surf = s.grind.surface;
       const step = PHYS.GRIND_SPEED * dt;
+      const slope = slopeOf(surf);
       s.x += step;
-      s.grind.dist += step;
-      if (s.x > s.grind.surface.x2) {
+      s.y = surfaceY(surf, s.x);
+      s.grind.dist += step * Math.sqrt(1 + slope * slope);
+      if (s.x > surf.x2) {
         this.endGrind();
         s.mode = 'air';
-        s.vy = 0;
+        s.vy = slope * PHYS.GRIND_SPEED; // carry on down a sloped rail
+        s.poppedAt = s.x;
       }
     } else if (s.mode === 'air') {
       this.updateAir(dt);
@@ -214,6 +287,7 @@ export class Game {
   updateAir(dt) {
     const s = this.sk;
     const prevY = s.y;
+    const prevX = s.x;
     s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;
@@ -228,21 +302,34 @@ export class Game {
     }
 
     // Touching the top of an obstacle from above.
+    // Passable surfaces (a handrail beside the stairs) only matter if primed.
     for (const surf of this.surfaces) {
-      if (prevY <= surf.y + 0.01 && s.y >= surf.y && s.x >= surf.x1 && s.x <= surf.x2) {
-        s.y = surf.y;
-        if (surf.grindable && s.primed) return this.startGrind(surf);
+      if (s.x < surf.x1 || s.x > surf.x2) continue;
+      const locked = s.primed || (this.hold && !s.flip);
+      if (surf.passable && !locked) continue;
+      if (prevY <= surfaceY(surf, prevX) + 0.01 && s.y >= surfaceY(surf, s.x)) {
+        s.y = surfaceY(surf, s.x);
+        if (surf.grindable && locked) {
+          if (this.hold) this.hold.used = true;
+          return this.startGrind(surf, this.grindKey());
+        }
         if (s.flip) return this.bail('flip');
         if (surf.landable) return this.land(surf);
         return this.bail('clipped');
       }
     }
 
-    if (s.y >= WORLD.GROUND) {
-      s.y = WORLD.GROUND;
+    const ground = this.groundAt(s.x);
+    if (s.y >= ground.y) {
+      // Came down on it from above, or hit its side (the far wall of a gap)?
+      const fromAbove = prevY <= ground.y + 0.01;
+      s.y = ground.y;
+      if (!fromAbove) return this.bail('gap');
+      if (!ground.landable) return this.bail(s.poppedAt === null ? 'rolled' : ground.bail || 'clipped');
       if (s.flip) return this.bail('flip');
       return this.land(null);
     }
+    if (s.y > WORLD.GROUND + PIT_DEPTH) return this.bail(s.poppedAt === null ? 'rolled' : 'gap');
 
     if (this.hitSolid()) return this.bail('slam');
   }
@@ -263,21 +350,21 @@ export class Game {
     this.emit('trick', { name, points });
   }
 
-  startGrind(surface) {
+  startGrind(surface, key = '50-50') {
     const s = this.sk;
     s.mode = 'grind';
     s.vy = 0;
-    s.y = surface.y;
+    s.y = surfaceY(surface, s.x);
     s.primed = false;
-    s.grind = { surface, dist: 0 };
-    this.emit('grind');
+    s.grind = { surface, dist: 0, key, type: GRINDS[key] };
+    this.emit('grind', { key });
   }
 
   endGrind() {
     const s = this.sk;
-    const { surface, dist } = s.grind;
+    const { dist, type } = s.grind;
     s.grind = null;
-    this.addTrick(surface.trick, SCORE.GRIND_BASE + Math.round(dist * SCORE.GRIND_PER_PX));
+    this.addTrick(type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
   }
 
   land(surface) {
@@ -285,7 +372,7 @@ export class Game {
     s.mode = 'roll';
     s.vy = 0;
     s.support = surface;
-    s.y = surface ? surface.y : WORLD.GROUND;
+    s.y = surface ? surfaceY(surface, s.x) : this.groundAt(s.x).y;
     s.primed = false;
     this.emit('land');
     this.bankCombo();
@@ -344,8 +431,9 @@ export class Game {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.ang += b.angV * dt;
-    if (b.y >= WORLD.GROUND) {
-      b.y = WORLD.GROUND;
+    const floor = this.groundAt(b.x).y;
+    if (b.y >= floor) {
+      b.y = floor;
       b.vy *= -0.25;
       b.vx *= 0.6;
       b.angV *= 0.4;
@@ -356,8 +444,9 @@ export class Game {
     b.bx += b.bvx * dt;
     b.by += b.bvy * dt;
     b.bang += b.bangV * dt;
-    if (b.by >= WORLD.GROUND) {
-      b.by = WORLD.GROUND;
+    const bfloor = this.groundAt(b.bx).y;
+    if (b.by >= bfloor) {
+      b.by = bfloor;
       b.bvy *= -0.35;
       b.bvx *= 0.75;
       b.bangV *= 0.3;

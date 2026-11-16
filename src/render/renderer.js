@@ -113,8 +113,12 @@ export class Renderer {
     const g = this.g;
     const G = P(WORLD.GROUND);
 
-    // ground: solid black
-    g.fill(0, G, RES.W, RES.H - G, ink);
+    // ground: solid black, column by column so gaps, platforms and stairs
+    // all come from the level's ground segments
+    for (let x = 0; x < RES.W; x++) {
+      const top = P(game.groundAt(x * S + S / 2).y);
+      if (top < RES.H) g.fill(x, top, 1, RES.H - top, ink);
+    }
 
     // take-off mark (tutorial levels)
     const th = game.level.takeoffHint;
@@ -133,7 +137,7 @@ export class Renderer {
       const b = s.bail;
       this.pose.update('bail', dt, 10);
       drawBoard(g, makeTransform(b.bx, b.by, b.bang * 0.15), b.bang);
-      const onGround = b.y >= WORLD.GROUND - 0.5 && b.vy === 0;
+      const onGround = b.y >= game.groundAt(b.x).y - 0.5 && b.vy === 0;
       const ang = onGround ? Math.sign(b.ang || 1) * Math.min(Math.abs(b.ang), Math.PI / 2) : b.ang;
       const hip = this.pose.pose.hip;
       // rotate around the hip, which sits at the bail body position
@@ -149,7 +153,13 @@ export class Renderer {
     else if (this.squash > 0) target = 'crouch';
     this.pose.update(target, dt);
 
-    const pitch = s.mode === 'air' ? boardPitch(s.vy) : 0;
+    // board tilts with the arc in the air, and with the rail on a sloped grind
+    let pitch = s.mode === 'air' ? boardPitch(s.vy) : 0;
+    if (s.mode === 'grind') {
+      const r = s.grind.surface;
+      if (r.y1 !== undefined) pitch = Math.atan2(r.y2 - r.y1, r.x2 - r.x1);
+      pitch += s.grind.type.pitch; // 5-0 tips the nose up, nose grind tips it down
+    }
     const base = makeTransform(s.x, s.y, pitch);
     // Side view, so turning around the vertical axis is drawn by squashing x:
     // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1.

@@ -57,20 +57,37 @@ Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
   once a grind is locked.
 * Any trick still turning when you land is a bail.
 
-## Level 1: First Rail
+**Hold to grind.** Keep your finger down as you reach a rail and it locks a
+grind, no timed tap needed. Drag while holding to pick the grind:
 
-A low rail, 260 px long and 64 px high. An ollie only carries you about
-225 px, so you can't clear it. You have to grind it. That makes it a good
-first lesson: it teaches both taps (ollie, then grind) in one obstacle.
+| Hold, then drag...    | Grind       | Base points |
+| --------------------- | ----------- | ----------- |
+| no drag (or timed tap)| 50-50       | 100         |
+| back (left)           | 5-0         | 150         |
+| forward (right)       | NOSE GRIND  | 200         |
 
-* The rail turns **red** once a grind is locked.
-* Bails explain what went wrong: slammed the rail (popped too late), clipped the
-  rail (didn't tap to grind), or landed mid-flip (flipped too late).
+Grinds also score 1 per px ground. On desktop, hold Space through the rail, with
+the left or right arrow held for a 5-0 or nose grind. Grinds live in `GRINDS`
+in `src/config.js`.
 
-Scoring: tricks as above, grind 100 + 1 per px ground. Tricks chain into a combo
-until you land on the ground, and the combo is multiplied by the number of tricks.
-Stars: finish (1), 700 pts (2, any kickflip + grind), 1400 pts (3, kickflip in,
-grind, pop and kickflip out).
+## Levels
+
+1. **First Gap**: a 130 px gap. Ollie just before the edge: too early and you
+   come up short, too late and you roll in. Stars: finish, 150 (any flip), 300
+   (a 360 flip).
+2. **First Rail**: a low rail, 260 px long and 64 px high, too long to ollie.
+   Grind it. Stars: finish, 700 (kickflip + grind), 1400 (kickflip in, grind,
+   pop and kickflip out).
+3. **Five Stair**: start on a platform with five stairs down and a handrail.
+   Ollie or flip the whole set (land on a step and you bail), or grind the
+   handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
+
+* A rail turns **red** once a grind is locked.
+* Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
+  came up short, landed on the stairs, or rolled off an edge.
+
+Tricks chain into a combo until you land on the ground, and the combo is
+multiplied by the number of tricks.
 
 ## Design choices
 
@@ -101,14 +118,14 @@ index.html              page shell, loads src/main.js
 src/main.js             canvas sizing, input, game loop, saved progress
 src/config.js           physics + scoring constants
 src/game.js             game logic: skater state machine, collisions, scoring
-src/obstacles/          obstacle builders (rail.js), each with surfaces, solids and draw()
+src/obstacles/          obstacle builders (rail, gap, stairs), each with surfaces, solids, ground and draw()
 src/levels/             one file per level + the ordered LEVELS list
 src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
 src/audio.js            PC-speaker style beeps
 src/update.js           reloads an installed Home Screen app when a newer version is deployed
 icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
 manifest.webmanifest    Home Screen app settings (full screen, landscape)
-tests/game.test.js      plays level 1 with scripted taps
+tests/game.test.js      plays the levels with scripted taps, swipes and holds
 ```
 
 ### Adding a level
@@ -121,12 +138,18 @@ tests/game.test.js      plays level 1 with scripted taps
 
 Write a builder in `src/obstacles/` that returns:
 
-* `surfaces`: top edges `{ x1, x2, y, grindable, landable, trick }`. `grindable` tops can be
+* `surfaces`: top edges `{ x1, x2, y, grindable, landable, passable }`, or a
+  sloped edge with `y1`/`y2` instead of `y` (a handrail). `grindable` tops can be
   grinded, `landable` tops (a box or ledge) can be landed on and rolled across,
-  and anything else is a bail if you come down on it.
+  `passable` ones (beside the line, like a handrail) are ignored unless you're
+  locked into a grind, and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels). `fx.hint` is `'ready'`, `'primed'` or `null`. Levels can also set
-  `takeoffHint: { x1, x2 }` to draw a POP marker on the ground, for easier levels.
+* `ground` (optional): segments `{ x1, x2, y, landable, bail }` that replace the
+  flat ground there: a gap is a segment far below the screen, stairs are a
+  raised platform plus non-landable steps.
+* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
+  pixels). The ground is drawn for you. `fx.hint` is `'ready'`, `'primed'` or
+  `null`. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
 
-The engine handles everything else. Slopes (kickers, quarter pipes) and gaps
+The engine handles everything else. Curved ramps (kickers, quarter pipes)
 would need small engine additions.
