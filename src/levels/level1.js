@@ -6,7 +6,6 @@ import { gap } from '../obstacles/index.js';
 export default {
   id: 'first-gap',
   name: 'First Gap',
-  hint: 'TAP: OLLIE THE GAP.  HOLD: PUSH FOR SPEED.',
   obstacles: [gap({ x: 430, width: 130 })],
   // Score needed for 1, 2 and 3 stars. Star 1 just means "made it".
   stars: [0, 150, 300],

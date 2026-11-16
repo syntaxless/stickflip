@@ -10,7 +10,6 @@ const LIP = G - 55;
 export default {
   id: 'euro-gap',
   name: 'Euro Gap',
-  hint: 'OLLIE OFF THE BANK, UP ONTO THE TOP STEP.',
   obstacles: [
     bank({ x: 250, run: 160, y1: G, y2: LIP }),
     bank({ x: 410, run: 60, y1: LIP, y2: LIP }), // the short flat lip

@@ -1,5 +1,5 @@
 import { WORLD, PHYS } from '../config.js';
-import { BAIL_MESSAGES, slopeOf } from '../game.js';
+import { slopeOf } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
@@ -139,13 +139,6 @@ export class Renderer {
       const top = P(game.groundAt(x * S + S / 2).y);
       if (top < bottom) g.fill(x, top, 1, bottom - top, ink);
     }
-
-    // take-off mark (tutorial levels)
-    const th = game.level.takeoffHint;
-    if (th && game.phase !== 'complete') {
-      for (let x = P(th.x1); x <= P(th.x2); x += 3) g.line(x, G + 3, x + 1, G + 3, red);
-      g.text('POP', P((th.x1 + th.x2) / 2), G + 8, red, 1, 'center');
-    }
   }
 
   drawSkater(game) {
@@ -280,7 +273,7 @@ export class Renderer {
     }
   }
 
-  // Each new screen (and each retry) names its level for a moment, over the
+  // Each new screen (and each retry) names its level (no hints) for a moment, over the
   // sky, without stopping the ride.
   drawTitleCard(game) {
     const g = this.g;
@@ -291,7 +284,6 @@ export class Renderer {
     g.text(label, cx, 44, red, 1, 'center');
     g.text(game.level.name, cx + 1, 57, ink, 2, 'center');
     g.text(game.level.name, cx, 56, red, 2, 'center');
-    g.text(game.level.hint, cx, 76, red, 1, 'center');
   }
 
   blink(rate = 3) {
@@ -321,17 +313,14 @@ export class Renderer {
       } else {
         g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
         g.text('STICKFLIP', cx, 38, red, 4, 'center');
-        g.text(game.level.hint, cx, 75, red, 1, 'center');
-        if (!opts.portrait) g.text('DRAG BACK TO BRAKE. SWIPE IN THE AIR: TRICKS.', cx, 86, red, 1, 'center');
-        tapY = opts.portrait ? 87 : 98;
+        tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
       if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', cx, tapY + 11, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
-      g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 70, red, 1, 'center');
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 84, red, 1, 'center');
+      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 70, red, 1, 'center');
     } else if (game.phase === 'playing') {
       this.drawTitleCard(game);
     }
