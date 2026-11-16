@@ -211,7 +211,7 @@ export class Renderer {
     if (s.flip?.trick.body === 'backflip') {
       // Head over heels, backwards (counter-clockwise when riding right),
       // turning around the middle of the body.
-      const p = Math.min(1, s.flip.t / s.flip.trick.dur);
+      const p = game.flipProgress();
       const a = -p * Math.PI * 2 * face;
       const c = Math.cos(a);
       const sn = Math.sin(a);
@@ -228,7 +228,7 @@ export class Renderer {
     let bodySx = 1;
     if (s.flip) {
       const { trick } = s.flip;
-      const p = Math.min(1, s.flip.t / trick.dur);
+      const p = game.flipProgress();
       const turn = (n) => Math.cos(p * Math.PI * n);
       lift = Math.sin(p * Math.PI) * 12;
       if (trick.roll) spin = trick.roll * p * Math.PI * 2;

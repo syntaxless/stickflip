@@ -299,8 +299,20 @@ export class Game {
 
   startTrick(key, head = 0) {
     const trick = TRICKS[key];
-    this.sk.flip = { t: Math.max(0, Math.min(head, trick.dur * PHYS.DRAW_CREDIT)), key, trick };
+    const t = Math.max(0, Math.min(head, trick.dur * PHYS.DRAW_CREDIT));
+    // t0: the head start from drawing. It shortens the trick, but the
+    // animation still plays from the start (see flipProgress).
+    this.sk.flip = { t, t0: t, key, trick };
     this.emit('flip', { key });
+  }
+
+  // 0..1: how far through the air trick's animation (the drawing head start
+  // speeds the animation up instead of skipping its first part).
+  flipProgress() {
+    const f = this.sk.flip;
+    if (!f) return 0;
+    const span = f.trick.dur - (f.t0 || 0);
+    return span > 0 ? Math.max(0, Math.min(1, (f.t - (f.t0 || 0)) / span)) : 1;
   }
 
   // ------------------------------------------------------------ prediction

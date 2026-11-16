@@ -498,3 +498,12 @@ test('time spent drawing a shape counts toward the trick, so a drawn kickflip st
   assert.equal(run(0).bailReason, 'flip', 'without the credit the flip comes too late');
   assert.equal(run(0.4).phase, 'playing', 'with it, it lands');
 });
+
+test('a drawing head start shortens a trick but its animation still starts at 0', () => {
+  const game = new Game(LEVELS[0]);
+  game.start();
+  game.sk.mode = 'air';
+  game.startTrick('circle', 0.4);
+  assert.ok(game.sk.flip.t > 0);
+  assert.equal(game.flipProgress(), 0);
+});
