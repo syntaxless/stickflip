@@ -49,6 +49,10 @@ jobs:
             v=$(git -C "$from" rev-parse --short HEAD)
             [ -e "$from/index.html" ] || return 0
             cp "$from/index.html" "$to/"
+            # icons, favicon and Home Screen manifest, when the branch has them
+            for f in icons favicon.ico manifest.webmanifest; do
+              [ -e "$from/$f" ] && cp -r "$from/$f" "$to/"
+            done
             if [ -d "$from/src" ]; then
               cp -r "$from/src" "$to/src-$v"
               sed -i "s#src=\"src/main.js\"#src=\"src-$v/main.js\"#" "$to/index.html"
@@ -56,6 +60,11 @@ jobs:
           }
           copy main _site
           copy unstable _site/unstable
+          # Label the unstable build so its Home Screen icon can't be mixed up with the real one.
+          if [ -e _site/unstable/manifest.webmanifest ]; then
+            sed -i 's/"name": "Stickflip"/"name": "Stickflip (unstable)"/; s/"short_name": "Stickflip"/"short_name": "Stickflip β"/' _site/unstable/manifest.webmanifest
+            sed -i 's#name="apple-mobile-web-app-title" content="Stickflip"#name="apple-mobile-web-app-title" content="Stickflip β"#; s#<title>Stickflip</title>#<title>Stickflip (unstable)</title>#' _site/unstable/index.html
+          fi
           cp main/CNAME _site/ 2>/dev/null || true
           grep -o 'src-[0-9a-f]*/main.js' _site/index.html _site/unstable/index.html
           find _site -maxdepth 2 | sort
