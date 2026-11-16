@@ -71,3 +71,22 @@ test('the loop-shaped flips are not mistaken for the backflip', () => {
     assert.equal(classifyStroke(draw(SHAPES[key], { scale: 70, wobble: 5 })), key);
   }
 });
+
+test('charging: only the shape drawn after the finger rests counts, and a long speed drag is a plain ollie', async () => {
+  const { readChargeStroke } = await import('../src/gesture.js');
+  const at = (pts, t0, dt) => pts.map(([x, y], i) => ({ x, y, t: t0 + i * dt }));
+  // A kickflip drawn quickly straight away
+  const kick = [[100, 100], [100, 130], [100, 160], [110, 130], [120, 100], [130, 70], [136, 40]];
+  assert.equal(readChargeStroke(at(kick, 0, 0.03)).key, 'kickflip');
+  // Drag forward to push, rest, then the kickflip
+  const drag = at([[0, 100], [40, 100], [80, 100], [100, 100]], 0, 0.05);
+  const rest = [{ x: 100, y: 100, t: 0.6 }];
+  assert.equal(readChargeStroke([...drag, ...rest, ...at(kick, 0.62, 0.03)]).key, 'kickflip');
+  // Drag forward, rest, let go: a plain ollie
+  assert.equal(readChargeStroke([...drag, ...rest, { x: 101, y: 100, t: 0.9 }]).key, 'tap');
+  // A slow drag back all the way to the lift: still a plain ollie, not a BS 360
+  const slow = at(Array.from({ length: 20 }, (_, i) => [200 - i * 6, 100]), 0, 0.06);
+  assert.equal(readChargeStroke(slow).key, 'tap');
+  // A quick flick forward is still an FS 360
+  assert.equal(readChargeStroke(at([[0, 100], [40, 100], [80, 100], [120, 100]], 0, 0.03)).key, 'fs360');
+});
