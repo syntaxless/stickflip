@@ -472,18 +472,44 @@ function frame(now) {
   });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // Letterbox: sky colour above the ground line, ground colour below it.
-  const groundY = Math.round((view.oy + (WORLD.GROUND / (WORLD.W / RES.W)) * view.scale) * view.dpr);
-  ctx.fillStyle = cssColor(PAL.sky);
-  ctx.fillRect(0, 0, canvas.width, groundY);
-  ctx.fillStyle = cssColor(PAL.ground);
-  ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-  ctx.fillStyle = cssColor(PAL.edge); // the ground's outline carries on past the game's edges
-  ctx.fillRect(0, groundY, canvas.width, Math.max(1, Math.round(view.scale * view.dpr)));
+  drawLetterbox();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
   if (TESTING) drawStrokeDebug();
   requestAnimationFrame(frame);
+}
+
+// The bars around the game (a screen wider or taller than 16:9) carry the
+// scene on: at each side the ground continues at the height it has at that
+// edge of the screen (sky all the way down over a gap), and below the game
+// each column carries on as it ends.
+function drawLetterbox() {
+  const k = view.scale * view.dpr; // device px per game pixel
+  const ox = Math.round(view.ox * view.dpr);
+  const oy = Math.round(view.oy * view.dpr);
+  const gw = Math.round(RES.W * k);
+  const gh = Math.round(RES.H * k);
+  ctx.fillStyle = cssColor(PAL.sky);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const cam = renderer.cam || { x: 0, y: 0 };
+  const u = WORLD.W / RES.W; // world units per game pixel
+  const side = (px, x0, w) => {
+    if (w <= 0) return;
+    const top = Math.round(game.groundAt(px * u + u / 2).y / u) - cam.y; // in framebuffer pixels
+    if (top >= RES.H) return; // a gap at the edge: sky all the way down
+    const y = oy + Math.round(top * k);
+    ctx.fillStyle = cssColor(PAL.ground);
+    ctx.fillRect(x0, y, w, canvas.height - y);
+    ctx.fillStyle = cssColor(PAL.edge);
+    ctx.fillRect(x0, y, w, Math.max(1, Math.round(k)));
+  };
+  side(cam.x, 0, ox);
+  side(cam.x + RES.W - 1, ox + gw, canvas.width - ox - gw);
+  // Below the game: stretch its bottom row (ground, or sky over a gap) down.
+  if (canvas.height > oy + gh) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(low, 0, RES.H - 1, RES.W, 1, ox, oy + gh, gw, canvas.height - oy - gh);
+  }
 }
 
 resize();

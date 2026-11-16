@@ -84,6 +84,7 @@ export class Renderer {
     g.clear(sky);
     // Wide levels scroll: the camera follows the skater (and rises with big airs).
     const cam = this.camera(game);
+    this.cam = cam; // main.js extends the ground past the game's edges from here
     g.ox = -cam.x;
     g.oy = -cam.y;
     this.drawBackground(game, cam);
