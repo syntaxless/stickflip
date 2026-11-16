@@ -95,7 +95,7 @@ export class Game {
       face: 1, // the way the skater faces: still right when riding back out fakie
       slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
-      qpAir: null, // { qp, t } while in the air above a quarter pipe
+      qpAir: null, // { qp, t, dur, v } while in the air above a quarter pipe
       charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
@@ -376,8 +376,8 @@ export class Game {
   // for tricks. Then ride back down and out to the left, fakie.
   enterRamp(qp) {
     const s = this.sk;
-    // A quarter pipe speeds the rider up (QP_SPEED): faster up the curve, a
-    // higher air in the same hang time, and a faster ride out afterwards.
+    // A quarter pipe speeds the rider up (QP_SPEED): faster up the curve and
+    // a faster ride out afterwards. (The air has its own QP_AIR_SPEED.)
     this.speed = this.baseSpeed * PHYS.QP_SPEED;
     s.mode = 'ramp';
     s.slope = 0;
@@ -398,11 +398,12 @@ export class Game {
       // out over the coping, straight up
       s.ramp = null;
       s.mode = 'air';
-      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME };
+      // the air's speed is its own (QP_AIR_SPEED), so its height stays put
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME, v: this.baseSpeed * PHYS.QP_AIR_SPEED };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
-      s.vy = -this.speed;
+      s.vy = -s.qpAir.v;
       s.poppedAt = s.x;
       this.emit('pop');
     } else if (r.dir < 0 && r.th <= 0) {
@@ -434,7 +435,7 @@ export class Game {
     const s = this.sk;
     const prevY = s.y;
     const prevX = s.x;
-    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -this.speed : this.speed; // steady up, steady down
+    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -s.qpAir.v : s.qpAir.v; // steady up, steady down
     else s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;

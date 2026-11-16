@@ -126,7 +126,7 @@ in `src/config.js`.
    bails.
    Stars: finish, 150, 300.
 6. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
-   ride up the quarter pipe (it speeds you up by a quarter, `QP_SPEED`, for
+   ride up the quarter pipe (it speeds you up by 35%, `QP_SPEED`, for
    the rest of the run, and keeps that pace across the screen up the curve) and go straight up out of it and straight back down, at
    riding speed and without turning: over a second of hang time for tricks
    (FS AIR, plus any flip you finish before you drop back in). Then ride back out fakie to the left, ollieing or grinding the rail
