@@ -68,8 +68,7 @@ export class Renderer {
   }
 
   popup(text, x, y, color) {
-    const half = (text.length * 6 * S) / 2 + 6;
-    this.popups.push({ text, x: Math.max(half, Math.min(WORLD.W - half, x)), y, color, life: 1.1 });
+    this.popups.push({ text, x, y, color, life: 1.1 }); // kept on screen when drawn
   }
 
   // ----------------------------------------------------------- drawing
@@ -81,12 +80,18 @@ export class Renderer {
     this.step(game, dt);
 
     g.clear(sky);
-    this.drawBackground(game);
+    // Wide levels scroll: the camera follows the skater (and rises with big airs).
+    const cam = this.camera(game);
+    g.ox = -cam.x;
+    g.oy = -cam.y;
+    this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
     this.drawSkater(game);
     this.drawParticles();
+    g.ox = 0;
+    g.oy = 0;
     const inset = Math.ceil(opts.inset || 0);
-    this.drawPopups(inset);
+    this.drawPopups(inset, cam);
     this.drawHud(game, opts, inset);
     this.drawOverlay(game, opts);
     g.flush();
@@ -109,15 +114,27 @@ export class Renderer {
     this.popups = this.popups.filter((p) => p.life > 0);
   }
 
-  drawBackground(game) {
+  // Camera position in pixels. Fixed-screen levels never move it.
+  camera(game) {
+    if (game.width <= WORLD.W) return { x: 0, y: 0 };
+    const s = game.sk;
+    const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
+    const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
+    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
+    const y = Math.min(0, fy - 200);
+    return { x: Math.round(x / S), y: Math.round(y / S) };
+  }
+
+  drawBackground(game, cam = { x: 0, y: 0 }) {
     const g = this.g;
     const G = P(WORLD.GROUND);
 
-    // ground: solid black, column by column so gaps, platforms and stairs
+    // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
-    for (let x = 0; x < RES.W; x++) {
+    const bottom = RES.H + cam.y;
+    for (let x = cam.x; x < cam.x + RES.W; x++) {
       const top = P(game.groundAt(x * S + S / 2).y);
-      if (top < RES.H) g.fill(x, top, 1, RES.H - top, ink);
+      if (top < bottom) g.fill(x, top, 1, bottom - top, ink);
     }
 
     // take-off mark (tutorial levels)
@@ -150,20 +167,30 @@ export class Renderer {
     if (game.phase === 'ready') target = 'idle';
     else if (s.mode === 'grind') target = 'grind';
     else if (s.mode === 'air') target = s.flip ? 'flip' : s.primed ? 'prime' : 'air';
+    else if (s.mode === 'ramp') target = 'crouch';
     else if (this.squash > 0) target = 'crouch';
     this.pose.update(target, dt);
 
-    // board tilts with the arc in the air, and with the rail on a sloped grind
-    let pitch = s.mode === 'air' ? boardPitch(s.vy) : 0;
+    // The board follows the ground (banks), tilts with the arc in the air,
+    // and with the rail on a sloped grind. Riding left, the skater is mirrored.
+    let face = s.dir;
+    let pitch = s.mode === 'air' ? boardPitch(s.vy) * s.dir : s.mode === 'roll' ? Math.atan(s.slope) : 0;
     if (s.mode === 'grind') {
       const r = s.grind.surface;
       if (r.y1 !== undefined) pitch = Math.atan2(r.y2 - r.y1, r.x2 - r.x1);
-      pitch += s.grind.type.pitch; // 5-0 tips the nose up, nose grind tips it down
+      pitch += s.grind.type.pitch * s.dir; // 5-0 tips the nose up, nose grind tips it down
+    } else if (s.mode === 'ramp') {
+      pitch = -s.ramp.th; // standing on the curve
+    } else if (s.qpAir) {
+      // Out of the quarter pipe: turn from facing up the wall to facing down it.
+      const p = Math.min(1, s.qpAir.t / ((2 * PHYS.QP_V) / PHYS.GRAVITY));
+      face = Math.cos(p * Math.PI);
+      pitch = (-Math.PI / 2) * Math.abs(face);
     }
     const base = makeTransform(s.x, s.y, pitch);
     // Side view, so turning around the vertical axis is drawn by squashing x:
     // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1.
-    const squashX = (tf, sx) => (p) => tf({ x: p.x * sx, y: p.y });
+    const squashX = (tf, sx) => (p) => tf({ x: p.x * sx * face, y: p.y });
     let spin = 0; // board roll around its long axis
     let lift = 0;
     let boardSx = 1;
@@ -197,13 +224,13 @@ export class Renderer {
     }
   }
 
-  drawPopups(inset = 0) {
+  drawPopups(inset = 0, cam = { x: 0, y: 0 }) {
     for (const p of this.popups) {
       if (p.life < 0.3 && Math.floor(p.life * 20) % 2) continue; // blink out
       // keep the text inside the visible part of the screen
       const half = this.g.textWidth(p.text) / 2 + 2;
-      const x = Math.max(inset + half, Math.min(RES.W - inset - half, P(p.x)));
-      this.g.text(p.text, x, P(p.y), p.color, 1, 'center');
+      const x = Math.max(inset + half, Math.min(RES.W - inset - half, P(p.x) - cam.x));
+      this.g.text(p.text, x, Math.max(36, P(p.y) - cam.y), p.color, 1, 'center');
     }
   }
 
@@ -212,7 +239,7 @@ export class Renderer {
     const g = this.g;
     const L = 4 + inset;
     const R = RES.W - 4 - inset;
-    g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, L, 4, red);
+    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}: ${game.level.name}`, L, 4, red);
     g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
     g.text(`HI ${pad(game.best || 0)}`, R, 15, red, 1, 'right');
     if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 26, red, 1, 'right');
@@ -280,7 +307,7 @@ export class Renderer {
     g.text(tip, cx, y + 64, red, 1, 'center');
 
     this.button('retry', 'RIDE AGAIN', x + 12, y + 82, 92, true);
-    this.button('next', game.hasNext ? 'NEXT LEVEL' : 'FINISH RUN', x + w - 104, y + 82, 92, true);
+    this.button('next', game.nextLabel || (game.hasNext ? 'NEXT LEVEL' : 'FINISH RUN'), x + w - 104, y + 82, 92, true);
   }
 
   button(id, label, x, y, w, enabled) {

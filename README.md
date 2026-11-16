@@ -81,9 +81,25 @@ in `src/config.js`.
 3. **Five Stair**: start on a platform with five stairs down and a handrail.
    Ollie or flip the whole set (land on a step and you bail), or grind the
    handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
+4. **Bank to Bank**: ride up a bank and ollie off its lip, over a gap, onto the
+   bank going down the other side. Rolling up a bank adds to your pop; roll off
+   the lip without an ollie and you drop in. Stars: finish, 200, 450.
+5. **Euro Gap**: a bank up to a gap with a two-stair rising on the far side.
+   Ollie off the bank up onto the top: the lower step and the risers are bails.
+   Stars: finish, 150, 300.
+6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
+   ride up the quarter pipe and go straight up out of it (FS AIR, plus any flip
+   you finish before you drop back in), then ollie or grind the rail again on
+   the way back out to the left. Stars: finish, 700, 1500.
+
+**Secret level: Mega Ramp.** Three screens wide and side-scrolling: drop in
+from a high deck, ollie off the kicker and fly the big gap onto the landing
+ramp. It's played after level 6 from your third full run onwards (finished runs
+are counted on the device), and its score counts toward the run total.
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
-  came up short, landed on the stairs, or rolled off an edge.
+  came up short, landed on the stairs or a step, rolled off an edge, or hit
+  the quarter pipe's wall.
 
 Tricks chain into a combo until you land on the ground, and the combo is
 multiplied by the number of tricks.
@@ -153,11 +169,14 @@ Write a builder in `src/obstacles/` that returns:
   `passable` ones (beside the line, like a handrail) are ignored unless you're
   locked into a grind, and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `ground` (optional): segments `{ x1, x2, y, landable, bail }` that replace the
-  flat ground there: a gap is a segment far below the screen, stairs are a
-  raised platform plus non-landable steps.
+* `ground` (optional): segments `{ x1, x2, y, landable, bail, wall }` that
+  replace the flat ground there: a gap is a segment far below the screen,
+  stairs are a raised platform plus non-landable steps. A segment can slope
+  (`y1`/`y2` instead of `y`: a bank) or be a quarter pipe curve
+  (`qp: { cx, cy, R }`). `bail` names the bail for landing on a non-landable
+  segment, `wall` the one for flying into its side.
 * `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
   pixels). The ground is drawn for you. `fx.time` is the clock. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
 
-The engine handles everything else. Curved ramps (kickers, quarter pipes)
-would need small engine additions.
+The engine handles everything else. A level can also set `width` (wider than
+960 scrolls, with the camera following the skater) and `speed` (rolling speed).
