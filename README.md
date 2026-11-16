@@ -36,7 +36,8 @@ One input, **tap**, means whatever makes sense at that moment:
 
 **Hold for a higher ollie.** On the ground the ollie pops when you lift your
 finger (or let go of Space). Hold it and the skater crouches lower and lower,
-then pops up to about 1.8x as high after a 0.7 s hold. A quick tap is a normal
+then pops up to about 1.25x as high after a 0.7 s hold (still not enough
+air for a backflip on flat ground). A quick tap is a normal
 ollie. Tuning: `CHARGE_*` in `src/config.js`.
 
 **Draw a shape in the air** for other tricks. Every shape starts by pulling
@@ -125,10 +126,10 @@ in `src/config.js`.
    bails.
    Stars: finish, 150, 300.
 6. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
-   ride up the quarter pipe and go straight up out of it and straight back
-   down, at riding speed the whole way and without turning: over a second of
-   hang time for tricks (FS AIR, plus any flip you finish before you drop back
-   in). Then ride back out fakie to the left, ollieing or grinding the rail
+   ride up the quarter pipe at full riding speed, pop straight up out of it
+   and fall straight back down under normal gravity, without turning (the
+   view rises to follow): over a second of hang time for tricks (FS AIR,
+   plus any flip you finish before you drop back in). Then ride back out fakie to the left, ollieing or grinding the rail
    again on the way. Stars: finish, 700, 1500.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop

@@ -116,14 +116,15 @@ export class Renderer {
     if (game.phase !== 'playing') this.popups = { bank: null };
   }
 
-  // Camera position in pixels. Fixed-screen levels never move it.
+  // Camera position in pixels. Fixed-screen levels never scroll sideways, but
+  // every level rises with a big air (a quarter pipe's) to keep the rider in view.
   camera(game) {
-    if (game.width <= WORLD.W) return { x: 0, y: 0 };
     const s = game.sk;
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
-    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
-    const y = Math.min(0, fy - 330);
+    const x = game.width <= WORLD.W ? 0 : Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
+    // fixed screens only rise once the rider's head would leave the top
+    const y = Math.min(0, fy - (game.width <= WORLD.W ? 140 : 330));
     return { x: Math.round(x / S), y: Math.round(y / S) };
   }
 
