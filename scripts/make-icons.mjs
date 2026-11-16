@@ -103,41 +103,21 @@ save('icon-192.png', png(icon(96, 2), 2));
 save('icon-512.png', png(icon(128, 3), 4));
 save('icon-maskable-512.png', png(icon(128, 3), 4));
 
-// Share preview, 1200 x 630: a 240 x 126 scene scaled by 5. Level 6 in
-// miniature: a long rail, then the rider airing straight up out of the
-// quarter pipe.
+// Share preview, 1200 x 630: a 240 x 126 scene scaled by 5. The giant
+// STICKFLIP wordmark on plain navy, with the rider mid-kickflip below it.
 {
   const W = 240;
   const H = 126;
   const g = new Pix(fakeCtx, W, H);
   g.clear(PAL.sky);
-  const ground = 104;
-  g.fill(0, ground, W, H - ground, PAL.ink);
-  // the long rail
-  const [x1, x2, top] = [26, 132, ground - 18];
-  for (const px of [x1 + 7, x2 - 7]) {
-    g.line(px, top + 2, px, ground - 1, PAL.ink);
-    g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);
-  }
-  g.line(x1, top, x2, top, PAL.ink);
-  g.line(x1, top + 1, x2, top + 1, PAL.ink);
-  // the quarter pipe: a curve rising to a vertical wall, then the deck
-  const R = 26;
-  const qx = W - R - 10; // where the curve starts at the bottom
-  const cy = ground - R; // height of the coping
-  for (let x = qx; x < W; x++) {
-    const d = Math.min(R, x - qx);
-    const y = Math.round(cy + Math.sqrt(R * R - d * d)); // concave, like the game's
-    g.fill(x, y, 1, ground - y + 1, PAL.ink);
-  }
-  // the rider up out of it above the coping, mid-flip
-  rider(g, qx + R - 4, cy - 6, 1 / 3, -0.15);
-  // title to the left of centre, clear of the rider
-  const tx = 100;
-  g.text('STICKFLIP', tx + 1, 13, PAL.ink, 3, 'center');
-  g.text('STICKFLIP', tx, 12, PAL.red, 3, 'center');
-  g.text('OLLIE. GRIND. FLIP. AIR.', tx, 40, PAL.red, 1, 'center');
-  g.text('PLAY IN YOUR BROWSER', W / 2, 113, PAL.red, 1, 'center');
+  g.text('STICKFLIP', W / 2 + 1, 19, PAL.ink, 4, 'center');
+  g.text('STICKFLIP', W / 2, 18, PAL.red, 4, 'center');
+  // the rider, bigger than in the game, centred along the bottom
+  const s = 0.5; // pixels per world unit
+  const [fx, fy] = [W / 2, H - 14];
+  drawFigure(g, makeTransform(fx / s, fy / s, 0, s), POSES.flip);
+  // the board below the feet, nose tipped up and part way through its flip
+  drawBoard(g, makeTransform(fx / s, fy / s, -0.3, s), 0.5, 0);
   save('og-image.png', png(g, 5));
 }
 
