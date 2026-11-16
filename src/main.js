@@ -5,6 +5,7 @@ import { Renderer } from './render/renderer.js';
 import { Pix, RES } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
+import { watchForUpdates } from './update.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -198,3 +199,4 @@ function frame(now) {
 resize();
 loadLevel(levelIndex);
 requestAnimationFrame(frame);
+watchForUpdates(() => game.phase === 'playing');
