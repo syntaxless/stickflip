@@ -18,7 +18,9 @@ export async function checkForUpdate() {
     // Already tried this version once and still got the old code: don't loop.
     if (new URLSearchParams(location.search).get('v') === latest) return;
     // A new URL can't be served from the old cached page.
-    location.replace(`${location.pathname}?v=${latest}`);
+    const params = new URLSearchParams(location.search); // keep ?level= etc.
+    params.set('v', latest);
+    location.replace(`${location.pathname}?${params}`);
   } catch {
     // Offline or blocked: keep playing the version we have.
   }

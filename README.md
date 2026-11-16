@@ -121,6 +121,14 @@ address, 30 overall). If the shared table can't be reached, the game falls back
 to the on-device table, and scores are always kept on the device too. Local
 copies (localhost) only use the device table.
 
+## Testing a level
+
+On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to jump
+straight to level N (1-6), or `?level=secret` for the secret level, e.g.
+`https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
+Test play keeps its own saves and on-device high scores, so it never touches
+your real progress or the shared table. It does nothing on the live site.
+
 ## Design choices
 
 * **DOS look.** The game draws into a 320×180 framebuffer with a 3-colour
