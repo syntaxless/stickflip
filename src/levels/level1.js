@@ -1,12 +1,13 @@
-import { rail } from '../obstacles/index.js';
+import { gap } from '../obstacles/index.js';
 
-// Level 1: one low, long rail. It's too long to ollie over, so the only way
-// past is to pop, tap again over the rail to lock a 50-50 grind, and ride it out.
+// Level 1: a gap in the ground. Ollie just before the edge to clear it; go
+// too early and you come up short, too late and you roll in. A trick in the
+// air is worth stars, but it has to finish before you land.
 export default {
-  id: 'first-rail',
-  name: 'First Rail',
-  hint: 'TAP: OLLIE.  TAP JUST BEFORE THE RAIL: GRIND.',
-  obstacles: [rail({ x: 430, length: 260, height: 64 })],
+  id: 'first-gap',
+  name: 'First Gap',
+  hint: 'TAP: OLLIE THE GAP.  TAP AGAIN: KICKFLIP.',
+  obstacles: [gap({ x: 430, width: 130 })],
   // Score needed for 1, 2 and 3 stars. Star 1 just means "made it".
-  stars: [0, 700, 1400],
+  stars: [0, 150, 300],
 };

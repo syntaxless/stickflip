@@ -21,8 +21,17 @@ export const PHYS = Object.freeze({
 });
 
 export const SCORE = Object.freeze({
-  GRIND_BASE: 100,
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
+});
+
+// Grinds. A timed tap locks a 50-50. Holding the finger down as you reach the
+// rail also locks one, and dragging while holding picks the grind: forward
+// (right) puts the weight on the nose, back (left) on the back truck.
+//   pitch: board tilt while grinding (radians, + = nose down)
+export const GRINDS = Object.freeze({
+  '50-50': { name: '50-50 GRIND', base: 100, pitch: 0 },
+  '5-0': { name: '5-0 GRIND', base: 150, pitch: -0.22 },
+  nose: { name: 'NOSE GRIND', base: 200, pitch: 0.22 },
 });
 
 // Air tricks. The key is the input that triggers it: a tap, a one-direction
