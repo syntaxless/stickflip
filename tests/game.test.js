@@ -368,10 +368,10 @@ test('quarter pipe: the air goes up and comes down at a steady riding speed', ()
   assert.equal(game.sk.vx, 0);
 });
 test('secret mega ramp: ollie the kicker over the rail, or grind it, then air the quarter', () => {
-  const clear = playActs(SECRET, [[0.85, 'tap']]);
+  const clear = playActs(SECRET, [[1.1, 'tap']]);
   assert.equal(clear.game.phase, 'complete', `bailed: ${clear.game.bailReason}`);
   assert.ok(clear.seen.has('FS AIR'));
-  const grind = playActs(SECRET, [[1.2, 'tap']]);
+  const grind = playActs(SECRET, [[1.35, 'tap']]);
   assert.equal(grind.game.phase, 'complete', `bailed: ${grind.game.bailReason}`);
   assert.ok(grind.seen.has('50-50 GRIND'));
   assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
@@ -381,7 +381,7 @@ test('secret mega ramp: the ollie clears the whole rainbow rail into the bank, t
   const rail = SECRET.obstacles.find((o) => o.type === 'rail').surfaces[0];
   const bank = SECRET.obstacles.flatMap((o) => o.ground || []).find((g) => g.x1 === rail.x2 && g.y2 > g.y1);
   assert.ok(bank, 'the landing bank starts at the end of the rail');
-  for (const t of [0.78, 0.85, 0.9]) {
+  for (const t of [1.05, 1.1, 1.15]) {
     const g = new Game(SECRET);
     g.tap();
     let landX = null;
@@ -396,7 +396,7 @@ test('secret mega ramp: the ollie clears the whole rainbow rail into the bank, t
   g.tap();
   const ys = [];
   for (let s = 0; s < 3; s += STEP) {
-    if (Math.abs(s - 1.2) < STEP / 2) g.tap();
+    if (Math.abs(s - 1.35) < STEP / 2) g.tap();
     g.update(STEP);
     if (g.sk.mode === 'grind') ys.push([g.sk.x, g.sk.y]);
   }
