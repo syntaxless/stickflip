@@ -5,15 +5,21 @@
 -- The game only ever uses the public anon key. With row level security on,
 -- that key can read the table and add rows, nothing else: no updates, no
 -- deletes, no reading the hidden ip_hash column. Every new row is checked
--- (1-4 letters A-Z or spaces, a score from 1 to 100000) and rate limited.
+-- (1-6 letters A-Z or spaces, a score from 1 to 100000) and rate limited.
 
 create table if not exists public.scores (
   id bigint generated always as identity primary key,
-  initials text not null check (initials ~ '^[A-Z ]{1,4}$' and btrim(initials) <> ''),
+  initials text not null check (initials ~ '^[A-Z ]{1,6}$' and btrim(initials) <> ''),
   score integer not null check (score between 1 and 100000),
   created_at timestamptz not null default now(),
   ip_hash text
 );
+
+-- Names went from 4 letters to 6 (2026-11-16): widen the check on a table
+-- made before then.
+alter table public.scores drop constraint if exists scores_initials_check;
+alter table public.scores add constraint scores_initials_check
+  check (initials ~ '^[A-Z ]{1,6}$' and btrim(initials) <> '');
 
 create index if not exists scores_top on public.scores (score desc, created_at);
 create index if not exists scores_recent on public.scores (created_at desc);

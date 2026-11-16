@@ -18,17 +18,8 @@ import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
 // Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
 // anywhere else acts like a tap, so it can never get you stuck.
 
-export const BAIL_MESSAGES = {
-  slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
-  clipped: 'CLIPPED THE RAIL. TAP JUST BEFORE IT!',
-  flip: 'LANDED MID-TRICK. START IT EARLIER!',
-  gap: 'CAME UP SHORT. OLLIE CLOSER TO THE EDGE!',
-  stairs: 'LANDED ON THE STAIRS. OLLIE CLOSER TO THE EDGE!',
-  rolled: 'ROLLED OFF THE EDGE. OLLIE BEFORE IT!',
-  step: 'LANDED ON THE STEP. OLLIE OFF THE LIP!',
-  stairsUp: 'HIT THE STAIRS. OLLIE UP THEM OFF THE BANK!',
-  wall: 'HIT THE WALL. STAY IN THE RAMP!',
-};
+// Bails keep their reason (game.bailReason) but show no tip: players find the
+// controls and timing themselves.
 
 // Anything this far below the ground line has fallen into a gap.
 const PIT_DEPTH = 40;
@@ -62,8 +53,12 @@ export const slopeOf = (surf, x) => {
 };
 
 export class Game {
-  constructor(level) {
+  // `entry` ({ speed }) rolls the rider straight in from the left edge, still
+  // moving: the next screen of a continuous run. Without it the rider waits at
+  // the start for a tap.
+  constructor(level, entry = null) {
     this.level = level;
+    this.entry = entry;
     this.surfaces = level.obstacles.flatMap((o) => o.surfaces);
     this.solids = level.obstacles.flatMap((o) => o.solids);
     // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
@@ -76,7 +71,8 @@ export class Game {
   }
 
   reset() {
-    this.speed = this.baseSpeed; // riding speed (a quarter pipe raises it, see enterRamp)
+    this.cruise = this.baseSpeed; // the speed the rider drifts back to (a quarter pipe raises it, see enterRamp)
+    this.speed = this.baseSpeed; // riding speed right now (holding speeds up, dragging back brakes)
     this.phase = 'ready';
     this.phaseTime = 0;
     this.time = 0;
@@ -105,6 +101,41 @@ export class Game {
       grind: null, // { surface, dist }
       bail: null, // ragdoll state after a bail
     };
+    const entry = this.entry;
+    this.entry = null; // a retry after a bail starts from a standstill
+    if (entry) {
+      const s = this.sk;
+      s.x = PHYS.ENTRY_X;
+      s.y = this.groundAt(s.x).y;
+      this.speed = this.clampSpeed(entry.speed || this.baseSpeed);
+      this.start();
+    }
+  }
+
+  clampSpeed(v) {
+    return Math.max(this.cruise * PHYS.SPEED_MIN, Math.min(this.cruise * PHYS.SPEED_MAX, v));
+  }
+
+  // Holding speeds up (crouched push), dragging forward speeds up more,
+  // dragging back brakes. Not holding drifts back to cruising speed.
+  updateSpeed(dt) {
+    const s = this.sk;
+    if (s.charge) {
+      const d = this.hold?.dir;
+      const fwd = d && (d === 'right') === (s.dir > 0);
+      const accel = !d ? PHYS.HOLD_ACCEL : fwd ? PHYS.PUSH_ACCEL : -PHYS.BRAKE;
+      this.speed = this.clampSpeed(this.speed + accel * dt);
+    } else {
+      const diff = this.cruise - this.speed;
+      this.speed += Math.sign(diff) * Math.min(Math.abs(diff), PHYS.SPEED_RETURN * dt);
+    }
+    s.vx = s.dir * this.speed;
+  }
+
+  // 0 at cruising speed, up to 1 at top speed, down to -1 at the slowest.
+  speedLevel() {
+    const r = this.speed / this.cruise;
+    return r >= 1 ? (r - 1) / (PHYS.SPEED_MAX - 1) : -(1 - r) / (1 - PHYS.SPEED_MIN);
   }
 
   setPhase(phase) {
@@ -173,6 +204,10 @@ export class Game {
   ollie(power) {
     const s = this.sk;
     s.charge = null;
+    // Faster pops a little higher, slower a little lower, but never past a full charge's cap.
+    const v = this.speedLevel();
+    const bySpeed = 1 + (v > 0 ? v * PHYS.SPEED_POP_UP : v * PHYS.SPEED_POP_DOWN);
+    power = Math.min(1 + PHYS.CHARGE_BOOST, power * bySpeed);
     this.takeOff((PHYS.OLLIE_V + Math.max(0, -s.slope * s.vx)) * power);
   }
 
@@ -324,6 +359,7 @@ export class Game {
 
     if (s.mode === 'roll') {
       if (s.charge) s.charge.t += dt;
+      this.updateSpeed(dt);
       s.x += s.vx * dt;
       if (s.support && (s.x > s.support.x2 || s.x < s.support.x1)) {
         s.mode = 'air';
@@ -378,7 +414,8 @@ export class Game {
     const s = this.sk;
     // A quarter pipe speeds the rider up (QP_SPEED): faster up the curve and
     // a faster ride out afterwards. (The air has its own QP_AIR_SPEED.)
-    this.speed = this.baseSpeed * PHYS.QP_SPEED;
+    this.cruise = this.baseSpeed * PHYS.QP_SPEED;
+    this.speed = this.cruise;
     s.mode = 'ramp';
     s.slope = 0;
     const th = Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R)));

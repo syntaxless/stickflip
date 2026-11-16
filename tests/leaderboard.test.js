@@ -25,12 +25,12 @@ test('a score qualifies only if it beats the bottom of a full table', async () =
   assert.equal(await lb.submit('ZZZ', 50), -1);
 });
 
-test('submit returns the rank, ties go to the earlier score, initials are up to 4 capitals', async () => {
+test('submit returns the rank, ties go to the earlier score, initials are up to 6 capitals', async () => {
   const lb = localLeaderboard(memoryStore());
   await lb.submit('abc', 300);
-  assert.equal(await lb.submit('xyzwq', 300), 1);
+  assert.equal(await lb.submit('xyzwqrs', 300), 1);
   assert.equal(await lb.submit('top', 400), 0);
-  assert.deepEqual((await lb.top()).map((e) => e.initials), ['TOP', 'ABC', 'XYZW']);
+  assert.deepEqual((await lb.top()).map((e) => e.initials), ['TOP', 'ABC', 'XYZWQR']);
 });
 
 test('a run counts the latest clear of each level, plus the level in progress', () => {
@@ -94,8 +94,20 @@ test('fallback: scores are kept on the device even when the shared table works',
   assert.deepEqual((await local.top()).map((e) => e.score), [400]);
 });
 
-test('initials are cleaned to 1-4 letters', () => {
+test('initials are cleaned to 1-6 letters', () => {
   assert.equal(cleanInitials('a.b-c'), 'ABC');
   assert.equal(cleanInitials('   '), 'ANON');
-  assert.equal(cleanInitials('LONGNAME'), 'LONG');
+  assert.equal(cleanInitials('LONGNAME'), 'LONGNA');
+});
+
+test('a run with no bails earns the clean-run bonus; one bail loses it, and it survives a save', async () => {
+  const { CLEAN_RUN_BONUS } = await import('../src/run.js');
+  const run = new Run(3);
+  assert.equal(run.bonus(), CLEAN_RUN_BONUS);
+  const saved = new Run(3, JSON.parse(JSON.stringify(run)));
+  assert.equal(saved.bonus(), CLEAN_RUN_BONUS);
+  run.recordBail();
+  assert.equal(run.bonus(), 0);
+  assert.equal(new Run(3, JSON.parse(JSON.stringify(run))).bonus(), 0);
+  assert.equal(new Run(3, [100, null, null]).bonus(), 0, 'an old save (scores only) is not proof of a clean run');
 });

@@ -10,7 +10,6 @@ const LIP = G - 50;
 export default {
   id: 'bank-to-bank',
   name: 'Bank to Bank',
-  hint: 'OLLIE OFF THE LIP OF THE BANK. CLEAR THE GAP.',
   obstacles: [
     bank({ x: 250, run: 130, y1: G, y2: LIP }),
     gap({ x: 380, width: 160 }),

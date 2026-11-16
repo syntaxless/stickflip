@@ -6,7 +6,6 @@ import { stairs } from '../obstacles/index.js';
 export default {
   id: 'handrail-stairs',
   name: 'Five Stair',
-  hint: 'OLLIE THE STAIRS, OR TAP AT THE RAIL: GRIND.',
   obstacles: [stairs({ x: 400, steps: 5, run: 46, rise: 16 })],
   stars: [0, 600, 1100],
 };
