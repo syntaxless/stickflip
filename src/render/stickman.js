@@ -84,8 +84,21 @@ export function drawBoard(g, tf, spin = 0, lift = 0) {
   const thick = Math.abs(Math.sin(spin)) * 18;
   const y = -8 - lift;
   if (thick > 4) {
+    // Mid-flip the board shows a face: the grip tape (black inside a brown
+    // edge) on one half of the roll, the bottom (all brown, with the four
+    // wheels) on the other.
     const t = thick / 2;
+    const bottom = Math.sin(spin) > 0;
+    for (let o = -t; o <= t; o += 1.5) poly(g, tf, [pt(-26, y + o), pt(26, y + o)], bottom ? PAL.deck : PAL.ink);
     poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.deck);
+    if (bottom) {
+      for (const wx of [-16, 16]) {
+        for (const wo of [-t + 2, t - 2]) {
+          const w = tf(pt(wx, y + wo));
+          g.pset(w.x, w.y, PAL.wheel);
+        }
+      }
+    }
     return;
   }
   poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.deck);
