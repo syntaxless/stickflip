@@ -53,8 +53,8 @@ Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
 * A grind only locks if you tap in the last 0.2 s before touching the rail.
   Tap any earlier and you get a kickflip, which won't finish in time.
 * Input during a trick is ignored. One trick at a time, no mashing.
-* There's no take-off marker and no warning flash on the rail. It only turns red
-  once a grind is locked.
+* There's no take-off marker, and rails never light up: not as a warning, and
+  not when a grind is locked.
 * Any trick still turning when you land is a bail.
 
 **Hold to grind.** Keep your finger down as you reach a rail and it locks a
@@ -82,7 +82,6 @@ in `src/config.js`.
    Ollie or flip the whole set (land on a step and you bail), or grind the
    handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
 
-* A rail turns **red** once a grind is locked.
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
   came up short, landed on the stairs, or rolled off an edge.
 
@@ -148,8 +147,7 @@ Write a builder in `src/obstacles/` that returns:
   flat ground there: a gap is a segment far below the screen, stairs are a
   raised platform plus non-landable steps.
 * `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
-  pixels). The ground is drawn for you. `fx.hint` is `'ready'`, `'primed'` or
-  `null`. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
+  pixels). The ground is drawn for you. `fx.time` is the clock. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
 
 The engine handles everything else. Curved ramps (kickers, quarter pipes)
 would need small engine additions.

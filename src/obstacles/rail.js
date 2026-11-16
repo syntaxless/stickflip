@@ -11,7 +11,7 @@ import { PAL } from '../render/pixel.js';
 //             landable  -> the skater can land and roll on top (boxes, ledges)
 //             otherwise touching it from above is a bail
 //   solids:   rectangles { x, y, w, h } that cause a slam when hit from the side
-//   draw(g, fx): renders the obstacle into the pixel framebuffer. fx.hint is 'ready' | 'primed' | null
+//   draw(g, fx): renders the obstacle into the pixel framebuffer (fx.time is the clock)
 export function rail({ x, length, height }) {
   const top = WORLD.GROUND - height;
   const x2 = x + length;
@@ -21,12 +21,11 @@ export function rail({ x, length, height }) {
     solids: [{ x, y: top, w: length, h: height }],
 
     // g is the pixel framebuffer (see render/pixel.js); world units / 3 = pixels.
-    draw(g, fx = {}) {
+    draw(g) {
       const P = (v) => Math.round(v / 3);
       const [x1, x2p, y, ground] = [P(x), P(x2), P(top), P(WORLD.GROUND)];
-      // Turns red once a grind is locked in. No advance warning: timing is on you.
-      let bar = PAL.ink;
-      if (fx.hint === 'primed') bar = PAL.red;
+      // Always black: no highlight or warning, the timing is on you.
+      const bar = PAL.ink;
       for (const px of [P(x + 22), P(x2 - 22)]) {
         g.line(px, y + 2, px, ground - 1, PAL.ink);
         g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);

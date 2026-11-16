@@ -21,10 +21,10 @@ export function stairs({ x, steps = 5, run = 46, rise = 16, handrail = true, rai
     solids: [],
     ground,
     // The platform and steps are drawn as part of the ground; this adds the rail.
-    draw(g, fx = {}) {
+    draw(g) {
       if (!handrail) return;
       const P = (v) => Math.round(v / 3);
-      const bar = fx.hint === 'primed' ? PAL.red : PAL.ink;
+      const bar = PAL.ink; // never highlighted
       // posts down to the tread below each one
       for (const px of [x + run * 0.5, end - run * 0.5]) {
         const ry = rail.y1 + ((rail.y2 - rail.y1) * (px - x)) / (end - x);

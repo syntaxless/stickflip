@@ -81,8 +81,7 @@ export class Renderer {
 
     g.clear(sky);
     this.drawBackground(game);
-    const hint = game.grindHint();
-    for (const o of game.level.obstacles) o.draw(g, { hint, time: this.time });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
     this.drawSkater(game);
     this.drawParticles();
     const inset = Math.ceil(opts.inset || 0);
