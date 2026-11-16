@@ -273,6 +273,7 @@ export class Renderer {
 
     if (opts.screen?.type === 'entry') return this.drawEntry(opts.screen);
     if (opts.screen?.type === 'scores') return this.drawScores(opts.screen, opts.highScores || []);
+    if (opts.screen?.type === 'unlock') return this.drawUnlock(opts.screen);
 
     if (game.phase === 'ready') {
       // Arcade attract mode: on the first level, the title takes turns with the high scores.
@@ -301,6 +302,20 @@ export class Renderer {
       if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 84, red, 1, 'center');
     } else if (game.phase === 'complete' && game.phaseTime > 0.35) {
       this.drawComplete(game);
+    }
+  }
+
+  // The secret level's arrival: a blinking banner over the scene.
+  drawUnlock(screen) {
+    const g = this.g;
+    const cx = RES.W / 2;
+    const [x, y, w, h] = [20, 48, 280, 70];
+    g.fill(x, y, w, h, ink);
+    g.rect(x, y, w, h, red);
+    g.rect(x + 2, y + 2, w - 4, h - 4, red);
+    if (this.blink(4)) {
+      g.text('SECRET LEVEL', cx, y + 12, red, 3, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, red, 2, 'center');
     }
   }
 

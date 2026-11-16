@@ -2,7 +2,7 @@ import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
 import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
-import { Pix, RES, PAL } from './render/pixel.js';
+import { Pix, RES, PAL, setPalette, cssColor } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke, readStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
@@ -112,7 +112,23 @@ function cycleLetter(i, step) {
   screen.pos = i;
 }
 
+// Between level 6 and the secret level: a blinking banner in the secret
+// palette ("SECRET LEVEL UNLOCKED" the first time), then the level loads.
+const UNLOCK_TIME = 2.4;
+function unlockSecret() {
+  const first = !store.get('secretSeen', false);
+  store.set('secretSeen', true);
+  setPalette('secret');
+  screen = { type: 'unlock', first, t: 0 };
+}
+
 function screenPress(clientX, clientY) {
+  if (screen.type === 'unlock') {
+    if (screen.t < 0.8) return; // a beat to read it, then a tap skips ahead
+    screen = null;
+    loadLevel(SECRET_INDEX);
+    return;
+  }
   if (screen.type === 'scores') {
     // REPLAY (the whole screen counts, so it's easy to hit): back to level 1
     // with a fresh run total. finishRun() already cleared the run.
@@ -137,9 +153,11 @@ function loadLevel(i, autoStart = false) {
   const level = secret ? SECRET : LEVELS[i];
   game = new Game(level);
   game.levelNumber = i + 1;
-  if (secret) game.levelLabel = 'SECRET';
+  if (secret) game.levelLabel = 'BONUS';
+  setPalette(secret ? 'secret' : 'normal');
   if (TESTING) game.levelLabel = `TEST ${secret ? 'S' : i + 1}`;
   game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
+  if (i === LEVELS.length - 1 && game.hasNext) game.nextLabel = 'BONUS LEVEL';
   game.best = store.get(`best:${level.id}`, 0);
   renderer.reset();
   if (autoStart) game.tap();
@@ -195,7 +213,8 @@ function press(clientX, clientY) {
     const id = p ? renderer.hitButton(p.x, p.y) : 'next'; // keyboard: carry on
     if (id === 'retry') loadLevel(levelIndex, true);
     else if (id === 'next') {
-      if (game.hasNext) loadLevel(levelIndex + 1);
+      if (game.hasNext && levelIndex + 1 === SECRET_INDEX) unlockSecret();
+      else if (game.hasNext) loadLevel(levelIndex + 1);
       else finishRun();
     }
     return;
@@ -359,6 +378,10 @@ window.addEventListener('keydown', (e) => {
 
 // End-of-run screens: type initials (or use the arrows), Enter to confirm.
 function screenKey(e) {
+  if (screen.type === 'unlock') {
+    if (e.code === 'Space' || e.code === 'Enter') press();
+    return;
+  }
   if (screen.type === 'scores') {
     if (e.code === 'Space' || e.code === 'Enter') press();
     return;
@@ -416,6 +439,10 @@ function frame(now) {
   audio.play(events, game);
   renderer.consume(events);
   if (screen) screen.t += dt;
+  if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {
+    screen = null;
+    loadLevel(SECRET_INDEX);
+  }
   renderer.draw(game, dt, {
     portrait: view.portrait,
     inset: view.inset,
@@ -426,11 +453,11 @@ function frame(now) {
   });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // Letterbox: navy sky above the ground line, black ground below it.
+  // Letterbox: sky colour above the ground line, ground colour below it.
   const groundY = Math.round((view.oy + (WORLD.GROUND / (WORLD.W / RES.W)) * view.scale) * view.dpr);
-  ctx.fillStyle = '#000080';
+  ctx.fillStyle = cssColor(PAL.sky);
   ctx.fillRect(0, 0, canvas.width, groundY);
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = cssColor(PAL.ink);
   ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
