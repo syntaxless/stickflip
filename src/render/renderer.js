@@ -85,8 +85,9 @@ export class Renderer {
     for (const o of game.level.obstacles) o.draw(g, { hint, time: this.time });
     this.drawSkater(game);
     this.drawParticles();
-    this.drawPopups();
-    this.drawHud(game, opts);
+    const inset = Math.ceil(opts.inset || 0);
+    this.drawPopups(inset);
+    this.drawHud(game, opts, inset);
     this.drawOverlay(game);
     g.flush();
   }
@@ -186,20 +187,26 @@ export class Renderer {
     }
   }
 
-  drawPopups() {
+  drawPopups(inset = 0) {
     for (const p of this.popups) {
       if (p.life < 0.3 && Math.floor(p.life * 20) % 2) continue; // blink out
-      this.g.text(p.text, P(p.x), P(p.y), p.color, 1, 'center');
+      // keep the text inside the visible part of the screen
+      const half = this.g.textWidth(p.text) / 2 + 2;
+      const x = Math.max(inset + half, Math.min(RES.W - inset - half, P(p.x)));
+      this.g.text(p.text, x, P(p.y), p.color, 1, 'center');
     }
   }
 
-  drawHud(game, opts) {
+  // `inset` is how many pixels at each side are cropped off (zoomed portrait view).
+  drawHud(game, opts, inset = 0) {
     const g = this.g;
-    g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, 4, 4, red);
-    g.text(`SCORE ${pad(game.score)}`, RES.W - 4, 4, red, 1, 'right');
-    g.text(`HI ${pad(game.best || 0)}`, RES.W - 4, 13, red, 1, 'right');
+    const L = 4 + inset;
+    const R = RES.W - 4 - inset;
+    g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, L, 4, red);
+    g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
+    g.text(`HI ${pad(game.best || 0)}`, R, 13, red, 1, 'right');
     if (game.combo.length && game.phase === 'playing') {
-      g.text(game.combo.map((t) => t.name).join(' + '), 4, 13, red);
+      g.text(game.combo.map((t) => t.name).join(' + '), L, 13, red);
     }
     if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 22, red, 1, 'center');
   }
