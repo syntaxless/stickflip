@@ -1,6 +1,8 @@
 // Turns one touch stroke (a list of {x, y} points in screen pixels) into
-// 'tap', 'circle' (a counter-clockwise loop as seen on screen: the backflip),
-// a trick key from SHAPES below, or null for a stroke that means nothing.
+// 'tap', 'circle' (a counter-clockwise loop as seen on screen: the backflip)
+// or a trick key from SHAPES below. Every stroke is some trick: the closest
+// shape wins, and the plain shapes (straight up or down, down-and-up) map to
+// the simple flips, so a rushed stroke still does something.
 // DOM-free so it can be unit tested.
 //
 // Trick shapes are matched against templates, so a rough, quick version of
@@ -11,9 +13,9 @@
 export const TAP_RADIUS = 18; // px of wobble a tap may have
 const SAMPLE = 32; // points each stroke is resampled to
 
-// A loop has to go at least this far round (radians, about 290 degrees) to
+// A loop has to go at least this far round (radians, about 260 degrees) to
 // count as a circle, so a U-shaped shove-it (about 180) never does.
-export const CIRCLE_TURN = Math.PI * 1.6;
+export const CIRCLE_TURN = Math.PI * 1.45;
 
 const mirror = (pts) => pts.map(([x, y]) => [-x, y]);
 
@@ -48,7 +50,8 @@ export const SHAPES = Object.freeze({
   up: [[0, 0], [0, -1]], // straight up or down: no trick
   down: [[0, 0], [0, 1]],
 });
-const NO_TRICK = new Set(['ollie', 'up', 'down']);
+// Plain strokes that aren't chart shapes still do the nearest simple trick.
+const SIMPLE = { ollie: 'kickflip', down: 'heelflip', up: 'shove' };
 
 function pathLength(pts) {
   let d = 0;
@@ -112,7 +115,7 @@ function isLoop(points) {
   const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
   const radii = pts.map((p) => Math.hypot(p.x - cx, p.y - cy));
   const mean = radii.reduce((a, b) => a + b, 0) / radii.length;
-  if (!mean || Math.min(...radii) < mean * 0.45) return false; // passes through the middle
+  if (!mean || Math.min(...radii) < mean * 0.3) return false; // passes through the middle
   let sweep = 0;
   let prev = Math.atan2(pts[0].y - cy, pts[0].x - cx);
   for (const p of pts) {
@@ -123,7 +126,16 @@ function isLoop(points) {
     sweep += d;
     prev = h;
   }
-  return sweep <= -CIRCLE_TURN; // screen y points down: counter-clockwise is negative
+  // Counter-clockwise only (screen y points down, so that's negative): the
+  // clockwise loops are the FS shove-its.
+  if (sweep > -CIRCLE_TURN) return false;
+  if (sweep <= -Math.PI * 1.9) return true; // all the way round (or more): a circle
+  // Most of the way: it has to come back round near where it began (the
+  // 360 shove-it's wide arc sweeps nearly as far but ends across from its start).
+  const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  return Math.hypot(b.x - a.x, b.y - a.y) <= size * 0.6;
 }
 
 // The closest template and how far it is (0 = exact).
@@ -138,12 +150,18 @@ export function matchShape(points) {
   return { key: best, d: bestD };
 }
 
-export function classifyStroke(points) {
-  if (!points.length) return 'tap';
+// The full reading, for the debug overlay: what it was read as, the shape it
+// matched and how far off it was (0 = exact, about 0.15+ is a rough match).
+export function readStroke(points) {
+  if (!points.length) return { key: 'tap', shape: 'tap', d: 0 };
   const start = points[0];
   const maxDist = Math.max(...points.map((p) => Math.hypot(p.x - start.x, p.y - start.y)));
-  if (maxDist < TAP_RADIUS) return 'tap';
-  if (isLoop(points)) return 'circle';
-  const { key } = matchShape(points);
-  return NO_TRICK.has(key) ? null : key;
+  if (maxDist < TAP_RADIUS) return { key: 'tap', shape: 'tap', d: 0 };
+  if (isLoop(points)) return { key: 'circle', shape: 'circle', d: 0 };
+  const { key, d } = matchShape(points);
+  return { key: SIMPLE[key] || key, shape: key, d };
+}
+
+export function classifyStroke(points) {
+  return readStroke(points).key;
 }

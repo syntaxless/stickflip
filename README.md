@@ -65,7 +65,11 @@ rough version works on a phone.
 | straight left (backward)                             | BS 360 spin      | 200    |
 | a counter-clockwise circle                           | BACKFLIP         | 1000   |
 
-A straight swipe up or down, or down and back up, does nothing in the air.
+Every stroke does something: a straight swipe down is a heelflip, up is a
+pop shove-it, and down-and-back-up is a kickflip. The time your finger spends
+drawing counts toward the trick (up to 60% of it, `DRAW_CREDIT`), so drawing
+a shape doesn't eat the air time it needs. You can also start drawing while
+riding up the quarter pipe and lift once you're in the air.
 
 **Ollie straight into a trick:** on the ground, hold to charge, then draw the
 shape before you lift. The ollie pops as that trick, with the charged height.
@@ -165,6 +169,10 @@ straight to level N (1-6), or `?level=secret` for the secret level, e.g.
 `https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
 Test play keeps its own saves and on-device high scores, so it never touches
 your real progress or the shared table. It does nothing on the live site.
+
+In test mode each stroke is drawn on screen (cyan while the finger is down,
+yellow after) with what it was read as, the template shape it matched and how
+far off it was (0 is exact; around 0.15 or more is a rough match).
 
 ## Design choices
 

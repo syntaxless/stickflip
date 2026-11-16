@@ -238,14 +238,16 @@ export class Game {
     return (d === 'right') === (this.sk.dir > 0) ? 'nose' : '5-0'; // forward = the way you're riding
   }
 
-  // A swipe, read by gesture.js: a TRICKS key, or null for a stroke that
-  // means nothing in the air. Anywhere else a swipe is a tap.
-  swipe(key) {
+  // A swipe, read by gesture.js: a TRICKS key. Anywhere but the air a swipe
+  // is a tap. `drawn` is how long the finger took to draw it (seconds): the
+  // trick counts as already that far along (up to 60% of it), so the time
+  // spent drawing a shape doesn't eat into the air time it needs.
+  swipe(key, drawn = 0) {
     if (this.phase !== 'playing' || this.sk.mode !== 'air') return this.tap();
     if (!TRICKS[key]) return;
     const s = this.sk;
     if (s.flip || s.primed) return; // one thing at a time: input during a trick is ignored
-    this.startTrick(key);
+    this.startTrick(key, drawn);
   }
 
   airTap() {
@@ -259,8 +261,9 @@ export class Game {
     }
   }
 
-  startTrick(key) {
-    this.sk.flip = { t: 0, key, trick: TRICKS[key] };
+  startTrick(key, head = 0) {
+    const trick = TRICKS[key];
+    this.sk.flip = { t: Math.max(0, Math.min(head, trick.dur * PHYS.DRAW_CREDIT)), key, trick };
     this.emit('flip', { key });
   }
 
