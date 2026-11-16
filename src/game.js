@@ -94,7 +94,7 @@ export class Game {
       face: 1, // the way the skater faces: still right when riding back out fakie
       slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
-      qpAir: null, // { qp } while in the air above a quarter pipe
+      qpAir: null, // { qp, t } while in the air above a quarter pipe
       charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
@@ -369,10 +369,10 @@ export class Game {
     }
   }
 
-  // Quarter pipe. Ride up the curve at riding speed (no slowing down), pop
-  // straight up out of it at QP_POP_V and fall back under normal gravity, as
-  // in any other air, with no turning: plenty of hang time for tricks. Then
-  // ride back down and out to the left, fakie.
+  // Quarter pipe. Arcade rules: ride up the curve at riding pace, carry
+  // straight on up out of it at that same speed, then come straight back down
+  // at it (QP_AIR_TIME in all), with no turning in the air: lots of hang time
+  // for tricks. Then ride back down and out to the left, fakie.
   enterRamp(qp) {
     const s = this.sk;
     s.mode = 'ramp';
@@ -385,16 +385,20 @@ export class Game {
     const s = this.sk;
     const r = s.ramp;
     const { cx, cy, R } = r.qp;
-    r.th += (r.dir * this.speed * dt) / R;
+    // Keep the riding pace across the screen: the steeper the curve, the
+    // faster along it, so going up doesn't read as slowing down (capped near
+    // the top, where the curve turns vertical).
+    const pace = Math.min(PHYS.QP_RAMP_BOOST, 1 / Math.cos(r.th));
+    r.th += (r.dir * this.speed * pace * dt) / R;
     if (r.dir > 0 && r.th >= Math.PI / 2) {
       // out over the coping, straight up
       s.ramp = null;
       s.mode = 'air';
-      s.qpAir = { qp: r.qp };
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
-      s.vy = -PHYS.QP_POP_V;
+      s.vy = -this.speed;
       s.poppedAt = s.x;
       this.emit('pop');
     } else if (r.dir < 0 && r.th <= 0) {
@@ -426,7 +430,8 @@ export class Game {
     const s = this.sk;
     const prevY = s.y;
     const prevX = s.x;
-    s.vy += PHYS.GRAVITY * dt;
+    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -this.speed : this.speed; // steady up, steady down
+    else s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;
     this.stepTrick(dt);
@@ -434,6 +439,7 @@ export class Game {
     if (s.qpAir) {
       // Straight up and back down into the quarter pipe, turning around on the way.
       const { qp } = s.qpAir;
+      s.qpAir.t += dt;
       if (s.vy > 0 && s.y >= qp.cy) {
         if (s.flip) return this.bail('flip');
         s.qpAir = null;
