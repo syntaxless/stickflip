@@ -377,6 +377,37 @@ test('secret mega ramp: ollie the kicker over the rail, or grind it, then air th
   assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
 });
 
+test('secret mega ramp: the ollie clears the whole rainbow rail into the bank, the grind follows the curve', () => {
+  const rail = SECRET.obstacles.find((o) => o.type === 'rail').surfaces[0];
+  const bank = SECRET.obstacles.flatMap((o) => o.ground || []).find((g) => g.x1 === rail.x2 && g.y2 > g.y1);
+  assert.ok(bank, 'the landing bank starts at the end of the rail');
+  for (const t of [0.78, 0.85, 0.9]) {
+    const g = new Game(SECRET);
+    g.tap();
+    let landX = null;
+    for (let s = 0; s < 3 && landX === null; s += STEP) {
+      if (Math.abs(s - t) < STEP / 2) g.tap();
+      g.update(STEP);
+      for (const e of g.drainEvents()) if (e.type === 'land' && e.x > 600) landX = e.x;
+    }
+    assert.ok(landX > rail.x2 && landX < bank.x2, `ollie at ${t} lands at ${landX}`);
+  }
+  const g = new Game(SECRET);
+  g.tap();
+  const ys = [];
+  for (let s = 0; s < 3; s += STEP) {
+    if (Math.abs(s - 1.2) < STEP / 2) g.tap();
+    g.update(STEP);
+    if (g.sk.mode === 'grind') ys.push([g.sk.x, g.sk.y]);
+  }
+  assert.ok(ys.length > 10, 'grinded');
+  const mid = (rail.x1 + rail.x2) / 2;
+  const top = Math.min(...ys.map(([, y]) => y));
+  assert.ok(top < rail.y - rail.arc * 0.9, 'rides up over the hump');
+  const [peakX] = ys.find(([, y]) => y === top);
+  assert.ok(Math.abs(peakX - mid) < 40 || ys[0][0] > mid, 'highest in the middle');
+});
+
 test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (capped)', () => {
   const flat = { id: 'flat', obstacles: [], width: 4000 };
   const peak = (holdTime) => {

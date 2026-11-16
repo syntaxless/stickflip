@@ -40,14 +40,19 @@ export function surfaceY(surf, x) {
     const d = Math.max(0, Math.min(R, x - cx));
     return cy + Math.sqrt(R * R - d * d);
   }
-  if (surf.y1 === undefined) return surf.y;
   const t = Math.max(0, Math.min(1, (x - surf.x1) / (surf.x2 - surf.x1)));
+  if (surf.arc) return surf.y - surf.arc * 4 * t * (1 - t); // a rainbow rail: ends at y, middle arc higher
+  if (surf.y1 === undefined) return surf.y;
   return surf.y1 + (surf.y2 - surf.y1) * t;
 }
 
 const FLAT = Object.freeze({ x1: -Infinity, x2: Infinity, y: WORLD.GROUND, landable: true });
 
-const slopeOf = (surf, x) => {
+export const slopeOf = (surf, x) => {
+  if (surf.arc) {
+    const t = Math.max(0, Math.min(1, (x - surf.x1) / (surf.x2 - surf.x1)));
+    return (-surf.arc * 4 * (1 - 2 * t)) / (surf.x2 - surf.x1);
+  }
   if (surf.qp) {
     const { cx, R } = surf.qp;
     const d = Math.max(0, Math.min(R - 0.5, x - cx));
@@ -109,7 +114,7 @@ export class Game {
   // The ground under x: { y, slope, landable, bail, wall }.
   groundAt(x) {
     for (const g of this.groundSegs) {
-      if (x >= g.x1 && x < g.x2) return g.y1 === undefined && !g.qp ? g : { ...g, y: surfaceY(g, x), slope: slopeOf(g, x) };
+      if (x >= g.x1 && x < g.x2) return g.y1 === undefined && !g.qp && !g.arc ? g : { ...g, y: surfaceY(g, x), slope: slopeOf(g, x) };
     }
     return FLAT;
   }
@@ -346,7 +351,7 @@ export class Game {
       const surf = s.grind.surface;
       const grindSpeed = this.speed * (PHYS.GRIND_SPEED / PHYS.ROLL_SPEED);
       const step = grindSpeed * dt;
-      const slope = slopeOf(surf);
+      const slope = slopeOf(surf, s.x);
       s.x += s.dir * step;
       s.y = surfaceY(surf, s.x);
       s.grind.dist += step * Math.sqrt(1 + slope * slope);
