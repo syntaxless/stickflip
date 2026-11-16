@@ -84,8 +84,9 @@ in `src/config.js`.
 4. **Bank to Bank**: ride up a bank and ollie off its lip, over a gap, onto the
    bank going down the other side. Rolling up a bank adds to your pop; roll off
    the lip without an ollie and you drop in. Stars: finish, 200, 450.
-5. **Euro Gap**: a bank up to a gap with a two-stair rising on the far side.
-   Ollie off the bank up onto the top: the lower step and the risers are bails.
+5. **Euro Gap**: a bank that runs right up to the foot of a two-stair going up.
+   Ollie off the bank's lip up onto the top: the lower step and the risers are
+   bails.
    Stars: finish, 150, 300.
 6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
    ride up the quarter pipe and go straight up out of it (FS AIR, plus any flip

@@ -290,10 +290,11 @@ test('bank to bank: the skater follows the bank up and is thrown off its lip', (
   assert.ok(top < bankToBank.obstacles[0].ground[0].y2 - 1, 'a little air off the lip');
 });
 
-test('euro gap: ollie up onto the top, short is a bail, the low step is a bail', () => {
-  assert.equal(play(euroGap, [0.96]).game.phase, 'complete');
-  assert.equal(play(euroGap, [0.5]).game.bailReason, 'gap');
-  assert.equal(play(euroGap, [0.8]).game.bailReason, 'step');
+test('euro gap: ollie off the bank up onto the top; early lands on the step, none hits the stairs', () => {
+  assert.equal(play(euroGap, [1.1]).game.phase, 'complete');
+  assert.equal(play(euroGap, [0.7]).game.bailReason, 'step');
+  assert.equal(play(euroGap, []).game.bailReason, 'stairsUp');
+  assert.equal(play(euroGap, [1.3]).game.bailReason, 'stairsUp');
 });
 
 test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
