@@ -89,10 +89,11 @@ in `src/config.js`.
    bails.
    Stars: finish, 150, 300.
 6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
-   ride up the quarter pipe and carry straight on up out of it at riding speed.
-   Gravity is gentle up there, so there's over a second of hang time for tricks
-   (FS AIR, plus any flip you finish before you drop back in). Then ollie or
-   grind the rail again on the way back out to the left. Stars: finish, 700, 1500.
+   ride up the quarter pipe and go straight up out of it and straight back
+   down, at riding speed the whole way and without turning: over a second of
+   hang time for tricks (FS AIR, plus any flip you finish before you drop back
+   in). Then ride back out fakie to the left, ollieing or grinding the rail
+   again on the way. Stars: finish, 700, 1500.
 
 **Secret level: Mega Ramp.** Three screens wide and side-scrolling: drop in
 from a high deck, ollie off the kicker and fly the big gap onto the landing
