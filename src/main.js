@@ -4,7 +4,7 @@ import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES, PAL } from './render/pixel.js';
 import * as audio from './audio.js';
-import { classifyStroke } from './gesture.js';
+import { classifyStroke, readStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
 import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
@@ -227,10 +227,12 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false, charge: false };
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false, charge: false, t0: performance.now() };
   canvas.setPointerCapture?.(e.pointerId);
   // On the ground, a touch charges an ollie: crouch while held, pop on lift.
   if (!screen && game.startCharge()) stroke.charge = true;
+  // Riding up the quarter pipe: start drawing now, the trick goes on lift.
+  else if (!screen && game.phase === 'playing' && game.sk.mode === 'ramp') stroke.read = true;
   // A tap that would lock a grind can't wait for the finger to lift.
   else if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
   else stroke.read = true;
@@ -246,22 +248,59 @@ canvas.addEventListener('pointermove', (e) => {
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY });
-  const { read, points, charge } = stroke;
+  const { read, points, charge, t0 } = stroke;
   stroke = null;
   const popped = charge && game.releaseCharge();
   const grinded = game.setHold(false);
   if (popped) {
     // Dragged a trick shape while charging: the ollie pops straight into it.
-    const gesture = classifyStroke(points);
-    if (gesture && gesture !== 'tap') game.swipe(gesture);
+    const r = readStroke(points);
+    showStroke(points, r);
+    if (r.key !== 'tap') game.swipe(r.key);
     return;
   }
   if (!read || grinded) return;
   // Landed while the finger was down: don't turn the gesture into an ollie.
-  if (game.phase !== 'playing' || game.sk.mode !== 'air') return;
-  const gesture = classifyStroke(points);
-  if (gesture === 'tap') game.tap();
-  else game.swipe(gesture);
+  if (game.phase !== 'playing' || game.sk.mode !== 'air') return showStroke(points, { key: 'landed first' });
+  const r = readStroke(points);
+  showStroke(points, r);
+  if (r.key === 'tap') game.tap();
+  else game.swipe(r.key, (performance.now() - t0) / 1000);
+}
+
+// Test mode only (/unstable/?level=N or a local copy): draw each stroke on
+// screen with what it was read as, to see why a gesture didn't work.
+let lastStroke = null; // { points, label, t }
+function showStroke(points, r) {
+  if (!TESTING) return;
+  const label = r.shape && r.shape !== r.key ? `${r.key} (${r.shape} ${r.d.toFixed(2)})` : r.d != null ? `${r.key} ${r.d.toFixed(2)}` : r.key;
+  lastStroke = { points, label, t: performance.now() };
+}
+function drawStrokeDebug() {
+  const live = stroke && stroke.points.length > 1 ? stroke.points : null;
+  const shown = lastStroke && performance.now() - lastStroke.t < 2500 ? lastStroke : null;
+  if (!live && !shown) return;
+  const d = view.dpr;
+  ctx.save();
+  ctx.lineWidth = 3 * d;
+  ctx.lineJoin = 'round';
+  const path = (pts, color) => {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p.x * d, p.y * d) : ctx.moveTo(p.x * d, p.y * d)));
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.fillRect(pts[0].x * d - 4 * d, pts[0].y * d - 4 * d, 8 * d, 8 * d); // start
+  };
+  if (shown) {
+    path(shown.points, '#ffff55');
+    ctx.font = `${14 * d}px monospace`;
+    ctx.fillStyle = '#ffff55';
+    const p = shown.points[shown.points.length - 1];
+    ctx.fillText(shown.label.toUpperCase(), Math.min(p.x * d + 8 * d, canvas.width - 260 * d), Math.max(p.y * d - 8 * d, 20 * d));
+  }
+  if (live) path(live, '#55ffff');
+  ctx.restore();
 }
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', (e) => {
@@ -393,6 +432,7 @@ function frame(now) {
   ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
+  if (TESTING) drawStrokeDebug();
   requestAnimationFrame(frame);
 }
 
