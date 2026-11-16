@@ -160,8 +160,9 @@ The table is set up by `supabase/scores.sql`: row level security lets the anon
 key only read scores and add new ones, the database checks the initials (1-4
 letters) and score (1-100000), and posting is rate limited (3 a minute per
 address, 30 overall). If the shared table can't be reached, the game falls back
-to the on-device table, and scores are always kept on the device too. Local
-copies (localhost) only use the device table.
+to the on-device table, and scores are always kept on the device too. Only the
+live site posts to the shared table: the /unstable/ preview and local copies
+(localhost) keep their own device table, apart from the live one.
 
 ## Testing a level
 
