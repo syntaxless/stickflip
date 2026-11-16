@@ -103,9 +103,25 @@ save('icon-192.png', png(icon(96, 2), 2));
 save('icon-512.png', png(icon(128, 3), 4));
 save('icon-maskable-512.png', png(icon(128, 3), 4));
 
+// Fills a convex quad (corners in order) pixel by pixel.
+function fillQuad(g, q, color) {
+  const xs = q.map((p) => p.x);
+  const ys = q.map((p) => p.y);
+  for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) {
+    for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) {
+      const [px, py] = [x + 0.5, y + 0.5];
+      const inside = q.every((a, i) => {
+        const b = q[(i + 1) % q.length];
+        return (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x) >= 0;
+      });
+      if (inside) g.pset(x, y, color);
+    }
+  }
+}
+
 // Share preview, 1200 x 630: a 240 x 126 scene scaled by 5. The giant
-// STICKFLIP wordmark centred on plain navy, with the rider mid-kickflip in
-// front of it.
+// STICKFLIP wordmark centred on plain navy, with the rider mid-kickflip
+// below it.
 {
   const W = 240;
   const H = 126;
@@ -114,13 +130,16 @@ save('icon-maskable-512.png', png(icon(128, 3), 4));
   const ty = Math.round(H / 2 - 14); // the title is 28 pixels tall
   g.text('STICKFLIP', W / 2 + 1, ty + 1, PAL.ink, 4, 'center');
   g.text('STICKFLIP', W / 2, ty, PAL.red, 4, 'center');
-  // the rider, bigger than in the game, low enough that only his head and
-  // hands overlap the title
-  const s = 0.5; // pixels per world unit
-  const [fx, fy] = [W / 2, H / 2 + 54];
+  // the rider, small enough to fit between the title and the bottom edge
+  const s = 0.32; // pixels per world unit
+  const [fx, fy] = [W / 2, H - 7];
   drawFigure(g, makeTransform(fx / s, fy / s, 0, s), POSES.flip);
-  // the board below the feet, nose tipped up and part way through its flip
-  drawBoard(g, makeTransform(fx / s, fy / s, -0.3, s), 0.5, 0);
+  // the board below the feet, nose tipped up and part way through its flip,
+  // filled solid black
+  const tf = makeTransform(fx / s, fy / s, -0.3, s);
+  const t = (Math.abs(Math.sin(0.5)) * 18) / 2;
+  fillQuad(g, [[-26, -8 - t], [26, -8 - t], [26, -8 + t], [-26, -8 + t]].map(([x, y]) => tf({ x, y })), PAL.ink);
+  drawBoard(g, tf, 0.5, 0);
   save('og-image.png', png(g, 5));
 }
 
