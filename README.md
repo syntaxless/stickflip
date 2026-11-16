@@ -53,8 +53,8 @@ Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
 * A grind only locks if you tap in the last 0.2 s before touching the rail.
   Tap any earlier and you get a kickflip, which won't finish in time.
 * Input during a trick is ignored. One trick at a time, no mashing.
-* There's no take-off marker and no warning flash on the rail. It only turns red
-  once a grind is locked.
+* There's no take-off marker, and rails never light up: not as a warning, and
+  not when a grind is locked.
 * Any trick still turning when you land is a bail.
 
 **Hold to grind.** Keep your finger down as you reach a rail and it locks a
@@ -82,12 +82,19 @@ in `src/config.js`.
    Ollie or flip the whole set (land on a step and you bail), or grind the
    handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
 
-* A rail turns **red** once a grind is locked.
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
   came up short, landed on the stairs, or rolled off an edge.
 
 Tricks chain into a combo until you land on the ground, and the combo is
 multiplied by the number of tricks.
+
+**Runs and high scores.** A run takes you through the levels in order. TOTAL
+in the corner adds up the score of each level you've cleared (ride a level
+again and your latest clear counts). After the last level, FINISH RUN puts the
+total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
+type them). PLAY AGAIN then starts over from level 1 with a fresh total. The table shows on the title screen too. It's stored on the device
+for now; `src/leaderboard.js` is a small async interface, so it can later be
+backed by a shared database.
 
 ## Design choices
 
@@ -122,6 +129,8 @@ src/obstacles/          obstacle builders (rail, gap, stairs), each with surface
 src/levels/             one file per level + the ordered LEVELS list
 src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
 src/audio.js            PC-speaker style beeps
+src/leaderboard.js      top 5 high scores (on-device, swappable for a shared one)
+src/run.js              the run total across levels
 src/update.js           reloads an installed Home Screen app when a newer version is deployed
 icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
 manifest.webmanifest    Home Screen app settings (full screen, landscape)
@@ -148,8 +157,7 @@ Write a builder in `src/obstacles/` that returns:
   flat ground there: a gap is a segment far below the screen, stairs are a
   raised platform plus non-landable steps.
 * `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
-  pixels). The ground is drawn for you. `fx.hint` is `'ready'`, `'primed'` or
-  `null`. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
+  pixels). The ground is drawn for you. `fx.time` is the clock. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
 
 The engine handles everything else. Curved ramps (kickers, quarter pipes)
 would need small engine additions.
