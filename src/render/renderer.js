@@ -1,5 +1,5 @@
 import { WORLD, PHYS } from '../config.js';
-import { BAIL_MESSAGES, slopeOf } from '../game.js';
+import { slopeOf } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
@@ -139,13 +139,6 @@ export class Renderer {
       const top = P(game.groundAt(x * S + S / 2).y);
       if (top < bottom) g.fill(x, top, 1, bottom - top, ink);
     }
-
-    // take-off mark (tutorial levels)
-    const th = game.level.takeoffHint;
-    if (th && game.phase !== 'complete') {
-      for (let x = P(th.x1); x <= P(th.x2); x += 3) g.line(x, G + 3, x + 1, G + 3, red);
-      g.text('POP', P((th.x1 + th.x2) / 2), G + 8, red, 1, 'center');
-    }
   }
 
   drawSkater(game) {
@@ -249,14 +242,15 @@ export class Renderer {
     const L = 4 + inset;
     const R = RES.W - 4 - inset;
     g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}: ${game.level.name}`, L, 4, red);
-    g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
-    g.text(`HI ${pad(game.best || 0)}`, R, 15, red, 1, 'right');
-    if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 26, red, 1, 'right');
-    if (game.phase === 'playing') this.drawSpeed(game, L, 26);
+    // Top right: just the running total for the run, with the speed under it.
+    // Tricks and combos pop up on screen; high scores wait for the end.
+    const total = opts.total ?? game.score;
+    g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
+    if (game.phase === 'playing') this.drawSpeed(game, R, 15);
     if (game.combo.length && game.phase === 'playing') {
-      // Under the level name, kept clear of the score column: the oldest
+      // Under the level name, kept clear of the right-hand column: the oldest
       // tricks drop off the front when the list gets too long.
-      const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(opts.total || 0)}`), g.textWidth(`HI ${pad(game.best || 0)}`)) - 8;
+      const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(total)}`), 75) - 8;
       const names = game.combo.map((t) => t.name);
       let text = names.join(' + ');
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
@@ -264,22 +258,22 @@ export class Renderer {
     }
   }
 
-  // SPEED and a bar of cells: the middle one is cruising speed.
-  drawSpeed(game, x, y) {
+  // SPEED and a bar of cells, right-aligned to `right`: the middle cell is cruising speed.
+  drawSpeed(game, right, y) {
     const g = this.g;
-    g.text('SPEED', x, y, red);
     const cells = 10;
     const lo = game.cruise * PHYS.SPEED_MIN;
     const hi = game.cruise * PHYS.SPEED_MAX;
     const n = Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo));
-    const bx = x + g.textWidth('SPEED') + 4;
+    const bx = right - cells * 4 + 1;
+    g.text('SPEED', bx - 4, y, red, 1, 'right');
     for (let i = 0; i < cells; i++) {
       if (i < n) g.fill(bx + i * 4, y, 3, 7, red);
       else g.rect(bx + i * 4, y, 3, 7, red);
     }
   }
 
-  // Each new screen (and each retry) names its level for a moment, over the
+  // Each new screen (and each retry) names its level (no hints) for a moment, over the
   // sky, without stopping the ride.
   drawTitleCard(game) {
     const g = this.g;
@@ -290,7 +284,6 @@ export class Renderer {
     g.text(label, cx, 44, red, 1, 'center');
     g.text(game.level.name, cx + 1, 57, ink, 2, 'center');
     g.text(game.level.name, cx, 56, red, 2, 'center');
-    g.text(game.level.hint, cx, 76, red, 1, 'center');
   }
 
   blink(rate = 3) {
@@ -320,17 +313,15 @@ export class Renderer {
       } else {
         g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
         g.text('STICKFLIP', cx, 38, red, 4, 'center');
-        g.text(game.level.hint, cx, 75, red, 1, 'center');
-        if (!opts.portrait) g.text('DRAG BACK TO BRAKE. SWIPE IN THE AIR: TRICKS.', cx, 86, red, 1, 'center');
-        tapY = opts.portrait ? 87 : 98;
+        tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
       if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', cx, tapY + 11, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
-      g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 70, red, 1, 'center');
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 84, red, 1, 'center');
+      g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
+      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
     } else if (game.phase === 'playing') {
       this.drawTitleCard(game);
     }

@@ -7,7 +7,6 @@ import { rail, quarterPipe } from '../obstacles/index.js';
 export default {
   id: 'quarter-pipe',
   name: 'Quarter Pipe',
-  hint: 'AIR OUT OF THE QUARTER. SWIPE FOR TRICKS.',
   obstacles: [rail({ x: 330, length: 240, height: 64 }), quarterPipe({ x: 760, radius: 120 })],
   stars: [0, 700, 1500],
 };

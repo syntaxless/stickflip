@@ -19,7 +19,6 @@ const QP_R = 210;
 export default {
   id: 'mega-ramp',
   name: 'Mega Ramp',
-  hint: 'KICKER, RAIL, THEN THE BIG QUARTER.',
   secret: true,
   width: QP_X + QP_R + 90,
   speed: 600, // twice normal

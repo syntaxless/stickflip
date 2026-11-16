@@ -459,7 +459,7 @@ function frame(now) {
   renderer.draw(game, dt, {
     portrait: view.portrait,
     inset: view.inset,
-    total: run.total(),
+    total: run.total(levelIndex, game.phase === 'bailed' ? 0 : game.score), // running total, this level included
     screen,
     highScores,
     attract: levelIndex === 0,

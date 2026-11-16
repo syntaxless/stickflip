@@ -18,17 +18,8 @@ import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
 // Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
 // anywhere else acts like a tap, so it can never get you stuck.
 
-export const BAIL_MESSAGES = {
-  slam: 'SLAMMED THE RAIL. OLLIE EARLIER!',
-  clipped: 'CLIPPED THE RAIL. TAP JUST BEFORE IT!',
-  flip: 'LANDED MID-TRICK. START IT EARLIER!',
-  gap: 'CAME UP SHORT. OLLIE CLOSER TO THE EDGE!',
-  stairs: 'LANDED ON THE STAIRS. OLLIE CLOSER TO THE EDGE!',
-  rolled: 'ROLLED OFF THE EDGE. OLLIE BEFORE IT!',
-  step: 'LANDED ON THE STEP. OLLIE OFF THE LIP!',
-  stairsUp: 'HIT THE STAIRS. OLLIE UP THEM OFF THE BANK!',
-  wall: 'HIT THE WALL. STAY IN THE RAMP!',
-};
+// Bails keep their reason (game.bailReason) but show no tip: players find the
+// controls and timing themselves.
 
 // Anything this far below the ground line has fallen into a gap.
 const PIT_DEPTH = 40;

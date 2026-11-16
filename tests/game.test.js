@@ -30,7 +30,7 @@ const level1 = LEVELS[1]; // First Rail (these tests predate the gap level)
 
 test('every level has the fields the engine needs', () => {
   for (const lvl of [...LEVELS, SECRET]) {
-    assert.ok(lvl.id && lvl.name && lvl.hint);
+    assert.ok(lvl.id && lvl.name);
     assert.ok(lvl.obstacles.length >= 1);
     for (const o of lvl.obstacles) {
       assert.ok(Array.isArray(o.surfaces) && Array.isArray(o.solids));
