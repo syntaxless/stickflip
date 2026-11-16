@@ -59,9 +59,11 @@ let game;
 
 // Shared between all players through Supabase when it's set up (see
 // SCOREBOARD in config.js), with the on-device table as the fallback when it
-// can't be reached. Local copies (localhost) only ever use the device table.
+// can't be reached. Only the live site posts there: the /unstable/ preview
+// and local copies only ever use their own device table (kept apart from the
+// live one by SAVE_PREFIX).
 const localBoard = localLeaderboard(store);
-const shared = SCOREBOARD.url && SCOREBOARD.key && !IS_LOCAL && !TESTING;
+const shared = SCOREBOARD.url && SCOREBOARD.key && !IS_LOCAL && !IS_UNSTABLE && !TESTING;
 const board = shared ? withFallback(supabaseLeaderboard(SCOREBOARD), localBoard) : localBoard;
 let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
