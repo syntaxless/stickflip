@@ -1,15 +1,30 @@
 // A run is one trip through the levels in order. Each level counts once, with
-// the score of your latest clear of it in this run (ride a level again to beat
-// your score there), and the run total goes on the leaderboard once the last
-// level is done. Bails cost nothing: you just try the level again.
+// the score of your latest clear of it in this run, and the run total goes on
+// the leaderboard once the last level is done. A bail costs nothing but the
+// no-bail bonus: you just try the level again.
+
+// Added to the run total for getting through every level without a single bail.
+export const CLEAN_RUN_BONUS = 2000;
 
 export class Run {
+  // `saved` is what toJSON() gave: { scores, clean }, or (older saves) just the
+  // scores array, which can't prove a clean run.
   constructor(levelCount, saved = null) {
-    this.scores = Array.from({ length: levelCount }, (_, i) => (saved && Number.isFinite(saved[i]) ? saved[i] : null));
+    const scores = Array.isArray(saved) ? saved : saved?.scores;
+    this.scores = Array.from({ length: levelCount }, (_, i) => (scores && Number.isFinite(scores[i]) ? scores[i] : null));
+    this.clean = saved ? !Array.isArray(saved) && saved.clean === true : true;
   }
 
   recordClear(levelIndex, score) {
     this.scores[levelIndex] = score;
+  }
+
+  recordBail() {
+    this.clean = false;
+  }
+
+  bonus() {
+    return this.clean ? CLEAN_RUN_BONUS : 0;
   }
 
   // Run total, with `current` standing in for `levelIndex` (a level in progress).
@@ -18,6 +33,6 @@ export class Run {
   }
 
   toJSON() {
-    return this.scores;
+    return { scores: this.scores, clean: this.clean };
   }
 }

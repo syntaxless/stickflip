@@ -84,26 +84,28 @@ let screen = null;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
 
 async function finishRun() {
-  const score = run.total();
+  // No bails all the way through: the bonus goes on the total.
+  const bonus = run.bonus();
+  const score = run.total() + bonus;
   run = new Run(LEVELS.length + 1);
   store.set('run', run);
   clears += 1;
   store.set('clears', clears);
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
-    screen = { type: 'entry', score, letters: saved.split(''), pos: 0, t: 0 };
+    screen = { type: 'entry', score, bonus, letters: saved.split(''), pos: 0, t: 0 };
   } else {
-    screen = { type: 'scores', score, highlight: -1, t: 0 };
+    screen = { type: 'scores', score, bonus, highlight: -1, t: 0 };
   }
 }
 
 async function submitInitials() {
   const name = screen.letters.join('').trim() || 'ANON'.slice(0, INITIALS);
   store.set('initials', screen.letters.join(''));
-  const { score } = screen;
+  const { score, bonus } = screen;
   const highlight = await board.submit(name, score);
   await refreshScores();
-  screen = { type: 'scores', score, highlight, t: 0 };
+  screen = { type: 'scores', score, bonus, highlight, t: 0 };
 }
 
 function cycleLetter(i, step) {
@@ -437,7 +439,11 @@ function frame(now) {
   const events = game.drainEvents();
   let flip = false;
   for (const e of events) {
-    if (e.type === 'bail' && navigator.vibrate) navigator.vibrate(60);
+    if (e.type === 'bail') {
+      if (navigator.vibrate) navigator.vibrate(60);
+      run.recordBail();
+      store.set('run', run);
+    }
     if (e.type === 'complete') {
       run.recordClear(levelIndex, e.score);
       store.set('run', run);

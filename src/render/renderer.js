@@ -363,6 +363,7 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const { y } = this.panel('NEW HIGH SCORE!');
+    this.drawBonus(scr, y);
     g.text(`RUN TOTAL ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     g.text('ENTER YOUR INITIALS', cx, y + 42, red, 1, 'center');
     const left = cx - 72;
@@ -380,11 +381,20 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const { y } = this.panel('HIGH SCORES');
+    this.drawBonus(scr, y);
     if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     if (list.length) this.drawTable(list, y + 46, scr.highlight, 12);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
     // Beat the game: start over from level 1 with a fresh total.
     if (scr.t > 0.6) this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
+  }
+
+  // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).
+  drawBonus(scr, panelY) {
+    if (!scr.bonus || !this.blink(2)) return;
+    const cx = RES.W / 2;
+    this.g.text(`NO BAIL BONUS +${scr.bonus}`, cx + 1, panelY - 11, ink, 1, 'center');
+    this.g.text(`NO BAIL BONUS +${scr.bonus}`, cx, panelY - 12, red, 1, 'center');
   }
 
   hitButton(lx, ly) {

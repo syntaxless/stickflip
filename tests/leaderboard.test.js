@@ -99,3 +99,15 @@ test('initials are cleaned to 1-4 letters', () => {
   assert.equal(cleanInitials('   '), 'ANON');
   assert.equal(cleanInitials('LONGNAME'), 'LONG');
 });
+
+test('a run with no bails earns the clean-run bonus; one bail loses it, and it survives a save', async () => {
+  const { CLEAN_RUN_BONUS } = await import('../src/run.js');
+  const run = new Run(3);
+  assert.equal(run.bonus(), CLEAN_RUN_BONUS);
+  const saved = new Run(3, JSON.parse(JSON.stringify(run)));
+  assert.equal(saved.bonus(), CLEAN_RUN_BONUS);
+  run.recordBail();
+  assert.equal(run.bonus(), 0);
+  assert.equal(new Run(3, JSON.parse(JSON.stringify(run))).bonus(), 0);
+  assert.equal(new Run(3, [100, null, null]).bonus(), 0, 'an old save (scores only) is not proof of a clean run');
+});
