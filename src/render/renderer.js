@@ -337,7 +337,7 @@ export class Renderer {
     if (list.length) this.drawTable(list, y + 44, scr.highlight);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
     // Beat the game: start over from level 1 with a fresh total.
-    if (scr.t > 0.6) this.button('again', 'PLAY AGAIN FROM LEVEL 1', cx - 80, y + 114, 160, true);
+    if (scr.t > 0.6) this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
   }
 
   hitButton(lx, ly) {
