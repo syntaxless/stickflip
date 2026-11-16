@@ -104,17 +104,19 @@ save('icon-512.png', png(icon(128, 3), 4));
 save('icon-maskable-512.png', png(icon(128, 3), 4));
 
 // Share preview, 1200 x 630: a 240 x 126 scene scaled by 5. The giant
-// STICKFLIP wordmark on plain navy, with the rider mid-kickflip below it.
+// STICKFLIP wordmark centred on plain navy, with the rider mid-kickflip in
+// front of it.
 {
   const W = 240;
   const H = 126;
   const g = new Pix(fakeCtx, W, H);
   g.clear(PAL.sky);
-  g.text('STICKFLIP', W / 2 + 1, 19, PAL.ink, 4, 'center');
-  g.text('STICKFLIP', W / 2, 18, PAL.red, 4, 'center');
-  // the rider, bigger than in the game, centred along the bottom
+  const ty = Math.round(H / 2 - 14); // the title is 28 pixels tall
+  g.text('STICKFLIP', W / 2 + 1, ty + 1, PAL.ink, 4, 'center');
+  g.text('STICKFLIP', W / 2, ty, PAL.red, 4, 'center');
+  // the rider, bigger than in the game, drawn over the middle of the title
   const s = 0.5; // pixels per world unit
-  const [fx, fy] = [W / 2, H - 14];
+  const [fx, fy] = [W / 2, H / 2 + 30];
   drawFigure(g, makeTransform(fx / s, fy / s, 0, s), POSES.flip);
   // the board below the feet, nose tipped up and part way through its flip
   drawBoard(g, makeTransform(fx / s, fy / s, -0.3, s), 0.5, 0);
