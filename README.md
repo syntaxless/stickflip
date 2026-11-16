@@ -139,7 +139,10 @@ long bank that starts right at its end, or grind over the curve and pop (or
 roll) off the end into the bank. Finish with a big air out of a tall quarter
 pipe. Rails take an `arc` option for the curve. It's played after level 6
 from your third full run onwards (finished runs are counted on the device), and
-its score counts toward the run total.
+its score counts toward the run total. It looks the part: level 6's button
+reads BONUS LEVEL, a blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL
+AHEAD! on later runs) leads into it, its HUD says BONUS: MEGA RAMP, and it has
+its own palette from the 16 named HTML colours (purple sky, yellow text).
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
   came up short, landed on the stairs or a step, rolled off an edge, or hit
