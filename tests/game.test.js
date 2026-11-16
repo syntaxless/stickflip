@@ -452,3 +452,19 @@ test('backflip: a circle in the quarter pipe air lands, too late is a bail, a no
   const flat = playActs({ id: 'flat', obstacles: [], width: 4000 }, [[0.3, 'tap'], [0.32, 'swipe', 'circle']], 2);
   assert.equal(flat.game.bailReason, 'flip', 'an ollie is not enough air for a backflip');
 });
+
+test('time spent drawing a shape counts toward the trick, so a drawn kickflip still lands', () => {
+  const flat = { id: 'flat', obstacles: [], width: 4000 };
+  const run = (drawn) => {
+    const g = new Game(flat);
+    g.tap();
+    for (let t = 0; t < 0.3; t += STEP) g.update(STEP);
+    g.tap(); // ollie
+    for (let t = 0; t < 0.4; t += STEP) g.update(STEP); // the finger draws for 0.4 s
+    g.swipe('kickflip', drawn);
+    for (let t = 0; t < 1 && g.phase === 'playing' && g.sk.mode === 'air'; t += STEP) g.update(STEP);
+    return g;
+  };
+  assert.equal(run(0).bailReason, 'flip', 'without the credit the flip comes too late');
+  assert.equal(run(0.4).phase, 'playing', 'with it, it lands');
+});

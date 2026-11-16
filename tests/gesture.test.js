@@ -37,7 +37,7 @@ test('small wobble is a tap', () => {
 
 test('every trick shape reads as itself, small or big, wobbly or not', () => {
   for (const [key, shape] of Object.entries(SHAPES)) {
-    const want = ['ollie', 'up', 'down'].includes(key) ? null : key;
+    const want = { ollie: 'kickflip', down: 'heelflip', up: 'shove' }[key] || key;
     for (const scale of [45, 70, 120]) {
       for (const seed of [1, 7, 42]) {
         assert.equal(classifyStroke(draw(shape, { scale, seed, wobble: 3 })), want, `${key} at ${scale}px, seed ${seed}`);
