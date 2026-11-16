@@ -34,20 +34,52 @@ One input, **tap**, means whatever makes sense at that moment:
 | in the air, otherwise           | **kickflip** (takes 0.38 s; land mid-flip and you bail)               |
 | grinding                        | **pop** off the rail, then tap again in the air for another kickflip  |
 
-**Swipe in the air** for other tricks. A swipe anywhere else counts as a tap.
+**Hold for a higher ollie.** On the ground the ollie pops when you lift your
+finger (or let go of Space). Hold it and the skater crouches lower and lower,
+then pops up to about 1.8x as high after a 0.7 s hold. A quick tap is a normal
+ollie. Tuning: `CHARGE_*` in `src/config.js`.
 
-| Swipe (in the air)            | Trick         | Points |
-| ----------------------------- | ------------- | ------ |
-| tap                           | KICKFLIP      | 150    |
-| down                          | HEELFLIP      | 150    |
-| up                            | POP SHOVE-IT  | 100    |
-| right (forward)               | FS 360 spin   | 200    |
-| left (backward)               | BS 360 spin   | 200    |
-| down, then right (one stroke) | 360 FLIP      | 300    |
-| down, then left (one stroke)  | HARDFLIP      | 250    |
+**Draw a shape in the air** for other tricks. Every shape starts by pulling
+down (like popping the tail), then flicks or hooks back up. "Right" means
+forward, the way the skater rides. Shapes are matched loosely, so a quick,
+rough version works on a phone.
 
-Arrow keys work as swipes on desktop. The trick list lives in `TRICKS` in
-`src/config.js`, and gesture reading is in `src/gesture.js`.
+| Shape (in the air)                                   | Trick            | Points |
+| ---------------------------------------------------- | ---------------- | ------ |
+| tap                                                  | KICKFLIP         | 150    |
+| down, then flick up-right                            | KICKFLIP         | 150    |
+| down, then flick up-left                             | HEELFLIP         | 150    |
+| down, then hook right and up (a U)                   | POP SHOVE-IT     | 100    |
+| down, then hook left and up                          | FS POP SHOVE-IT  | 100    |
+| down-left, then a wide arc round to the right        | 360 SHOVE-IT     | 200    |
+| down-right, then a wide arc round to the left        | FS 360 SHOVE-IT  | 200    |
+| down-left, then straight back up-right (a V)         | VARIAL KICKFLIP  | 250    |
+| down-right, then straight back up-left               | VARIAL HEELFLIP  | 250    |
+| down-left, a short zig right, then straight up       | HARDFLIP         | 250    |
+| down-right, a short zag left, then straight up       | INWARD HEELFLIP  | 250    |
+| left, curve down and round, then up-right            | 360 FLIP         | 300    |
+| right, curve down and round, then up-left            | LASER FLIP       | 350    |
+| right, curve down and round, then straight up        | 360 HARDFLIP     | 400    |
+| left, curve down and round, then straight up         | 360 INWARD HEEL  | 400    |
+| straight right (forward)                             | FS 360 spin      | 200    |
+| straight left (backward)                             | BS 360 spin      | 200    |
+| a counter-clockwise circle                           | BACKFLIP         | 1000   |
+
+A straight swipe up or down, or down and back up, does nothing in the air.
+
+**Ollie straight into a trick:** on the ground, hold to charge, then draw the
+shape before you lift. The ollie pops as that trick, with the charged height.
+A plain tap or a hold and release is still just an ollie.
+
+The backflip turns the rider and board a full 360 backwards and is slow
+(0.85 s), so it only fits in big air: the quarter pipe or the secret level.
+Land before it comes round and you bail. The circle has to go most of the
+way round (about 290 degrees) without cutting through its middle, so none
+of the flip shapes set it off.
+
+On desktop, Up is a pop shove-it, Down a heelflip, Left and Right the 360
+spins, and B the backflip. The trick list lives in `TRICKS` in
+`src/config.js`, and the shapes are `SHAPES` in `src/gesture.js`.
 
 **It's meant to be hard**, like the shareware games it's inspired by:
 * A grind only locks if you tap in the last 0.2 s before touching the rail.
@@ -81,9 +113,30 @@ in `src/config.js`.
 3. **Five Stair**: start on a platform with five stairs down and a handrail.
    Ollie or flip the whole set (land on a step and you bail), or grind the
    handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
+4. **Bank to Bank**: ride up a bank and ollie off its lip, over a gap, onto the
+   bank going down the other side. Rolling up a bank adds to your pop; roll off
+   the lip without an ollie and you drop in. Stars: finish, 200, 450.
+5. **Euro Gap**: a bank that runs right up to the foot of a two-stair going up.
+   Ollie off the bank's lip up onto the top: the lower step and the risers are
+   bails.
+   Stars: finish, 150, 300.
+6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
+   ride up the quarter pipe and go straight up out of it and straight back
+   down, at riding speed the whole way and without turning: over a second of
+   hang time for tricks (FS AIR, plus any flip you finish before you drop back
+   in). Then ride back out fakie to the left, ollieing or grinding the rail
+   again on the way. Stars: finish, 700, 1500.
+
+**Secret level: Mega Ramp.** Side-scrolling, three and a half screens wide:
+drop in from a high deck, fly off the kicker onto a deck with a raised rail
+(grind it, or ollie off the kicker to clear it), roll down a long bank and
+finish with a big air out of a tall quarter pipe. It's played after level 6
+from your third full run onwards (finished runs are counted on the device), and
+its score counts toward the run total.
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
-  came up short, landed on the stairs, or rolled off an edge.
+  came up short, landed on the stairs or a step, rolled off an edge, or hit
+  the quarter pipe's wall.
 
 Tricks chain into a combo until you land on the ground, and the combo is
 multiplied by the number of tricks.
@@ -92,9 +145,24 @@ multiplied by the number of tricks.
 in the corner adds up the score of each level you've cleared (ride a level
 again and your latest clear counts). After the last level, FINISH RUN puts the
 total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
-type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too. It's stored on the device
-for now; `src/leaderboard.js` is a small async interface, so it can later be
-backed by a shared database.
+type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too.
+
+**Shared high scores.** With `SCOREBOARD` in `src/config.js` filled in (a
+Supabase project URL and its public anon key), the top 5 is shared by everyone.
+The table is set up by `supabase/scores.sql`: row level security lets the anon
+key only read scores and add new ones, the database checks the initials (1-4
+letters) and score (1-100000), and posting is rate limited (3 a minute per
+address, 30 overall). If the shared table can't be reached, the game falls back
+to the on-device table, and scores are always kept on the device too. Local
+copies (localhost) only use the device table.
+
+## Testing a level
+
+On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to jump
+straight to level N (1-6), or `?level=secret` for the secret level, e.g.
+`https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
+Test play keeps its own saves and on-device high scores, so it never touches
+your real progress or the shared table. It does nothing on the live site.
 
 ## Design choices
 
@@ -153,11 +221,14 @@ Write a builder in `src/obstacles/` that returns:
   `passable` ones (beside the line, like a handrail) are ignored unless you're
   locked into a grind, and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `ground` (optional): segments `{ x1, x2, y, landable, bail }` that replace the
-  flat ground there: a gap is a segment far below the screen, stairs are a
-  raised platform plus non-landable steps.
+* `ground` (optional): segments `{ x1, x2, y, landable, bail, wall }` that
+  replace the flat ground there: a gap is a segment far below the screen,
+  stairs are a raised platform plus non-landable steps. A segment can slope
+  (`y1`/`y2` instead of `y`: a bank) or be a quarter pipe curve
+  (`qp: { cx, cy, R }`). `bail` names the bail for landing on a non-landable
+  segment, `wall` the one for flying into its side.
 * `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
   pixels). The ground is drawn for you. `fx.time` is the clock. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
 
-The engine handles everything else. Curved ramps (kickers, quarter pipes)
-would need small engine additions.
+The engine handles everything else. A level can also set `width` (wider than
+960 scrolls, with the camera following the skater) and `speed` (rolling speed).

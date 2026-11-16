@@ -1,12 +1,12 @@
-import { WORLD } from './config.js';
+import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
-import { LEVELS } from './levels/index.js';
+import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES, PAL } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
-import { localLeaderboard, INITIALS } from './leaderboard.js';
+import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
@@ -24,8 +24,16 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 
 // ------------------------------------------------------------ progress
 
+// Testing: on /unstable/ or a local copy, ?level=1..6 (or ?level=secret)
+// starts straight on that level. Test play keeps its own saves and its own
+// on-device high scores, so it never touches real progress or the shared table.
+const IS_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+const IS_UNSTABLE = location.pathname.includes('/unstable');
+const TEST_LEVEL = IS_LOCAL || IS_UNSTABLE ? new URLSearchParams(location.search).get('level') : null;
+const TESTING = TEST_LEVEL != null;
+
 // The /unstable/ preview shares an origin with the live game, so keep its saves apart.
-const SAVE_PREFIX = location.pathname.includes('/unstable') ? 'stickflip-unstable' : 'stickflip';
+const SAVE_PREFIX = (IS_UNSTABLE ? 'stickflip-unstable' : 'stickflip') + (TESTING ? '-test' : '');
 const store = {
   get(key, fallback) {
     try {
@@ -49,14 +57,23 @@ let game;
 
 // ------------------------------------------------------------ run + high scores
 
-// On-device for now. Swap in another object with the same async interface
-// (see leaderboard.js) to share scores between players.
-const board = localLeaderboard(store);
+// Shared between all players through Supabase when it's set up (see
+// SCOREBOARD in config.js), with the on-device table as the fallback when it
+// can't be reached. Local copies (localhost) only ever use the device table.
+const localBoard = localLeaderboard(store);
+const shared = SCOREBOARD.url && SCOREBOARD.key && !IS_LOCAL && !TESTING;
+const board = shared ? withFallback(supabaseLeaderboard(SCOREBOARD), localBoard) : localBoard;
 let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
 refreshScores();
 
-let run = new Run(LEVELS.length, store.get('run', null));
+// The secret level plays after level 6 from the third full clear of the run
+// onwards, and counts toward the run total like any other level.
+const SECRET_INDEX = LEVELS.length;
+const SECRET_AFTER_CLEARS = 2; // full clears needed before the run that unlocks it
+let clears = store.get('clears', 0);
+
+let run = new Run(LEVELS.length + 1, store.get('run', null));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -66,8 +83,10 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
 
 async function finishRun() {
   const score = run.total();
-  run = new Run(LEVELS.length);
+  run = new Run(LEVELS.length + 1);
   store.set('run', run);
+  clears += 1;
+  store.set('clears', clears);
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, letters: saved.split(''), pos: 0, t: 0 };
@@ -110,11 +129,16 @@ function screenPress(clientX, clientY) {
 
 function loadLevel(i, autoStart = false) {
   levelIndex = i;
-  store.set('level', i);
-  game = new Game(LEVELS[i]);
+  if (i === 0) refreshScores(); // the title screen shows the table
+  const secret = i === SECRET_INDEX;
+  if (!secret) store.set('level', i);
+  const level = secret ? SECRET : LEVELS[i];
+  game = new Game(level);
   game.levelNumber = i + 1;
-  game.hasNext = i + 1 < LEVELS.length;
-  game.best = store.get(`best:${LEVELS[i].id}`, 0);
+  if (secret) game.levelLabel = 'SECRET';
+  if (TESTING) game.levelLabel = `TEST ${secret ? 'S' : i + 1}`;
+  game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
+  game.best = store.get(`best:${level.id}`, 0);
   renderer.reset();
   if (autoStart) game.tap();
 }
@@ -177,8 +201,12 @@ function press(clientX, clientY) {
   game.tap();
 }
 
-// Taps act on touch-down for the lowest latency. In the air, a touch is
-// followed until the finger lifts so it can be read as a tap or a swipe.
+// On the ground a touch charges an ollie: the skater crouches while the
+// finger is down and pops when it lifts, higher the longer it was held (a
+// quick tap is a normal ollie). Drag a trick shape before lifting and the
+// ollie pops straight into that trick. Other taps act on touch-down for the lowest
+// latency. In the air, a touch is followed until the finger lifts so it can
+// be read as a tap or a swipe.
 // Every touch while playing also counts as a hold: if the finger is still
 // down when the skater reaches a rail, it locks a grind (drag forward for a
 // nose grind, back for a 5-0), and the lift is then ignored.
@@ -199,10 +227,12 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false };
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false, charge: false };
   canvas.setPointerCapture?.(e.pointerId);
+  // On the ground, a touch charges an ollie: crouch while held, pop on lift.
+  if (!screen && game.startCharge()) stroke.charge = true;
   // A tap that would lock a grind can't wait for the finger to lift.
-  if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
+  else if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
   else stroke.read = true;
   if (game.phase === 'playing') game.setHold(true);
 });
@@ -216,9 +246,16 @@ canvas.addEventListener('pointermove', (e) => {
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY });
-  const { read, points } = stroke;
+  const { read, points, charge } = stroke;
   stroke = null;
+  const popped = charge && game.releaseCharge();
   const grinded = game.setHold(false);
+  if (popped) {
+    // Dragged a trick shape while charging: the ollie pops straight into it.
+    const gesture = classifyStroke(points);
+    if (gesture && gesture !== 'tap') game.swipe(gesture);
+    return;
+  }
   if (!read || grinded) return;
   // Landed while the finger was down: don't turn the gesture into an ollie.
   if (game.phase !== 'playing' || game.sk.mode !== 'air') return;
@@ -230,6 +267,7 @@ canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', (e) => {
   if (stroke && e.pointerId === stroke.id) {
     stroke = null;
+    game.cancelCharge();
     game.setHold(false);
   }
 });
@@ -240,8 +278,10 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Keyboard: Space/Enter is the finger. In the air it acts on release (like a
 // touch), so holding it through a rail grinds; an arrow held with it picks the
-// grind (right: nose grind, left: 5-0). Arrows on their own are swipes.
+// grind (right: nose grind, left: 5-0). Arrows on their own do tricks.
 const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+// Arrow keys on their own do a few of the tricks (the rest need a finger).
+const ARROW_TRICK = { up: 'shove', down: 'heelflip', left: 'bs360', right: 'fs360' };
 let keyHold = null; // { read } while Space/Enter is down
 
 window.addEventListener('keydown', (e) => {
@@ -251,12 +291,17 @@ window.addEventListener('keydown', (e) => {
     audio.toggleMute();
     return;
   }
+  if (e.code === 'KeyB') {
+    game.swipe('circle'); // backflip
+    return;
+  }
   if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault();
     audio.unlock();
     const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-    keyHold = { read: inAir && game.grindHint() !== 'ready' };
-    if (!keyHold.read) press();
+    keyHold = { read: inAir && game.grindHint() !== 'ready', charge: game.startCharge() };
+    if (keyHold.charge) keyHold.read = false;
+    else if (!keyHold.read) press();
     if (game.phase === 'playing') game.setHold(true);
     return;
   }
@@ -267,7 +312,7 @@ window.addEventListener('keydown', (e) => {
     if (keyHold && game.hold) {
       if (dir === 'left' || dir === 'right') game.setHold(true, dir);
     } else if (game.phase === 'complete') press();
-    else game.swipe(dir);
+    else game.swipe(ARROW_TRICK[dir]);
   }
 });
 
@@ -292,8 +337,9 @@ function screenKey(e) {
 
 window.addEventListener('keyup', (e) => {
   if ((e.code === 'Space' || e.code === 'Enter') && keyHold) {
-    const { read } = keyHold;
+    const { read, charge } = keyHold;
     keyHold = null;
+    if (charge) game.releaseCharge();
     const grinded = game.setHold(false);
     if (read && !grinded && game.phase === 'playing' && game.sk.mode === 'air') game.tap();
   } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && keyHold && game.hold) {
@@ -351,6 +397,10 @@ function frame(now) {
 }
 
 resize();
+if (TESTING) {
+  const n = TEST_LEVEL.toLowerCase() === 'secret' ? SECRET_INDEX + 1 : parseInt(TEST_LEVEL, 10);
+  levelIndex = Number.isInteger(n) && n >= 1 && n <= SECRET_INDEX + 1 ? n - 1 : 0;
+}
 loadLevel(levelIndex);
 requestAnimationFrame(frame);
 watchForUpdates(() => game.phase === 'playing');

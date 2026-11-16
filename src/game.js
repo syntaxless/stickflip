@@ -25,13 +25,21 @@ export const BAIL_MESSAGES = {
   gap: 'CAME UP SHORT. OLLIE CLOSER TO THE EDGE!',
   stairs: 'LANDED ON THE STAIRS. OLLIE CLOSER TO THE EDGE!',
   rolled: 'ROLLED OFF THE EDGE. OLLIE BEFORE IT!',
+  step: 'LANDED ON THE STEP. OLLIE OFF THE LIP!',
+  stairsUp: 'HIT THE STAIRS. OLLIE UP THEM OFF THE BANK!',
+  wall: 'HIT THE WALL. STAY IN THE RAMP!',
 };
 
 // Anything this far below the ground line has fallen into a gap.
 const PIT_DEPTH = 40;
 
-// Height of a (possibly sloped) surface at x.
+// Height of a (possibly sloped or curved) surface at x.
 export function surfaceY(surf, x) {
+  if (surf.qp) {
+    const { cx, cy, R } = surf.qp;
+    const d = Math.max(0, Math.min(R, x - cx));
+    return cy + Math.sqrt(R * R - d * d);
+  }
   if (surf.y1 === undefined) return surf.y;
   const t = Math.max(0, Math.min(1, (x - surf.x1) / (surf.x2 - surf.x1)));
   return surf.y1 + (surf.y2 - surf.y1) * t;
@@ -39,7 +47,14 @@ export function surfaceY(surf, x) {
 
 const FLAT = Object.freeze({ x1: -Infinity, x2: Infinity, y: WORLD.GROUND, landable: true });
 
-const slopeOf = (surf) => (surf.y1 === undefined ? 0 : (surf.y2 - surf.y1) / (surf.x2 - surf.x1));
+const slopeOf = (surf, x) => {
+  if (surf.qp) {
+    const { cx, R } = surf.qp;
+    const d = Math.max(0, Math.min(R - 0.5, x - cx));
+    return -d / Math.sqrt(R * R - d * d);
+  }
+  return surf.y1 === undefined ? 0 : (surf.y2 - surf.y1) / (surf.x2 - surf.x1);
+};
 
 export class Game {
   constructor(level) {
@@ -48,7 +63,10 @@ export class Game {
     this.solids = level.obstacles.flatMap((o) => o.solids);
     // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
+    // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
+    this.speed = level.speed || PHYS.ROLL_SPEED;
+    this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
   }
 
@@ -67,6 +85,12 @@ export class Game {
       y: this.groundAt(PHYS.START_X).y,
       vx: 0,
       vy: 0,
+      dir: 1, // 1 = riding right, -1 = riding back to the left (after a quarter pipe)
+      face: 1, // the way the skater faces: still right when riding back out fakie
+      slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
+      ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
+      qpAir: null, // { qp, t } while in the air above a quarter pipe
+      charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
       flip: null, // { t, key, trick } while an air trick is in progress
@@ -82,9 +106,11 @@ export class Game {
     this.phaseTime = 0;
   }
 
-  // The ground segment under x: { y, landable, bail }.
+  // The ground under x: { y, slope, landable, bail, wall }.
   groundAt(x) {
-    for (const g of this.groundSegs) if (x >= g.x1 && x < g.x2) return g;
+    for (const g of this.groundSegs) {
+      if (x >= g.x1 && x < g.x2) return g.y1 === undefined && !g.qp ? g : { ...g, y: surfaceY(g, x), slope: slopeOf(g, x) };
+    }
     return FLAT;
   }
 
@@ -121,14 +147,14 @@ export class Game {
   start() {
     this.setPhase('playing');
     this.sk.mode = 'roll';
-    this.sk.vx = PHYS.ROLL_SPEED;
+    this.sk.vx = this.speed;
     this.emit('push');
   }
 
   skaterTap() {
     const s = this.sk;
     if (s.mode === 'roll') {
-      this.takeOff(PHYS.OLLIE_V);
+      this.ollie(1);
     } else if (s.mode === 'grind') {
       this.endGrind();
       this.takeOff(PHYS.POP_V);
@@ -137,11 +163,49 @@ export class Game {
     }
   }
 
+  // An ollie from the ground; `power` 1 is a normal one. Rolling up a bank adds to the pop.
+  ollie(power) {
+    const s = this.sk;
+    s.charge = null;
+    this.takeOff((PHYS.OLLIE_V + Math.max(0, -s.slope * s.vx)) * power);
+  }
+
+  // Charged ollie: hold down on the ground to crouch, let go to pop. A quick
+  // tap is a normal ollie; holding longer pops higher, up to a cap.
+  startCharge() {
+    const s = this.sk;
+    if (this.phase !== 'playing' || s.mode !== 'roll' || s.charge) return false;
+    s.charge = { t: 0 };
+    return true;
+  }
+
+  // 0..1: how charged the ollie is (for the crouch).
+  chargeLevel() {
+    const c = this.sk.charge;
+    if (!c) return 0;
+    return Math.max(0, Math.min(1, (c.t - PHYS.CHARGE_MIN) / PHYS.CHARGE_TIME));
+  }
+
+  // Let go: ollie if still rolling. Returns whether it popped.
+  releaseCharge() {
+    const s = this.sk;
+    if (!s.charge) return false;
+    const k = this.chargeLevel();
+    s.charge = null;
+    if (this.phase !== 'playing' || s.mode !== 'roll') return false;
+    this.ollie(1 + k * PHYS.CHARGE_BOOST);
+    return true;
+  }
+
+  cancelCharge() {
+    this.sk.charge = null;
+  }
+
   takeOff(speed) {
     const s = this.sk;
     s.mode = 'air';
     s.vy = -speed;
-    s.vx = PHYS.ROLL_SPEED;
+    s.vx = s.dir * this.speed;
     s.support = null;
     s.primed = false;
     s.poppedAt = s.x;
@@ -165,14 +229,15 @@ export class Game {
   // Which grind a contact right now would lock.
   grindKey() {
     const d = this.hold?.dir;
-    return d === 'right' ? 'nose' : d === 'left' ? '5-0' : '50-50';
+    if (!d) return '50-50';
+    return (d === 'right') === (this.sk.dir > 0) ? 'nose' : '5-0'; // forward = the way you're riding
   }
 
-  // A swipe: 'up' | 'down' | 'left' | 'right' or a pattern like 'down-right'.
-  swipe(dir) {
+  // A swipe, read by gesture.js: a TRICKS key, or null for a stroke that
+  // means nothing in the air. Anywhere else a swipe is a tap.
+  swipe(key) {
     if (this.phase !== 'playing' || this.sk.mode !== 'air') return this.tap();
-    const key = TRICKS[dir] ? dir : dir.split('-')[0];
-    if (!TRICKS[key]) return this.airTap();
+    if (!TRICKS[key]) return;
     const s = this.sk;
     if (s.flip || s.primed) return; // one thing at a time: input during a trick is ignored
     this.startTrick(key);
@@ -249,34 +314,46 @@ export class Game {
     }
 
     if (s.mode === 'roll') {
+      if (s.charge) s.charge.t += dt;
       s.x += s.vx * dt;
-      if (s.support && s.x > s.support.x2) {
+      if (s.support && (s.x > s.support.x2 || s.x < s.support.x1)) {
         s.mode = 'air';
         s.vy = 0;
         s.support = null;
         s.poppedAt = null;
       } else if (!s.support) {
-        // follow the ground; a drop (gap, top of the stairs) means falling
-        const gy = this.groundAt(s.x).y;
-        if (gy > s.y + 1) {
+        // Follow the ground (banks included). A drop (gap, top of the stairs,
+        // the lip of a bank) means flying off it; a step up means a slam.
+        const ground = this.groundAt(s.x);
+        if (ground.qp && s.dir > 0) return this.enterRamp(ground.qp);
+        const give = Math.abs((ground.slope || 0) * s.vx * dt) + 1;
+        if (ground.y > s.y + give) {
           s.mode = 'air';
-          s.vy = 0;
+          s.vy = s.slope * s.vx; // a bank's lip throws you up
           s.poppedAt = null;
-        } else s.y = gy;
+        } else if (ground.y < s.y - give - 5) {
+          return this.bail(ground.wall || 'wall');
+        } else {
+          s.y = ground.y;
+          s.slope = ground.slope || 0;
+        }
       }
       if (this.hitSolid()) return this.bail('slam');
-      if (s.x > PHYS.EXIT_X) return this.finish();
+      if (s.x > this.width + 40 || s.x < -40) return this.finish();
+    } else if (s.mode === 'ramp') {
+      this.updateRamp(dt);
     } else if (s.mode === 'grind') {
       const surf = s.grind.surface;
-      const step = PHYS.GRIND_SPEED * dt;
+      const grindSpeed = this.speed * (PHYS.GRIND_SPEED / PHYS.ROLL_SPEED);
+      const step = grindSpeed * dt;
       const slope = slopeOf(surf);
-      s.x += step;
+      s.x += s.dir * step;
       s.y = surfaceY(surf, s.x);
       s.grind.dist += step * Math.sqrt(1 + slope * slope);
-      if (s.x > surf.x2) {
+      if (s.dir > 0 ? s.x > surf.x2 : s.x < surf.x1) {
         this.endGrind();
         s.mode = 'air';
-        s.vy = slope * PHYS.GRIND_SPEED; // carry on down a sloped rail
+        s.vy = slope * s.dir * grindSpeed; // carry on down a sloped rail
         s.poppedAt = s.x;
       }
     } else if (s.mode === 'air') {
@@ -284,21 +361,85 @@ export class Game {
     }
   }
 
+  // Quarter pipe. Arcade rules: ride up the curve at riding speed, carry
+  // straight on up out of it at that same speed, then come straight back down
+  // at it (QP_AIR_TIME in all), with no turning in the air: lots of hang time
+  // for tricks. Then ride back down and out to the left, fakie.
+  enterRamp(qp) {
+    const s = this.sk;
+    s.mode = 'ramp';
+    s.slope = 0;
+    const th = Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R)));
+    s.ramp = { qp, th, dir: 1 };
+  }
+
+  updateRamp(dt) {
+    const s = this.sk;
+    const r = s.ramp;
+    const { cx, cy, R } = r.qp;
+    r.th += (r.dir * this.speed * dt) / R;
+    if (r.dir > 0 && r.th >= Math.PI / 2) {
+      // out over the coping, straight up
+      s.ramp = null;
+      s.mode = 'air';
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME };
+      s.x = cx + R - 1;
+      s.y = cy;
+      s.vx = 0;
+      s.vy = -this.speed;
+      s.poppedAt = s.x;
+      this.emit('pop');
+    } else if (r.dir < 0 && r.th <= 0) {
+      s.ramp = null;
+      s.mode = 'roll';
+      s.x = cx;
+      s.y = cy + R;
+      s.vx = -this.speed;
+      s.slope = 0;
+      if (this.level.endAfterQuarter) this.finish(); // the quarter pipe is the finale
+    } else {
+      s.x = cx + R * Math.sin(r.th);
+      s.y = cy + R * Math.cos(r.th);
+    }
+  }
+
+  stepTrick(dt) {
+    const s = this.sk;
+    if (!s.flip) return;
+    s.flip.t += dt;
+    const { trick } = s.flip;
+    if (s.flip.t >= trick.dur) {
+      s.flip = null;
+      this.addTrick(trick.name, trick.points);
+    }
+  }
+
   updateAir(dt) {
     const s = this.sk;
     const prevY = s.y;
     const prevX = s.x;
-    s.vy += PHYS.GRAVITY * dt;
+    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -this.speed : this.speed; // steady up, steady down
+    else s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;
+    this.stepTrick(dt);
 
-    if (s.flip) {
-      s.flip.t += dt;
-      const { trick } = s.flip;
-      if (s.flip.t >= trick.dur) {
-        s.flip = null;
-        this.addTrick(trick.name, trick.points);
+    if (s.qpAir) {
+      // Straight up and back down into the quarter pipe, turning around on the way.
+      const { qp } = s.qpAir;
+      s.qpAir.t += dt;
+      if (s.vy > 0 && s.y >= qp.cy) {
+        if (s.flip) return this.bail('flip');
+        s.qpAir = null;
+        s.dir = -1;
+        s.y = qp.cy;
+        s.mode = 'ramp';
+        s.ramp = { qp, th: Math.PI / 2, dir: -1 };
+        this.addTrick('FS AIR', 100);
+        this.emit('land');
+        this.bankCombo();
       }
+      return;
     }
 
     // Touching the top of an obstacle from above.
@@ -322,9 +463,9 @@ export class Game {
     const ground = this.groundAt(s.x);
     if (s.y >= ground.y) {
       // Came down on it from above, or hit its side (the far wall of a gap)?
-      const fromAbove = prevY <= ground.y + 0.01;
+      const fromAbove = prevY <= ground.y + 0.01 + Math.abs((ground.slope || 0) * (s.x - prevX));
       s.y = ground.y;
-      if (!fromAbove) return this.bail('gap');
+      if (!fromAbove) return this.bail(ground.wall || 'gap');
       if (!ground.landable) return this.bail(s.poppedAt === null ? 'rolled' : ground.bail || 'clipped');
       if (s.flip) return this.bail('flip');
       return this.land(null);
@@ -338,7 +479,7 @@ export class Game {
     const s = this.sk;
     for (const r of this.solids) {
       const inX = (px) => px > r.x && px < r.x + r.w;
-      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + PHYS.NOSE))) return true;
+      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + s.dir * PHYS.NOSE))) return true;
     }
     return false;
   }
@@ -372,7 +513,9 @@ export class Game {
     s.mode = 'roll';
     s.vy = 0;
     s.support = surface;
-    s.y = surface ? surfaceY(surface, s.x) : this.groundAt(s.x).y;
+    const ground = this.groundAt(s.x);
+    s.y = surface ? surfaceY(surface, s.x) : ground.y;
+    s.slope = surface ? 0 : ground.slope || 0;
     s.primed = false;
     this.emit('land');
     this.bankCombo();
@@ -404,17 +547,20 @@ export class Game {
     s.flip = null;
     s.primed = false;
     s.grind = null;
+    s.ramp = null;
+    s.qpAir = null;
+    s.charge = null;
     s.mode = 'bail';
     s.bail = {
       x: s.x,
       y: s.y,
-      vx: reason === 'slam' ? -60 : s.vx * 0.55,
+      vx: reason === 'slam' || reason === 'wall' ? -s.dir * 60 : s.vx * 0.55,
       vy: Math.min(s.vy, 0) - 380,
       ang: 0,
-      angV: reason === 'slam' ? -9 : 8,
+      angV: (reason === 'slam' ? -9 : 8) * s.dir,
       bx: s.x,
       by: s.y,
-      bvx: reason === 'slam' ? -140 : s.vx * 1.15,
+      bvx: reason === 'slam' ? -s.dir * 140 : s.vx * 1.15,
       bvy: -260,
       bang: 0,
       bangV: 14,

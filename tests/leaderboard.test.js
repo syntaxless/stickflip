@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { localLeaderboard, TABLE_SIZE } from '../src/leaderboard.js';
+import { localLeaderboard, supabaseLeaderboard, withFallback, cleanInitials, TABLE_SIZE } from '../src/leaderboard.js';
 import { Run } from '../src/run.js';
 
 const memoryStore = () => {
@@ -42,4 +42,60 @@ test('a run counts the latest clear of each level, plus the level in progress', 
   assert.equal(run.total(2, 250), 1250);
   assert.equal(run.total(1, 0), 300);
   assert.deepEqual(new Run(3, JSON.parse(JSON.stringify(run))).scores, [300, 700, null]);
+});
+
+// A fake Supabase REST endpoint, ordered and limited like the real query.
+function fakeSupabase({ fail = false } = {}) {
+  const rows = [];
+  let n = 0;
+  const calls = [];
+  const fetchFn = async (url, opts) => {
+    calls.push({ url, opts });
+    if (fail) throw new TypeError('offline');
+    if (opts.method === 'POST') {
+      const { initials, score } = JSON.parse(opts.body);
+      if (!/^[A-Z ]{1,4}$/.test(initials)) return { ok: false, status: 400 };
+      rows.push({ initials, score, created_at: String(n++).padStart(6, '0') });
+      return { ok: true, status: 201, json: async () => null };
+    }
+    const sorted = [...rows].sort((a, b) => b.score - a.score || a.created_at.localeCompare(b.created_at));
+    return { ok: true, status: 200, json: async () => sorted.slice(0, 5) };
+  };
+  return { fetchFn, calls, rows };
+}
+
+test('shared table: sends the anon key, cleans initials and returns the rank', async () => {
+  const api = fakeSupabase();
+  const lb = supabaseLeaderboard({ url: 'https://x.supabase.co/', key: 'anon' }, { fetchFn: api.fetchFn });
+  await lb.submit('ab', 300);
+  assert.equal(await lb.submit('c-d1', 500), 0);
+  assert.equal(await lb.submit('ZED', 300), 2, 'a tie ranks after the earlier score');
+  assert.deepEqual((await lb.top()).map((e) => [e.initials, e.score]), [['CD', 500], ['AB', 300], ['ZED', 300]]);
+  const post = api.calls.find((c) => c.opts.method === 'POST');
+  assert.equal(post.url, 'https://x.supabase.co/rest/v1/scores');
+  assert.equal(post.opts.headers.apikey, 'anon');
+  assert.equal(await lb.qualifies(1), true);
+});
+
+test('fallback: the device table is used when the shared one is unreachable', async () => {
+  const local = localLeaderboard(memoryStore());
+  const lb = withFallback(supabaseLeaderboard({ url: 'https://x', key: 'k' }, { fetchFn: fakeSupabase({ fail: true }).fetchFn }), local);
+  assert.equal(await lb.submit('AL', 400), 0);
+  assert.deepEqual((await lb.top()).map((e) => e.score), [400]);
+  assert.equal(await lb.qualifies(10), true);
+});
+
+test('fallback: scores are kept on the device even when the shared table works', async () => {
+  const local = localLeaderboard(memoryStore());
+  const api = fakeSupabase();
+  const lb = withFallback(supabaseLeaderboard({ url: 'https://x', key: 'k' }, { fetchFn: api.fetchFn }), local);
+  await lb.submit('AL', 400);
+  assert.equal(api.rows.length, 1);
+  assert.deepEqual((await local.top()).map((e) => e.score), [400]);
+});
+
+test('initials are cleaned to 1-4 letters', () => {
+  assert.equal(cleanInitials('a.b-c'), 'ABC');
+  assert.equal(cleanInitials('   '), 'ANON');
+  assert.equal(cleanInitials('LONGNAME'), 'LONG');
 });

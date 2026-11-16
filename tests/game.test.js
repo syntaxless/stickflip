@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
-import { LEVELS } from '../src/levels/index.js';
+import { WORLD } from '../src/config.js';
+import { LEVELS, SECRET } from '../src/levels/index.js';
 
 const STEP = 1 / 120;
 
@@ -27,7 +28,7 @@ function play(level, taps, maxTime = 8) {
 const level1 = LEVELS[1]; // First Rail (these tests predate the gap level)
 
 test('every level has the fields the engine needs', () => {
-  for (const lvl of LEVELS) {
+  for (const lvl of [...LEVELS, SECRET]) {
     assert.ok(lvl.id && lvl.name && lvl.hint);
     assert.ok(lvl.obstacles.length >= 1);
     for (const o of lvl.obstacles) {
@@ -101,7 +102,7 @@ test('retry after a bail restarts the run', () => {
 
 // ------------------------------------------------------------ swipe tricks
 
-// Like play(), but each input is [time, 'tap' | swipe direction].
+// Like play(), but each input is [time, 'tap' | a TRICKS key from a swipe].
 function playInputs(level, inputs, maxTime = 8) {
   const game = new Game(level);
   game.tap();
@@ -122,30 +123,63 @@ function playInputs(level, inputs, maxTime = 8) {
 }
 
 test('swipes in the air do their tricks and still allow the grind', () => {
-  for (const [dir, name] of [
-    ['down', 'HEELFLIP'],
-    ['up', 'POP SHOVE-IT'],
-    ['right', 'FS 360'],
-    ['left', 'BS 360'],
-    ['down-right', '360 FLIP'],
-    ['down-left', 'HARDFLIP'],
+  for (const [key, name] of [
+    ['heelflip', 'HEELFLIP'],
+    ['kickflip', 'KICKFLIP'],
+    ['shove', 'POP SHOVE-IT'],
+    ['fsShove', 'FS POP SHOVE-IT'],
+    ['shove360', '360 SHOVE-IT'],
+    ['varialKick', 'VARIAL KICKFLIP'],
+    ['varialHeel', 'VARIAL HEELFLIP'],
+    ['hardflip', 'HARDFLIP'],
+    ['inwardHeel', 'INWARD HEELFLIP'],
+    ['fs360', 'FS 360'],
+    ['bs360', 'BS 360'],
+    ['treflip', '360 FLIP'],
   ]) {
-    const { game, names } = playInputs(level1, [[0.75, 'tap'], [0.77, dir], [1.36, 'tap']]);
-    assert.ok(names.includes(name), `${dir} -> ${names}`);
-    assert.equal(game.phase, 'complete', `${dir}: bailed ${game.bailReason}`);
+    const { game, names } = playInputs(level1, [[0.75, 'tap'], [0.77, key], [1.36, 'tap']]);
+    assert.ok(names.includes(name), `${key} -> ${names}`);
+    assert.equal(game.phase, 'complete', `${key}: bailed ${game.bailReason}`);
   }
 });
 
-test('a swipe on the ground ollies and an unknown pattern falls back to its first direction', () => {
-  const { game, names } = playInputs(level1, [[0.75, 'right'], [0.77, 'down-up'], [1.32, 'tap']]);
-  assert.ok(names.includes('HEELFLIP'), String(names));
+test('a swipe on the ground ollies, and a stroke that is no trick does nothing in the air', () => {
+  const { game, names } = playInputs(level1, [[0.75, 'fs360'], [0.77, null], [1.32, 'tap']]);
+  assert.deepEqual(names, ['50-50 GRIND'], String(names));
   assert.equal(game.phase, 'complete');
 });
 
 test('a long trick started too late is a bail', () => {
-  const { game } = playInputs(level1, [[0.2, 'tap'], [0.75, 'down-right']]);
+  const { game } = playInputs(level1, [[0.2, 'tap'], [0.75, 'treflip']]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'flip');
+});
+
+test('the biggest flips fit in quarter pipe air', () => {
+  for (const [key, name] of [['laser', 'LASER FLIP'], ['hardflip360', '360 HARDFLIP'], ['inward360', '360 INWARD HEEL'], ['fsShove360', 'FS 360 SHOVE-IT']]) {
+    const { seen, game } = playActs(LEVELS[5], [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [2.95, 'swipe', key]], 4.6);
+    assert.ok(seen.has(name), `${key}: ${[...seen]}`);
+    assert.equal(game.phase, 'playing', `${key}: ${game.bailReason}`);
+  }
+});
+
+test('charged ollie straight into a trick: hold, drag the shape, lift', () => {
+  const flat = { id: 'flat', obstacles: [], width: 4000 };
+  const g = new Game(flat);
+  g.tap();
+  for (let t = 0; t < 0.3; t += STEP) g.update(STEP);
+  assert.ok(g.startCharge());
+  for (let t = 0; t < 0.5; t += STEP) g.update(STEP);
+  assert.ok(g.releaseCharge());
+  g.swipe('kickflip'); // what main.js does when the held finger drew a shape
+  assert.equal(g.sk.flip?.trick.name, 'KICKFLIP', 'the trick starts on the pop');
+  const names = [];
+  for (let t = 0; t < 2 && g.sk.mode === 'air'; t += STEP) {
+    g.update(STEP);
+    for (const e of g.drainEvents()) if (e.type === 'trick') names.push(e.name);
+  }
+  assert.equal(g.phase, 'playing', g.bailReason);
+  assert.ok(names.includes('KICKFLIP'), String(names));
 });
 
 // ------------------------------------------------------------ holds and grinds
@@ -212,7 +246,7 @@ test('gap: no ollie rolls in, too early comes up short', () => {
 
 test('gap: a kickflip over it is two stars, a 360 flip three', () => {
   assert.equal(play(gapLevel, [0.9, 0.92]).game.stars, 2);
-  assert.equal(playInputs(gapLevel, [[0.9, 'tap'], [0.92, 'down-right']]).game.stars, 3);
+  assert.equal(playInputs(gapLevel, [[0.9, 'tap'], [0.92, 'treflip']]).game.stars, 3);
 });
 
 // ------------------------------------------------------------ level 3: stairs
@@ -246,4 +280,144 @@ test('stairs: kickflip in, grind, pop and kickflip out gets three stars', () => 
   const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.14, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.equal(game.stars, 3, `score ${game.score}`);
+});
+
+// ---------------------------------------------------------------- levels 4-6 + secret
+
+function playActs(level, acts, maxTime = 10) {
+  const game = new Game(level);
+  game.tap();
+  const queue = [...acts].sort((a, b) => a[0] - b[0]);
+  const seen = new Set();
+  let t = 0;
+  while (t < maxTime && game.phase === 'playing') {
+    while (queue.length && queue[0][0] <= t + 1e-9) {
+      const [, act, arg] = queue.shift();
+      if (act === 'tap') game.tap();
+      else if (act === 'swipe') game.swipe(arg);
+      else if (act === 'hold') game.setHold(true, arg || null);
+      else if (act === 'up') game.setHold(false);
+    }
+    game.update(STEP);
+    t += STEP;
+    for (const e of game.drainEvents()) seen.add(e.type === 'trick' ? e.name : e.type);
+  }
+  return { game, seen };
+}
+
+const [bankToBank, euroGap, quarter] = [LEVELS[3], LEVELS[4], LEVELS[5]];
+
+test('bank to bank: ollie off the lip clears the gap, rolling off drops in', () => {
+  assert.equal(play(bankToBank, [0.9]).game.phase, 'complete');
+  assert.equal(play(bankToBank, []).game.bailReason, 'rolled');
+  assert.equal(play(bankToBank, [0.4]).game.bailReason, 'gap');
+});
+
+test('bank to bank: the skater follows the bank up and is thrown off its lip', () => {
+  const game = new Game(bankToBank);
+  game.tap();
+  let top = Infinity;
+  for (let i = 0; i < 150; i++) {
+    game.update(STEP);
+    top = Math.min(top, game.sk.y);
+  }
+  assert.ok(top < bankToBank.obstacles[0].ground[0].y2 - 1, 'a little air off the lip');
+});
+
+test('euro gap: ollie off the bank up onto the top; early lands on the step, none hits the stairs', () => {
+  assert.equal(play(euroGap, [1.1]).game.phase, 'complete');
+  assert.equal(play(euroGap, [0.7]).game.bailReason, 'step');
+  assert.equal(play(euroGap, []).game.bailReason, 'stairsUp');
+  assert.equal(play(euroGap, [1.3]).game.bailReason, 'stairsUp');
+});
+
+test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
+  const { game, seen } = playActs(quarter, [
+    [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
+    [3.0, 'tap'], // kickflip in the air
+    [5.2, 'tap'], [5.2, 'hold', 'left'], [7, 'up'],
+  ]);
+  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
+  assert.ok(seen.has('50-50 GRIND') && seen.has('KICKFLIP') && seen.has('FS AIR'));
+  assert.ok(seen.has('NOSE GRIND'), 'dragging forward (left) on the way back is a nose grind');
+  assert.ok(game.sk.x < 0 && game.sk.dir === -1);
+});
+
+test('quarter pipe: doing nothing slams the rail, a late flip in the air is a bail', () => {
+  assert.equal(play(quarter, []).game.bailReason, 'slam');
+  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [3.75, 'tap']]);
+  assert.equal(game.bailReason, 'flip');
+});
+
+test('quarter pipe: straight up and down at riding speed, over a second of hang time for two tricks', () => {
+  const { game, seen } = playActs(quarter, [
+    [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
+    [2.95, 'swipe', 'treflip'], // 360 flip
+    [3.55, 'tap'], // then a kickflip
+  ], 4.6);
+  assert.ok(seen.has('360 FLIP') && seen.has('KICKFLIP') && seen.has('FS AIR'), [...seen].join());
+  assert.equal(game.phase, 'playing');
+  assert.equal(game.sk.dir, -1);
+  assert.equal(game.sk.face, 1, 'no turning around: back out fakie');
+});
+
+test('quarter pipe: the air goes up and comes down at a steady riding speed', () => {
+  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']], 3.2);
+  assert.ok(game.sk.qpAir, 'in the air off the quarter');
+  assert.equal(Math.abs(game.sk.vy), game.speed);
+  assert.equal(game.sk.vx, 0);
+});
+test('secret mega ramp: ollie the kicker over the rail, or grind it, then air the quarter', () => {
+  const clear = playActs(SECRET, [[0.85, 'tap']]);
+  assert.equal(clear.game.phase, 'complete', `bailed: ${clear.game.bailReason}`);
+  assert.ok(clear.seen.has('FS AIR'));
+  const grind = playActs(SECRET, [[1.2, 'tap']]);
+  assert.equal(grind.game.phase, 'complete', `bailed: ${grind.game.bailReason}`);
+  assert.ok(grind.seen.has('50-50 GRIND'));
+  assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
+});
+
+test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (capped)', () => {
+  const flat = { id: 'flat', obstacles: [], width: 4000 };
+  const peak = (holdTime) => {
+    const game = new Game(flat);
+    game.tap();
+    game.startCharge();
+    for (let t = 0; t < holdTime; t += STEP) game.update(STEP);
+    assert.ok(game.releaseCharge());
+    let top = Infinity;
+    while (game.sk.mode === 'air') {
+      game.update(STEP);
+      top = Math.min(top, game.sk.y);
+    }
+    return WORLD.GROUND - top;
+  };
+  const tap = peak(0.05);
+  const normal = new Game(LEVELS[0]);
+  assert.ok(Math.abs(tap - 169) < 6, `tap height ${tap}`);
+  assert.ok(peak(0.4) > tap * 1.2);
+  assert.ok(Math.abs(peak(2) - peak(0.8)) < 2, 'capped');
+  assert.ok(peak(2) < tap * 2);
+  assert.equal(normal.chargeLevel(), 0);
+});
+
+test('charged ollie: only from the ground, and the crouch level grows with the hold', () => {
+  const game = new Game(LEVELS[0]);
+  assert.equal(game.startCharge(), false, 'not before the run starts');
+  game.tap();
+  assert.equal(game.startCharge(), true);
+  game.update(0.1);
+  assert.equal(game.chargeLevel(), 0);
+  for (let i = 0; i < 40; i++) game.update(STEP);
+  assert.ok(game.chargeLevel() > 0.3);
+});
+test('backflip: a circle in the quarter pipe air lands, too late is a bail, a normal ollie is too short', () => {
+  const qpActs = [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']];
+  const ok = playActs(quarter, [...qpActs, [2.95, 'swipe', 'circle']], 4.6);
+  assert.ok(ok.seen.has('BACKFLIP') && ok.seen.has('FS AIR'), [...ok.seen].join());
+  assert.equal(ok.game.phase, 'playing');
+  const late = playActs(quarter, [...qpActs, [3.5, 'swipe', 'circle']], 4.6);
+  assert.equal(late.game.bailReason, 'flip');
+  const flat = playActs({ id: 'flat', obstacles: [], width: 4000 }, [[0.3, 'tap'], [0.32, 'swipe', 'circle']], 2);
+  assert.equal(flat.game.bailReason, 'flip', 'an ollie is not enough air for a backflip');
 });
