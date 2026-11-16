@@ -25,7 +25,7 @@ export const PHYS = Object.freeze({
 // means the table stays on the device.
 export const SCOREBOARD = Object.freeze({
   url: 'https://meyzelyllboyuypnmusr.supabase.co',
-  key: '',
+  key: 'sb_publishable_NHTCq8t75Xnp6NMI9pHLHQ_8A_w50kV',
 });
 
 export const SCORE = Object.freeze({

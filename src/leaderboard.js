@@ -48,13 +48,16 @@ export function cleanInitials(initials) {
 // scores (see the setup SQL). Calls throw when offline, slow or refused.
 export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, fetchFn = (...a) => fetch(...a), timeoutMs = 5000 } = {}) {
   const base = `${url.replace(/\/+$/, '')}/rest/v1/scores`;
+  // New-style publishable keys (sb_publishable_...) go in the apikey header
+  // only; legacy anon keys are JWTs and are also sent as the bearer token.
+  const authHeaders = key.startsWith('sb_') ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
   async function call(query, opts = {}) {
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctl && setTimeout(() => ctl.abort(), timeoutMs);
     try {
       const res = await fetchFn(base + query, {
         ...opts,
-        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...opts.headers },
+        headers: { ...authHeaders, 'Content-Type': 'application/json', ...opts.headers },
         signal: ctl?.signal,
       });
       if (!res.ok) throw new Error(`scores: HTTP ${res.status}`);
