@@ -105,6 +105,8 @@ src/obstacles/          obstacle builders (rail.js), each with surfaces, solids 
 src/levels/             one file per level + the ordered LEVELS list
 src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
 src/audio.js            PC-speaker style beeps
+icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
+manifest.webmanifest    Home Screen app settings (full screen, landscape)
 tests/game.test.js      plays level 1 with scripted taps
 ```
 
