@@ -165,3 +165,36 @@ export function readStroke(points) {
 export function classifyStroke(points) {
   return readStroke(points).key;
 }
+
+// While charging an ollie the finger also steers the speed (hold and drag
+// forward or back), so only the part drawn after the finger last rested
+// counts as a trick shape. Points carry t (seconds). A pause is the finger
+// staying within PAUSE_RADIUS for PAUSE_TIME. A part that took longer than
+// SHAPE_TIME to draw was a speed drag, not a shape: a plain ollie ('tap').
+export const PAUSE_TIME = 0.15;
+export const PAUSE_RADIUS = 8;
+export const SHAPE_TIME = 0.7;
+
+export function trickPart(points) {
+  if (points.length < 2 || points[0].t == null) return points;
+  const last = points.length - 1;
+  let start = 0;
+  for (let i = last; i > 0 && !start; i--) {
+    // Look back PAUSE_TIME from point i: did the finger stay put?
+    let j = i;
+    let still = true;
+    while (j > 0 && points[i].t - points[j].t < PAUSE_TIME) {
+      j--;
+      if (Math.hypot(points[j].x - points[i].x, points[j].y - points[i].y) > PAUSE_RADIUS) still = false;
+    }
+    if (still && points[i].t - points[j].t >= PAUSE_TIME) start = i;
+  }
+  const part = points.slice(start);
+  if (part[part.length - 1].t - part[0].t > SHAPE_TIME) return [part[part.length - 1]];
+  return part;
+}
+
+// What a stroke drawn while charging an ollie pops into.
+export function readChargeStroke(points) {
+  return readStroke(trickPart(points));
+}

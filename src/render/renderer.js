@@ -19,8 +19,9 @@ export class Renderer {
     this.reset();
   }
 
-  reset() {
-    this.pose = new PoseBlender('idle');
+  // `keepPose`: the rider rolled on from the last screen, so don't snap his pose.
+  reset(keepPose = false) {
+    if (!keepPose || !this.pose) this.pose = new PoseBlender('idle');
     this.particles = [];
     // Pop-up text lives in one fixed slot under the HUD, and a new message
     // replaces the old one instead of piling on top of it. Trick names show in
@@ -251,6 +252,7 @@ export class Renderer {
     g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
     g.text(`HI ${pad(game.best || 0)}`, R, 15, red, 1, 'right');
     if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 26, red, 1, 'right');
+    if (game.phase === 'playing') this.drawSpeed(game, L, 26);
     if (game.combo.length && game.phase === 'playing') {
       // Under the level name, kept clear of the score column: the oldest
       // tricks drop off the front when the list gets too long.
@@ -260,6 +262,35 @@ export class Renderer {
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
       g.text(fit(g, text, room), L, 15, red);
     }
+  }
+
+  // SPEED and a bar of cells: the middle one is cruising speed.
+  drawSpeed(game, x, y) {
+    const g = this.g;
+    g.text('SPEED', x, y, red);
+    const cells = 10;
+    const lo = game.cruise * PHYS.SPEED_MIN;
+    const hi = game.cruise * PHYS.SPEED_MAX;
+    const n = Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo));
+    const bx = x + g.textWidth('SPEED') + 4;
+    for (let i = 0; i < cells; i++) {
+      if (i < n) g.fill(bx + i * 4, y, 3, 7, red);
+      else g.rect(bx + i * 4, y, 3, 7, red);
+    }
+  }
+
+  // Each new screen (and each retry) names its level for a moment, over the
+  // sky, without stopping the ride.
+  drawTitleCard(game) {
+    const g = this.g;
+    const t = game.phaseTime;
+    if (t > 1.8 || (t > 1.4 && Math.floor(t * 20) % 2)) return; // blink out
+    const cx = RES.W / 2;
+    const label = game.levelLabel || `LEVEL ${game.levelNumber || 1}`;
+    g.text(label, cx, 44, red, 1, 'center');
+    g.text(game.level.name, cx + 1, 57, ink, 2, 'center');
+    g.text(game.level.name, cx, 56, red, 2, 'center');
+    g.text(game.level.hint, cx, 76, red, 1, 'center');
   }
 
   blink(rate = 3) {
@@ -290,7 +321,7 @@ export class Renderer {
         g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
         g.text('STICKFLIP', cx, 38, red, 4, 'center');
         g.text(game.level.hint, cx, 75, red, 1, 'center');
-        if (!opts.portrait) g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 86, red, 1, 'center');
+        if (!opts.portrait) g.text('DRAG BACK TO BRAKE. SWIPE IN THE AIR: TRICKS.', cx, 86, red, 1, 'center');
         tapY = opts.portrait ? 87 : 98;
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
@@ -300,8 +331,8 @@ export class Renderer {
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text(BAIL_MESSAGES[game.bailReason] || '', cx, 70, red, 1, 'center');
       if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 84, red, 1, 'center');
-    } else if (game.phase === 'complete' && game.phaseTime > 0.35) {
-      this.drawComplete(game);
+    } else if (game.phase === 'playing') {
+      this.drawTitleCard(game);
     }
   }
 
@@ -317,26 +348,6 @@ export class Renderer {
       g.text('SECRET LEVEL', cx, y + 12, red, 3, 'center');
       g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, red, 2, 'center');
     }
-  }
-
-  drawComplete(game) {
-    const g = this.g;
-    const cx = RES.W / 2;
-    const [x, y, w, h] = [36, 38, 248, 108];
-    g.fill(x, y, w, h, ink);
-    g.rect(x, y, w, h, red);
-    g.rect(x + 2, y + 2, w - 4, h - 4, red);
-
-    g.text('LANDED IT!', cx, y + 9, red, 2, 'center');
-    g.text(`SCORE ${pad(game.score)}`, cx, y + 31, red, 1, 'center');
-    const stars = [0, 1, 2].map((i) => (i < game.stars ? '*' : '-')).join(' ');
-    g.text(stars, cx, y + 44, red, 2, 'center');
-    const s = game.level.stars;
-    const tip = game.stars < 3 ? `NEXT STAR: ${s[game.stars]} PTS. TRY SOME FLIPS!` : 'PERFECT RUN!';
-    g.text(tip, cx, y + 64, red, 1, 'center');
-
-    this.button('retry', 'RIDE AGAIN', x + 12, y + 82, 92, true);
-    this.button('next', game.nextLabel || (game.hasNext ? 'NEXT LEVEL' : 'FINISH RUN'), x + w - 104, y + 82, 92, true);
   }
 
   button(id, label, x, y, w, enabled) {

@@ -4,7 +4,7 @@ import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES, PAL, setPalette, cssColor } from './render/pixel.js';
 import * as audio from './audio.js';
-import { classifyStroke, readStroke } from './gesture.js';
+import { readStroke, readChargeStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
 import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
@@ -145,13 +145,24 @@ function screenPress(clientX, clientY) {
   cycleLetter(Number(id.slice(2)), id.startsWith('up') ? 1 : -1);
 }
 
-function loadLevel(i, autoStart = false) {
+// `entry` ({ speed }) rolls straight onto the screen at that speed: the levels
+// play as one continuous ride, each a screen the rider flips onto.
+function loadLevel(i, autoStart = false, entry = null) {
   levelIndex = i;
   if (i === 0) refreshScores(); // the title screen shows the table
   const secret = i === SECRET_INDEX;
   if (!secret) store.set('level', i);
   const level = secret ? SECRET : LEVELS[i];
-  game = new Game(level);
+  const prev = game;
+  game = new Game(level, entry);
+  // A finger still down from the last screen keeps charging on this one.
+  if (entry && prev?.sk.charge && game.startCharge()) {
+    game.sk.charge.t = prev.sk.charge.t;
+    game.setHold(true, prev.hold?.dir || null);
+  } else if (entry) {
+    if (stroke) stroke.charge = false;
+    if (keyHold) keyHold.charge = false;
+  }
   game.levelNumber = i + 1;
   if (secret) game.levelLabel = 'BONUS';
   setPalette(secret ? 'secret' : 'normal');
@@ -159,8 +170,16 @@ function loadLevel(i, autoStart = false) {
   game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
   if (i === LEVELS.length - 1 && game.hasNext) game.nextLabel = 'BONUS LEVEL';
   game.best = store.get(`best:${level.id}`, 0);
-  renderer.reset();
+  renderer.reset(!!entry);
   if (autoStart) game.tap();
+}
+
+// The rider left the screen: flip to the next level still rolling, or end the run.
+function nextScreen() {
+  const last = LEVELS.length - 1;
+  if (levelIndex < last) loadLevel(levelIndex + 1, false, { speed: game.speed });
+  else if (levelIndex === last && clears >= SECRET_AFTER_CLEARS) unlockSecret();
+  else finishRun();
 }
 
 // ------------------------------------------------------------ layout
@@ -207,25 +226,16 @@ function toWorld(clientX, clientY) {
 
 function press(clientX, clientY) {
   if (screen) return screenPress(clientX, clientY);
-  if (game.phase === 'complete') {
-    if (game.phaseTime < 0.35) return;
-    const p = clientX == null ? null : toWorld(clientX, clientY);
-    const id = p ? renderer.hitButton(p.x, p.y) : 'next'; // keyboard: carry on
-    if (id === 'retry') loadLevel(levelIndex, true);
-    else if (id === 'next') {
-      if (game.hasNext && levelIndex + 1 === SECRET_INDEX) unlockSecret();
-      else if (game.hasNext) loadLevel(levelIndex + 1);
-      else finishRun();
-    }
-    return;
-  }
+  if (game.phase === 'complete') return; // between screens / end of the run
   game.tap();
 }
 
 // On the ground a touch charges an ollie: the skater crouches while the
 // finger is down and pops when it lifts, higher the longer it was held (a
-// quick tap is a normal ollie). Drag a trick shape before lifting and the
-// ollie pops straight into that trick. Other taps act on touch-down for the lowest
+// quick tap is a normal ollie). Holding also pushes (speeds up); drag forward
+// while holding to push harder, back to brake. Draw a trick shape before
+// lifting (after resting the finger, if you were dragging) and the ollie pops
+// straight into that trick. Other taps act on touch-down for the lowest
 // latency. In the air, a touch is followed until the finger lifts so it can
 // be read as a tap or a swipe.
 // Every touch while playing also counts as a hold: if the finger is still
@@ -248,7 +258,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false, charge: false, t0: performance.now() };
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 }], read: false, charge: false, t0: performance.now() };
   canvas.setPointerCapture?.(e.pointerId);
   // On the ground, a touch charges an ollie: crouch while held, pop on lift.
   if (!screen && game.startCharge()) stroke.charge = true;
@@ -262,20 +272,20 @@ canvas.addEventListener('pointerdown', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   if (!stroke || e.pointerId !== stroke.id) return;
-  stroke.points.push({ x: e.clientX, y: e.clientY });
+  stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
   if (game.hold) game.setHold(true, holdDir(stroke.points));
 });
 
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
-  stroke.points.push({ x: e.clientX, y: e.clientY });
+  stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
   const { read, points, charge, t0 } = stroke;
   stroke = null;
   const popped = charge && game.releaseCharge();
   const grinded = game.setHold(false);
   if (popped) {
     // Dragged a trick shape while charging: the ollie pops straight into it.
-    const r = readStroke(points);
+    const r = readChargeStroke(points);
     showStroke(points, r);
     if (r.key !== 'tap') game.swipe(r.key);
     return;
@@ -425,6 +435,7 @@ function frame(now) {
     acc -= STEP;
   }
   const events = game.drainEvents();
+  let flip = false;
   for (const e of events) {
     if (e.type === 'bail' && navigator.vibrate) navigator.vibrate(60);
     if (e.type === 'complete') {
@@ -434,10 +445,12 @@ function frame(now) {
         game.best = e.score;
         store.set(`best:${game.level.id}`, e.score);
       }
+      flip = true;
     }
   }
   audio.play(events, game);
   renderer.consume(events);
+  if (flip) nextScreen();
   if (screen) screen.t += dt;
   if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {
     screen = null;

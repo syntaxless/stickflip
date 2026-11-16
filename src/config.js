@@ -26,6 +26,21 @@ export const PHYS = Object.freeze({
   QP_RAMP_BOOST: 1.6, // most a quarter pipe's curve speeds up to keep the riding pace across the screen
   QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
+  // Speed control. The rider rolls on his own at ROLL_SPEED. Holding down
+  // crouches and pushes (faster), holding and dragging forward pushes harder,
+  // holding and dragging back brakes. Let go and the speed drifts back to cruising.
+  SPEED_MIN: 0.7, // slowest and fastest, as shares of cruising speed
+  SPEED_MAX: 1.4,
+  HOLD_ACCEL: 120, // px/s^2 while holding (crouched push)
+  PUSH_ACCEL: 260, // px/s^2 while holding and dragging forward
+  BRAKE: 420, // px/s^2 while holding and dragging back
+  SPEED_RETURN: 60, // px/s^2 back toward cruising once you let go
+  // Ollie height follows speed a little (distance follows it a lot): up to
+  // this share higher at top speed, lower at the slowest. The total, with the
+  // charge, never goes over 1 + CHARGE_BOOST (no backflips on flat ground).
+  SPEED_POP_UP: 0.06,
+  SPEED_POP_DOWN: 0.1,
+  ENTRY_X: -12, // where the rider rolls in from the left on the next screen
 });
 
 // The shared high-score table (Supabase). Both values are public: the anon key
