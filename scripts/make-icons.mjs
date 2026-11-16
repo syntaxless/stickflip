@@ -134,12 +134,20 @@ function fillQuad(g, q, color) {
   const s = 0.32; // pixels per world unit
   const [fx, fy] = [W / 2, H - 7];
   drawFigure(g, makeTransform(fx / s, fy / s, 0, s), POSES.flip);
-  // the board below the feet, nose tipped up and part way through its flip,
-  // filled solid black
-  const tf = makeTransform(fx / s, fy / s, -0.3, s);
-  const t = (Math.abs(Math.sin(0.5)) * 18) / 2;
-  fillQuad(g, [[-26, -8 - t], [26, -8 - t], [26, -8 + t], [-26, -8 + t]].map(([x, y]) => tf({ x, y })), PAL.ink);
-  drawBoard(g, tf, 0.5, 0);
+  // the board below the feet, nose tipped up: a solid black deck with
+  // wheels underneath
+  const tf = makeTransform(fx / s, fy / s, -0.25, s);
+  const deck = [[-28, -15], [28, -15], [28, -9], [-28, -9]].map(([x, y]) => tf({ x, y }));
+  fillQuad(g, deck, PAL.ink);
+  deck.forEach((a, i) => {
+    const b = deck[(i + 1) % deck.length];
+    g.line(a.x, a.y, b.x, b.y, PAL.ink); // the edges too, so the deck has no gaps
+  });
+  // two 2 x 2 wheels, a pixel clear of the deck
+  for (const wx of [-17, 17]) {
+    const w = tf({ x: wx, y: 0 });
+    g.fill(Math.round(w.x - 1), Math.round(w.y - 1), 2, 2, PAL.ink);
+  }
   save('og-image.png', png(g, 5));
 }
 
