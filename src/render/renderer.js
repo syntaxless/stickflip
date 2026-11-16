@@ -22,7 +22,11 @@ export class Renderer {
   reset() {
     this.pose = new PoseBlender('idle');
     this.particles = [];
-    this.popups = [];
+    // Pop-up text lives in one fixed slot under the HUD, and a new message
+    // replaces the old one instead of piling on top of it. Trick names show in
+    // the HUD's combo line; the slot is for the points, banked on landing,
+    // when the rider is down on the ground and out of the way.
+    this.popups = { bank: null };
     this.squash = 0;
     this.buttons = [];
     this.time = 0;
@@ -42,11 +46,8 @@ export class Renderer {
         case 'grind':
           this.sparks(e.x, e.y, 10);
           break;
-        case 'trick':
-          this.popup(e.name, e.x, e.y - 130, red);
-          break;
         case 'bank':
-          this.popup(e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`, e.x, e.y - 160, red);
+          this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
         case 'bail':
           this.dust(e.x, e.y, 10);
@@ -67,8 +68,8 @@ export class Renderer {
     }
   }
 
-  popup(text, x, y, color) {
-    this.popups.push({ text, x, y, color, life: 1.1 }); // kept on screen when drawn
+  popup(slot, text) {
+    this.popups[slot] = { text, life: 1.1 };
   }
 
   // ----------------------------------------------------------- drawing
@@ -91,7 +92,7 @@ export class Renderer {
     g.ox = 0;
     g.oy = 0;
     const inset = Math.ceil(opts.inset || 0);
-    this.drawPopups(inset, cam);
+    this.drawPopups(inset);
     this.drawHud(game, opts, inset);
     this.drawOverlay(game, opts);
     g.flush();
@@ -107,11 +108,12 @@ export class Renderer {
       p.vy += (p.kind === 'spark' ? 1400 : 300) * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
-    for (const p of this.popups) {
-      p.life -= dt;
-      p.y -= 40 * dt;
+    for (const k of Object.keys(this.popups)) {
+      const p = this.popups[k];
+      if (p && (p.life -= dt) <= 0) this.popups[k] = null;
     }
-    this.popups = this.popups.filter((p) => p.life > 0);
+    // Bails and the level-end box use the middle of the screen: clear the way.
+    if (game.phase !== 'playing') this.popups = { bank: null };
   }
 
   // Camera position in pixels. Fixed-screen levels never move it.
@@ -230,13 +232,13 @@ export class Renderer {
     }
   }
 
-  drawPopups(inset = 0, cam = { x: 0, y: 0 }) {
-    for (const p of this.popups) {
-      if (p.life < 0.3 && Math.floor(p.life * 20) % 2) continue; // blink out
-      // keep the text inside the visible part of the screen
-      const half = this.g.textWidth(p.text) / 2 + 2;
-      const x = Math.max(inset + half, Math.min(RES.W - inset - half, P(p.x) - cam.x));
-      this.g.text(p.text, x, Math.max(36, P(p.y) - cam.y), p.color, 1, 'center');
+  // Centred under the HUD (which ends about y 33).
+  drawPopups(inset = 0) {
+    const rows = [['bank', 42]];
+    for (const [slot, y] of rows) {
+      const p = this.popups[slot];
+      if (!p || (p.life < 0.3 && Math.floor(p.life * 20) % 2)) continue; // blink out
+      this.g.text(fit(this.g, p.text, RES.W - 2 * inset - 8), RES.W / 2, y, red, 1, 'center');
     }
   }
 
@@ -250,7 +252,13 @@ export class Renderer {
     g.text(`HI ${pad(game.best || 0)}`, R, 15, red, 1, 'right');
     if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 26, red, 1, 'right');
     if (game.combo.length && game.phase === 'playing') {
-      g.text(game.combo.map((t) => t.name).join(' + '), L, 15, red);
+      // Under the level name, kept clear of the score column: the oldest
+      // tricks drop off the front when the list gets too long.
+      const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(opts.total || 0)}`), g.textWidth(`HI ${pad(game.best || 0)}`)) - 8;
+      const names = game.combo.map((t) => t.name);
+      let text = names.join(' + ');
+      for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
+      g.text(fit(g, text, room), L, 15, red);
     }
   }
 
@@ -383,4 +391,12 @@ export class Renderer {
     const padding = 12;
     return this.buttons.find((b) => lx >= b.x - padding && lx <= b.x + b.w + padding && ly >= b.y - padding && ly <= b.y + b.h + padding)?.id;
   }
+}
+
+// Shortens text that would be wider than `max` pixels.
+function fit(g, text, max) {
+  if (g.textWidth(text) <= max) return text;
+  let t = text;
+  while (t.length > 1 && g.textWidth(`${t}...`) > max) t = t.slice(0, -1);
+  return `${t}...`;
 }
