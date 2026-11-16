@@ -1,12 +1,12 @@
 // High scores. The game only talks to this small async interface, so the
 // on-device version below can later be swapped for one backed by a shared
 // database without touching the rest of the code:
-//   top()                     -> [{ initials, score, date }] best first (initials: up to 4 letters)
+//   top()                     -> [{ initials, score, date }] best first (initials: up to INITIALS letters)
 //   qualifies(score)          -> would this score make the table?
 //   submit(initials, score)   -> the new entry's rank (0-based), or -1
 
 export const TABLE_SIZE = 5;
-export const INITIALS = 4; // letters per name
+export const INITIALS = 5; // letters per name (the database allows up to 5: see supabase/scores.sql)
 
 // `store` is any { get(key, fallback), set(key, value) } (localStorage in the
 // browser, a plain object in tests).

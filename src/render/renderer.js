@@ -365,8 +365,8 @@ export class Renderer {
     const { y } = this.panel('NEW HIGH SCORE!');
     this.drawBonus(scr, y);
     g.text(`RUN TOTAL ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
-    g.text('ENTER YOUR INITIALS', cx, y + 42, red, 1, 'center');
-    const left = cx - 72;
+    g.text('ENTER YOUR NAME', cx, y + 42, red, 1, 'center');
+    const left = cx - Math.round((INITIALS * 26 + 40) / 2); // letters, then OK
     for (let i = 0; i < INITIALS; i++) {
       const lx = left + i * 26;
       this.button(`up${i}`, '+', lx, y + 56, 20, true);
