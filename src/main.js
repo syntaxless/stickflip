@@ -476,8 +476,10 @@ function frame(now) {
   const groundY = Math.round((view.oy + (WORLD.GROUND / (WORLD.W / RES.W)) * view.scale) * view.dpr);
   ctx.fillStyle = cssColor(PAL.sky);
   ctx.fillRect(0, 0, canvas.width, groundY);
-  ctx.fillStyle = cssColor(PAL.ink);
+  ctx.fillStyle = cssColor(PAL.ground);
   ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+  ctx.fillStyle = cssColor(PAL.edge); // the ground's outline carries on past the game's edges
+  ctx.fillRect(0, groundY, canvas.width, Math.max(1, Math.round(view.scale * view.dpr)));
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
   if (TESTING) drawStrokeDebug();

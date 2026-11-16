@@ -10,7 +10,7 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red } = PAL;
+const { sky, ink, red, ground: groundCol, edge } = PAL;
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -134,10 +134,22 @@ export class Renderer {
 
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
+    // Dark grey ground with a maroon outline along its top and down every
+    // step, drop and gap wall.
     const bottom = RES.H + cam.y;
+    const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
+    let prev = topAt(cam.x - 1);
+    let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + RES.W; x++) {
-      const top = P(game.groundAt(x * S + S / 2).y);
-      if (top < bottom) g.fill(x, top, 1, bottom - top, ink);
+      const next = topAt(x + 1);
+      if (top < bottom) {
+        g.fill(x, top, 1, bottom - top, groundCol);
+        // a lower neighbour means this column's side shows
+        const drop = Math.max(prev, next);
+        g.line(x, top, x, Math.max(top, Math.min(drop, bottom) - 1), edge);
+      }
+      prev = top;
+      top = next;
     }
   }
 
