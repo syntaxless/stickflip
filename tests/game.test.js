@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
-import { LEVELS } from '../src/levels/index.js';
+import { LEVELS, SECRET } from '../src/levels/index.js';
 
 const STEP = 1 / 120;
 
@@ -27,7 +27,7 @@ function play(level, taps, maxTime = 8) {
 const level1 = LEVELS[1]; // First Rail (these tests predate the gap level)
 
 test('every level has the fields the engine needs', () => {
-  for (const lvl of LEVELS) {
+  for (const lvl of [...LEVELS, SECRET]) {
     assert.ok(lvl.id && lvl.name && lvl.hint);
     assert.ok(lvl.obstacles.length >= 1);
     for (const o of lvl.obstacles) {
@@ -246,4 +246,77 @@ test('stairs: kickflip in, grind, pop and kickflip out gets three stars', () => 
   const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.14, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.equal(game.stars, 3, `score ${game.score}`);
+});
+
+// ---------------------------------------------------------------- levels 4-6 + secret
+
+function playActs(level, acts, maxTime = 10) {
+  const game = new Game(level);
+  game.tap();
+  const queue = [...acts].sort((a, b) => a[0] - b[0]);
+  const seen = new Set();
+  let t = 0;
+  while (t < maxTime && game.phase === 'playing') {
+    while (queue.length && queue[0][0] <= t + 1e-9) {
+      const [, act, arg] = queue.shift();
+      if (act === 'tap') game.tap();
+      else if (act === 'swipe') game.swipe(arg);
+      else if (act === 'hold') game.setHold(true, arg || null);
+      else if (act === 'up') game.setHold(false);
+    }
+    game.update(STEP);
+    t += STEP;
+    for (const e of game.drainEvents()) seen.add(e.type === 'trick' ? e.name : e.type);
+  }
+  return { game, seen };
+}
+
+const [bankToBank, euroGap, quarter] = [LEVELS[3], LEVELS[4], LEVELS[5]];
+
+test('bank to bank: ollie off the lip clears the gap, rolling off drops in', () => {
+  assert.equal(play(bankToBank, [0.9]).game.phase, 'complete');
+  assert.equal(play(bankToBank, []).game.bailReason, 'rolled');
+  assert.equal(play(bankToBank, [0.4]).game.bailReason, 'gap');
+});
+
+test('bank to bank: the skater follows the bank up and is thrown off its lip', () => {
+  const game = new Game(bankToBank);
+  game.tap();
+  let top = Infinity;
+  for (let i = 0; i < 150; i++) {
+    game.update(STEP);
+    top = Math.min(top, game.sk.y);
+  }
+  assert.ok(top < bankToBank.obstacles[0].ground[0].y2 - 1, 'a little air off the lip');
+});
+
+test('euro gap: ollie up onto the top, short is a bail, the low step is a bail', () => {
+  assert.equal(play(euroGap, [0.96]).game.phase, 'complete');
+  assert.equal(play(euroGap, [0.5]).game.bailReason, 'gap');
+  assert.equal(play(euroGap, [0.8]).game.bailReason, 'step');
+});
+
+test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
+  const { game, seen } = playActs(quarter, [
+    [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
+    [2.95, 'tap'],
+    [4.8, 'tap'], [4.8, 'hold', 'left'], [6, 'up'],
+  ]);
+  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
+  assert.ok(seen.has('50-50 GRIND') && seen.has('KICKFLIP') && seen.has('FS AIR'));
+  assert.ok(seen.has('NOSE GRIND'), 'dragging forward (left) on the way back is a nose grind');
+  assert.ok(game.sk.x < 0 && game.sk.dir === -1);
+});
+
+test('quarter pipe: doing nothing slams the rail, a late flip in the air is a bail', () => {
+  assert.equal(play(quarter, []).game.bailReason, 'slam');
+  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [3.4, 'tap']]);
+  assert.equal(game.bailReason, 'flip');
+});
+
+test('secret mega ramp: ollie off the kicker flies the big gap', () => {
+  const { game } = playActs(SECRET, [[1.05, 'tap'], [1.1, 'swipe', 'down-right']]);
+  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
+  assert.ok(game.score >= 300);
+  assert.equal(play(SECRET, []).game.bailReason, 'rolled');
 });

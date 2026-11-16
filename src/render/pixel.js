@@ -77,6 +77,9 @@ export class Pix {
     this.h = h;
     this.img = ctx.createImageData(w, h);
     this.data = this.img.data;
+    // Camera offset in pixels, added to everything drawn (scrolling levels).
+    this.ox = 0;
+    this.oy = 0;
   }
 
   clear(c = PAL.sky) {
@@ -94,8 +97,8 @@ export class Pix {
   }
 
   pset(x, y, c) {
-    x = Math.round(x);
-    y = Math.round(y);
+    x = Math.round(x) + this.ox;
+    y = Math.round(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = (y * this.w + x) * 4;
     this.data[i] = c[0];

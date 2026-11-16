@@ -1,12 +1,12 @@
-import { WORLD } from './config.js';
+import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
-import { LEVELS } from './levels/index.js';
+import { LEVELS, SECRET } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES, PAL } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
-import { localLeaderboard, INITIALS } from './leaderboard.js';
+import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
@@ -49,14 +49,23 @@ let game;
 
 // ------------------------------------------------------------ run + high scores
 
-// On-device for now. Swap in another object with the same async interface
-// (see leaderboard.js) to share scores between players.
-const board = localLeaderboard(store);
+// Shared between all players through Supabase when it's set up (see
+// SCOREBOARD in config.js), with the on-device table as the fallback when it
+// can't be reached. Local copies (localhost) only ever use the device table.
+const localBoard = localLeaderboard(store);
+const shared = SCOREBOARD.url && SCOREBOARD.key && !/^(localhost|127\.|\[::1\])/.test(location.hostname);
+const board = shared ? withFallback(supabaseLeaderboard(SCOREBOARD), localBoard) : localBoard;
 let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
 refreshScores();
 
-let run = new Run(LEVELS.length, store.get('run', null));
+// The secret level plays after level 6 from the third full clear of the run
+// onwards, and counts toward the run total like any other level.
+const SECRET_INDEX = LEVELS.length;
+const SECRET_AFTER_CLEARS = 2; // full clears needed before the run that unlocks it
+let clears = store.get('clears', 0);
+
+let run = new Run(LEVELS.length + 1, store.get('run', null));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -66,8 +75,10 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
 
 async function finishRun() {
   const score = run.total();
-  run = new Run(LEVELS.length);
+  run = new Run(LEVELS.length + 1);
   store.set('run', run);
+  clears += 1;
+  store.set('clears', clears);
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, letters: saved.split(''), pos: 0, t: 0 };
@@ -110,11 +121,15 @@ function screenPress(clientX, clientY) {
 
 function loadLevel(i, autoStart = false) {
   levelIndex = i;
-  store.set('level', i);
-  game = new Game(LEVELS[i]);
+  if (i === 0) refreshScores(); // the title screen shows the table
+  const secret = i === SECRET_INDEX;
+  if (!secret) store.set('level', i);
+  const level = secret ? SECRET : LEVELS[i];
+  game = new Game(level);
   game.levelNumber = i + 1;
-  game.hasNext = i + 1 < LEVELS.length;
-  game.best = store.get(`best:${LEVELS[i].id}`, 0);
+  if (secret) game.levelLabel = 'SECRET';
+  game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
+  game.best = store.get(`best:${level.id}`, 0);
   renderer.reset();
   if (autoStart) game.tap();
 }

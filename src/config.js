@@ -16,8 +16,16 @@ export const PHYS = Object.freeze({
   GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
-  EXIT_X: 1000, // rolling past this x finishes the level
+  QP_V: 900, // speed straight up out of a quarter pipe
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
+});
+
+// The shared high-score table (Supabase). Both values are public: the anon key
+// can only read and add scores (row level security, see the setup SQL). Empty
+// means the table stays on the device.
+export const SCOREBOARD = Object.freeze({
+  url: 'https://meyzelyllboyuypnmusr.supabase.co',
+  key: 'sb_publishable_NHTCq8t75Xnp6NMI9pHLHQ_8A_w50kV',
 });
 
 export const SCORE = Object.freeze({
