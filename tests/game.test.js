@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
-import { WORLD } from '../src/config.js';
+import { WORLD, PHYS } from '../src/config.js';
 import { LEVELS, SECRET } from '../src/levels/index.js';
+import { quarterPipe } from '../src/obstacles/index.js';
 
 const STEP = 1 / 120;
 
@@ -335,7 +336,7 @@ test('quarter pipe: grind in, air out of the quarter, grind back and exit left',
   const { game, seen } = playActs(quarter, [
     [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
     [3.0, 'tap'], // kickflip in the air
-    [5.2, 'tap'], [5.2, 'hold', 'left'], [7, 'up'],
+    [5.125, 'tap'], [5.125, 'hold', 'left'], [7, 'up'],
   ]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.ok(seen.has('50-50 GRIND') && seen.has('KICKFLIP') && seen.has('FS AIR'));
@@ -361,11 +362,25 @@ test('quarter pipe: straight up and down at riding speed, over a second of hang 
   assert.equal(game.sk.face, 1, 'no turning around: back out fakie');
 });
 
-test('quarter pipe: the air goes up and comes down at a steady riding speed', () => {
-  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']], 3.2);
-  assert.ok(game.sk.qpAir, 'in the air off the quarter');
-  assert.equal(Math.abs(game.sk.vy), game.speed);
-  assert.equal(game.sk.vx, 0);
+test('quarter pipe: no slowing down on the curve, then straight up and down under normal gravity', () => {
+  const game = new Game({ id: 'qp', obstacles: [quarterPipe({ x: 760, radius: 120 })] });
+  game.tap();
+  let [px, py] = [game.sk.x, game.sk.y];
+  let rampFrames = 0;
+  let launched = null;
+  for (let i = 0; i < 120 * 6 && !launched; i++) {
+    game.update(STEP);
+    const s = game.sk;
+    if (s.mode === 'ramp') {
+      rampFrames++;
+      assert.ok(Math.abs(Math.hypot(s.x - px, s.y - py) / STEP - game.speed) < 1, 'riding speed all the way up');
+    }
+    if (s.qpAir) launched = { vy: s.vy, vx: s.vx };
+    [px, py] = [s.x, s.y];
+  }
+  assert.ok(rampFrames > 10 && launched, 'rode up the quarter and out');
+  assert.equal(launched.vx, 0);
+  assert.ok(launched.vy < -PHYS.QP_POP_V + PHYS.GRAVITY * STEP * 1.01, 'pops straight up');
 });
 test('secret mega ramp: ollie the kicker over the rail, or grind it, then air the quarter', () => {
   const clear = playActs(SECRET, [[1.1, 'tap']]);
@@ -426,9 +441,10 @@ test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (ca
   const tap = peak(0.05);
   const normal = new Game(LEVELS[0]);
   assert.ok(Math.abs(tap - 169) < 6, `tap height ${tap}`);
-  assert.ok(peak(0.4) > tap * 1.2);
+  assert.ok(peak(0.4) > tap * 1.05);
+  assert.ok(peak(0.8) > tap * 1.2, 'a full charge is about 1.25x as high');
   assert.ok(Math.abs(peak(2) - peak(0.8)) < 2, 'capped');
-  assert.ok(peak(2) < tap * 2);
+  assert.ok(peak(2) < tap * 1.3, 'only a little higher');
   assert.equal(normal.chargeLevel(), 0);
 });
 
@@ -451,6 +467,16 @@ test('backflip: a circle in the quarter pipe air lands, too late is a bail, a no
   assert.equal(late.game.bailReason, 'flip');
   const flat = playActs({ id: 'flat', obstacles: [], width: 4000 }, [[0.3, 'tap'], [0.32, 'swipe', 'circle']], 2);
   assert.equal(flat.game.bailReason, 'flip', 'an ollie is not enough air for a backflip');
+  // nor is a fully charged one, even with the circle drawn while charging
+  const g = new Game({ id: 'flat', obstacles: [], width: 4000 });
+  g.tap();
+  for (let t = 0; t < 0.3; t += STEP) g.update(STEP);
+  g.startCharge();
+  for (let t = 0; t < 1; t += STEP) g.update(STEP);
+  assert.ok(g.releaseCharge());
+  g.swipe('circle');
+  for (let t = 0; t < 2 && g.phase === 'playing'; t += STEP) g.update(STEP);
+  assert.equal(g.bailReason, 'flip', 'a charged ollie on flat ground is not enough air for a backflip');
 });
 
 test('time spent drawing a shape counts toward the trick, so a drawn kickflip still lands', () => {
