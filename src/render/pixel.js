@@ -11,6 +11,22 @@ export const PAL = {
   red: [255, 85, 85],
 };
 
+// The secret level has its own palette, from the 16 original named HTML
+// colours: purple sky and yellow text (solids stay black). `red` is the text
+// colour's name everywhere, whatever colour it is.
+export const PALETTES = {
+  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85] },
+  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0] },
+};
+
+// Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.
+export function setPalette(name) {
+  const pal = PALETTES[name] || PALETTES.normal;
+  for (const k of Object.keys(pal)) PAL[k].splice(0, 3, ...pal[k]);
+}
+
+export const cssColor = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+
 // 5x7 glyphs, one 5-bit row per number (MSB = leftmost pixel).
 const b = (...rows) => rows.map((r) => parseInt(r, 2));
 const FONT = {
