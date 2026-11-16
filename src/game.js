@@ -70,12 +70,13 @@ export class Game {
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
     // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
-    this.speed = level.speed || PHYS.ROLL_SPEED;
+    this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
   }
 
   reset() {
+    this.speed = this.baseSpeed; // riding speed (a quarter pipe raises it, see enterRamp)
     this.phase = 'ready';
     this.phaseTime = 0;
     this.time = 0;
@@ -375,6 +376,9 @@ export class Game {
   // for tricks. Then ride back down and out to the left, fakie.
   enterRamp(qp) {
     const s = this.sk;
+    // A quarter pipe speeds the rider up (QP_SPEED): faster up the curve, a
+    // higher air in the same hang time, and a faster ride out afterwards.
+    this.speed = this.baseSpeed * PHYS.QP_SPEED;
     s.mode = 'ramp';
     s.slope = 0;
     const th = Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R)));
