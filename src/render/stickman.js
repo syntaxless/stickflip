@@ -38,11 +38,15 @@ export class PoseBlender {
   }
 }
 
+// How big the rider and board are drawn, relative to their poses (the
+// physics doesn't change): smaller, so the screen reads as a place to ride.
+export const RIDER_SIZE = 0.72;
+
 // A transform from skater-local world units to framebuffer pixels.
 // (x, y) is the anchor in world units, `ang` a rotation in radians.
-export function makeTransform(x, y, ang = 0, scale = 1 / 3) {
-  const c = Math.cos(ang);
-  const s = Math.sin(ang);
+export function makeTransform(x, y, ang = 0, scale = 1 / 3, size = RIDER_SIZE) {
+  const c = Math.cos(ang) * size;
+  const s = Math.sin(ang) * size;
   return (p) => ({ x: (x + c * p.x - s * p.y) * scale, y: (y + s * p.x + c * p.y) * scale });
 }
 
@@ -81,13 +85,14 @@ export function drawBoard(g, tf, spin = 0, lift = 0) {
   const y = -8 - lift;
   if (thick > 4) {
     const t = thick / 2;
-    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.ink);
+    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.deck);
     return;
   }
-  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.ink);
+  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.deck);
+  // Wheels: 2x2 blocks under the trucks (on top when the board is upside down).
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));
-    g.pset(w.x, w.y, PAL.ink);
+    g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, PAL.wheel); // sit on the ground, not in it
   }
 }
 

@@ -1,7 +1,8 @@
 // A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: navy sky, black for everything solid (ground, obstacles, board, rider) and red for all text.
+// Palette: navy sky, dark grey ground outlined in maroon, black rider and
+// obstacles, a coloured board, and red for all text.
 
 export const RES = { W: 320, H: 180 };
 
@@ -9,14 +10,18 @@ export const PAL = {
   sky: [0, 0, 128],
   ink: [0, 0, 0],
   red: [255, 85, 85],
+  ground: [40, 40, 40],
+  edge: [128, 0, 0],
+  deck: [255, 0, 255],
+  wheel: [255, 255, 0],
 };
 
 // The secret level has its own palette, from the 16 original named HTML
 // colours: purple sky and yellow text (solids stay black). `red` is the text
 // colour's name everywhere, whatever colour it is.
 export const PALETTES = {
-  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85] },
-  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0] },
+  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [40, 40, 40], edge: [128, 0, 0], deck: [255, 0, 255], wheel: [255, 255, 0] },
+  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [40, 40, 40], edge: [128, 0, 0], deck: [0, 255, 255], wheel: [255, 255, 0] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.
