@@ -21,8 +21,8 @@ export const PHYS = Object.freeze({
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
   DRAW_CREDIT: 0.6, // time spent drawing a trick shape counts for up to this share of the trick
-  QP_POP_V: 1300, // take-off speed straight up out of a quarter pipe (then normal gravity:
-  // about a second of hang time, and the view rises to follow)
+  QP_RAMP_BOOST: 1.6, // most a quarter pipe's curve speeds up to keep the riding pace across the screen
+  QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
 });
 
