@@ -247,3 +247,30 @@ Write a builder in `src/obstacles/` that returns:
 
 The engine handles everything else. A level can also set `width` (wider than
 960 scrolls, with the camera following the skater) and `speed` (rolling speed).
+
+## iOS app
+
+The `ios/` folder wraps the same game as a native iPhone app with
+[Capacitor](https://capacitorjs.com). The game files are bundled inside the
+app, so it plays offline. The website doesn't use any of this.
+
+On a Mac with Xcode:
+
+```sh
+npm install
+npm run ios        # copies the game into www/ and syncs it into ios/
+npm run ios:open   # opens the project in Xcode
+```
+
+Run `npm run ios` again after any change to the game before building in Xcode.
+
+What's different in the app:
+
+- Always landscape, full screen, iPhone only.
+- Posts to the same Supabase leaderboard as the live site, plus a Game Center
+  leaderboard (ID `stickflip.runs`), with the Game Center button shown on the
+  high-score table.
+- Haptics on pops, landings, grinds, bails and level clears
+  (`src/native.js` + `ios/App/App/StickflipPlugin.swift`).
+- No GoatCounter. `scripts/build-app.mjs` strips it from the app's copy.
+- The App Store icon and launch screen come from `npm run icons`.

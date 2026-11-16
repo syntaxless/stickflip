@@ -8,6 +8,7 @@ import { readStroke, readChargeStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
 import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
+import { NATIVE, haptics, submitToGameCenter, showGameCenterButton } from './native.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -27,7 +28,9 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 // Testing: on /unstable/ or a local copy, ?level=1..6 (or ?level=secret)
 // starts straight on that level. Test play keeps its own saves and its own
 // on-device high scores, so it never touches real progress or the shared table.
-const IS_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+// The iOS app is served from capacitor://localhost but is a live copy of the
+// game: it plays real runs and posts to the shared table.
+const IS_LOCAL = !NATIVE && /^(localhost|127\.|\[::1\])/.test(location.hostname);
 const IS_UNSTABLE = location.pathname.includes('/unstable');
 const TEST_LEVEL = IS_LOCAL || IS_UNSTABLE ? new URLSearchParams(location.search).get('level') : null;
 const TESTING = TEST_LEVEL != null;
@@ -91,6 +94,7 @@ async function finishRun() {
   store.set('run', run);
   clears += 1;
   store.set('clears', clears);
+  submitToGameCenter(score);
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, bonus, letters: saved.split(''), pos: 0, t: 0 };
@@ -440,7 +444,7 @@ function frame(now) {
   let flip = false;
   for (const e of events) {
     if (e.type === 'bail') {
-      if (navigator.vibrate) navigator.vibrate(60);
+      if (navigator.vibrate && !NATIVE) navigator.vibrate(60);
       run.recordBail();
       store.set('run', run);
     }
@@ -455,9 +459,11 @@ function frame(now) {
     }
   }
   audio.play(events, game);
+  haptics(events);
   renderer.consume(events);
   if (flip) nextScreen();
   if (screen) screen.t += dt;
+  showGameCenterButton(screen?.type === 'scores');
   if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {
     screen = null;
     loadLevel(SECRET_INDEX);
