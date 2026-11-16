@@ -6,6 +6,8 @@ import { Pix, RES } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
+import { localLeaderboard, INITIALS } from './leaderboard.js';
+import { Run } from './run.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -43,6 +45,67 @@ const store = {
 
 let levelIndex = Math.min(store.get('level', 0), LEVELS.length - 1);
 let game;
+
+// ------------------------------------------------------------ run + high scores
+
+// On-device for now. Swap in another object with the same async interface
+// (see leaderboard.js) to share scores between players.
+const board = localLeaderboard(store);
+let highScores = [];
+const refreshScores = () => board.top().then((list) => (highScores = list));
+refreshScores();
+
+let run = new Run(LEVELS.length, store.get('run', null));
+
+// End-of-run screens drawn over the game:
+//   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
+//   { type: 'scores', score, highlight, t }    the table
+let screen = null;
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
+
+async function finishRun() {
+  const score = run.total();
+  run = new Run(LEVELS.length);
+  store.set('run', run);
+  if (await board.qualifies(score)) {
+    const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
+    screen = { type: 'entry', score, letters: saved.split(''), pos: 0, t: 0 };
+  } else {
+    screen = { type: 'scores', score, highlight: -1, t: 0 };
+  }
+}
+
+async function submitInitials() {
+  const name = screen.letters.join('').trim() || 'ANON'.slice(0, INITIALS);
+  store.set('initials', screen.letters.join(''));
+  const { score } = screen;
+  const highlight = await board.submit(name, score);
+  await refreshScores();
+  screen = { type: 'scores', score, highlight, t: 0 };
+}
+
+function cycleLetter(i, step) {
+  const at = LETTERS.indexOf(screen.letters[i]);
+  screen.letters[i] = LETTERS[(at + step + LETTERS.length) % LETTERS.length];
+  screen.pos = i;
+}
+
+function screenPress(clientX, clientY) {
+  if (screen.type === 'scores') {
+    // REPLAY (the whole screen counts, so it's easy to hit): back to level 1
+    // with a fresh run total. finishRun() already cleared the run.
+    if (screen.t < 0.6) return;
+    screen = null;
+    loadLevel(0);
+    return;
+  }
+  if (clientX == null) return submitInitials(); // keyboard confirm
+  const p = toWorld(clientX, clientY);
+  const id = renderer.hitButton(p.x, p.y);
+  if (!id) return;
+  if (id === 'ok') return submitInitials();
+  cycleLetter(Number(id.slice(2)), id.startsWith('up') ? 1 : -1);
+}
 
 function loadLevel(i, autoStart = false) {
   levelIndex = i;
@@ -98,12 +161,16 @@ function toWorld(clientX, clientY) {
 }
 
 function press(clientX, clientY) {
+  if (screen) return screenPress(clientX, clientY);
   if (game.phase === 'complete') {
     if (game.phaseTime < 0.35) return;
     const p = clientX == null ? null : toWorld(clientX, clientY);
-    const id = p ? renderer.hitButton(p.x, p.y) : game.hasNext ? 'next' : 'retry';
+    const id = p ? renderer.hitButton(p.x, p.y) : 'next'; // keyboard: carry on
     if (id === 'retry') loadLevel(levelIndex, true);
-    else if (id === 'next') loadLevel(levelIndex + 1);
+    else if (id === 'next') {
+      if (game.hasNext) loadLevel(levelIndex + 1);
+      else finishRun();
+    }
     return;
   }
   game.tap();
@@ -178,6 +245,7 @@ let keyHold = null; // { read } while Space/Enter is down
 
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
+  if (screen) return screenKey(e);
   if (e.code === 'KeyM') {
     audio.toggleMute();
     return;
@@ -201,6 +269,25 @@ window.addEventListener('keydown', (e) => {
     else game.swipe(dir);
   }
 });
+
+// End-of-run screens: type initials (or use the arrows), Enter to confirm.
+function screenKey(e) {
+  if (screen.type === 'scores') {
+    if (e.code === 'Space' || e.code === 'Enter') press();
+    return;
+  }
+  const last = INITIALS - 1;
+  if (/^Key[A-Z]$/.test(e.code) || e.code === 'Space') {
+    screen.letters[screen.pos] = e.code === 'Space' ? ' ' : e.code.slice(3);
+    screen.pos = Math.min(last, screen.pos + 1);
+  } else if (e.code === 'Backspace' || e.code === 'ArrowLeft') screen.pos = Math.max(0, screen.pos - 1);
+  else if (e.code === 'ArrowRight') screen.pos = Math.min(last, screen.pos + 1);
+  else if (e.code === 'ArrowUp') cycleLetter(screen.pos, 1);
+  else if (e.code === 'ArrowDown') cycleLetter(screen.pos, -1);
+  else if (e.code === 'Enter') submitInitials();
+  else return;
+  e.preventDefault();
+}
 
 window.addEventListener('keyup', (e) => {
   if ((e.code === 'Space' || e.code === 'Enter') && keyHold) {
@@ -229,14 +316,26 @@ function frame(now) {
   const events = game.drainEvents();
   for (const e of events) {
     if (e.type === 'bail' && navigator.vibrate) navigator.vibrate(60);
-    if (e.type === 'complete' && e.score > game.best) {
-      game.best = e.score;
-      store.set(`best:${game.level.id}`, e.score);
+    if (e.type === 'complete') {
+      run.recordClear(levelIndex, e.score);
+      store.set('run', run);
+      if (e.score > game.best) {
+        game.best = e.score;
+        store.set(`best:${game.level.id}`, e.score);
+      }
     }
   }
   audio.play(events, game);
   renderer.consume(events);
-  renderer.draw(game, dt, { portrait: view.portrait, inset: view.inset });
+  if (screen) screen.t += dt;
+  renderer.draw(game, dt, {
+    portrait: view.portrait,
+    inset: view.inset,
+    total: run.total(),
+    screen,
+    highScores,
+    attract: levelIndex === 0,
+  });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // Letterbox: navy sky above the ground line, black ground below it.
