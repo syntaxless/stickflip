@@ -82,10 +82,13 @@
       window.addEventListener('error', function (e) {
         // A failed file load (script, module) has a target with a src.
         if (e.target && e.target.src) return showError('could not load ' + e.target.src);
-        // Errors from other origins (the browser's own content blocker, an
-        // extension, analytics) arrive as a bare "Script error." with no file:
-        // they aren't the game's, so don't put them on screen.
-        if (!e.filename || e.filename.indexOf(location.origin) !== 0) return;
+        // Only the game's own code (our src/*.js files) puts an error on screen.
+        // Browsers inject scripts of their own (Brave's wallet sets
+        // window.ethereum, content blockers, extensions, analytics), and those
+        // report as this page or a bare "Script error." with no file.
+        var own = /\/src\/[\w\/-]+\.js/;
+        var where = (e.filename || '') + ' ' + ((e.error && e.error.stack) || '');
+        if (where.indexOf(location.origin) === -1 || !own.test(where)) return;
         showError(e.message || 'unknown');
       }, true);
       window.addEventListener('unhandledrejection', function (e) {
