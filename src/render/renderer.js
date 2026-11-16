@@ -210,13 +210,8 @@ export class Renderer {
       const p = Math.min(1, s.flip.t / trick.dur);
       const turn = (n) => Math.cos(p * Math.PI * n);
       lift = Math.sin(p * Math.PI) * 12;
-      switch (trick.board) {
-        case 'flip': spin = p * Math.PI * 2; break;
-        case 'flipRev': spin = -p * Math.PI * 2; break;
-        case 'shove': boardSx = turn(1); break;
-        case 'treflip': spin = p * Math.PI * 2; boardSx = turn(2); break;
-        case 'hardflip': spin = p * Math.PI * 2; boardSx = turn(1); break;
-      }
+      if (trick.roll) spin = trick.roll * p * Math.PI * 2;
+      if (trick.turn) boardSx = turn(trick.turn);
       if (trick.body === 'backflip') lift = 0;
       if (trick.body === 'spin') {
         bodySx = turn(2);

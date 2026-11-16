@@ -45,21 +45,30 @@ export const GRINDS = Object.freeze({
   nose: { name: 'NOSE GRIND', base: 200, pitch: 0.22 },
 });
 
-// Air tricks. The key is the input that triggers it: a tap, a one-direction
-// swipe, or a two-direction swipe pattern ("down-right" = swipe down, then
-// right without lifting). Screen directions; the skater rides to the right.
-//   board: how the board moves  -> flip (around its long axis), flipRev (heelflip),
-//          shove (spins flat), treflip (flip + flat 360), hardflip (flip + flat 180)
-//   body:  'spin' turns the rider (and board) a full 360,
-//          'backflip' rotates them a full 360 backwards, head over heels
+// Air tricks. The key is what the stroke in the air reads as (see SHAPES in
+// gesture.js); a tap in the air is a quick kickflip.
+//   roll: the board flips around its long axis (1 = kickflip way, -1 = heelflip way)
+//   turn: the board spins flat, in half turns (1 = 180, 2 = 360)
+//   body: 'spin' turns the rider (and board) a full 360,
+//         'backflip' rotates them a full 360 backwards, head over heels
 export const TRICKS = Object.freeze({
-  tap: { name: 'KICKFLIP', dur: 0.44, points: 150, board: 'flip' },
-  down: { name: 'HEELFLIP', dur: 0.44, points: 150, board: 'flipRev' },
-  up: { name: 'POP SHOVE-IT', dur: 0.37, points: 100, board: 'shove' },
-  right: { name: 'FS 360', dur: 0.52, points: 200, body: 'spin', dirSign: 1 },
-  left: { name: 'BS 360', dur: 0.52, points: 200, body: 'spin', dirSign: -1 },
-  'down-right': { name: '360 FLIP', dur: 0.575, points: 300, board: 'treflip' },
-  'down-left': { name: 'HARDFLIP', dur: 0.52, points: 250, board: 'hardflip' },
+  tap: { name: 'KICKFLIP', dur: 0.44, points: 150, roll: 1 },
+  kickflip: { name: 'KICKFLIP', dur: 0.44, points: 150, roll: 1 },
+  heelflip: { name: 'HEELFLIP', dur: 0.44, points: 150, roll: -1 },
+  shove: { name: 'POP SHOVE-IT', dur: 0.37, points: 100, turn: 1 },
+  fsShove: { name: 'FS POP SHOVE-IT', dur: 0.37, points: 100, turn: 1 },
+  shove360: { name: '360 SHOVE-IT', dur: 0.5, points: 200, turn: 2 },
+  fsShove360: { name: 'FS 360 SHOVE-IT', dur: 0.5, points: 200, turn: 2 },
+  varialKick: { name: 'VARIAL KICKFLIP', dur: 0.5, points: 250, roll: 1, turn: 1 },
+  varialHeel: { name: 'VARIAL HEELFLIP', dur: 0.5, points: 250, roll: -1, turn: 1 },
+  hardflip: { name: 'HARDFLIP', dur: 0.52, points: 250, roll: 1, turn: 1 },
+  inwardHeel: { name: 'INWARD HEELFLIP', dur: 0.52, points: 250, roll: -1, turn: 1 },
+  treflip: { name: '360 FLIP', dur: 0.575, points: 300, roll: 1, turn: 2 },
+  laser: { name: 'LASER FLIP', dur: 0.6, points: 350, roll: -1, turn: 2 },
+  hardflip360: { name: '360 HARDFLIP', dur: 0.62, points: 400, roll: 1, turn: 2 },
+  inward360: { name: '360 INWARD HEEL', dur: 0.62, points: 400, roll: -1, turn: 2 },
+  fs360: { name: 'FS 360', dur: 0.52, points: 200, body: 'spin' },
+  bs360: { name: 'BS 360', dur: 0.52, points: 200, body: 'spin' },
   // A counter-clockwise circle. Slow, so it needs big air: the quarter pipe
   // or the secret level. Land before it comes round and you bail.
   circle: { name: 'BACKFLIP', dur: 0.85, points: 1000, body: 'backflip' },

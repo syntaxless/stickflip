@@ -233,11 +233,11 @@ export class Game {
     return (d === 'right') === (this.sk.dir > 0) ? 'nose' : '5-0'; // forward = the way you're riding
   }
 
-  // A swipe: 'up' | 'down' | 'left' | 'right' or a pattern like 'down-right'.
-  swipe(dir) {
+  // A swipe, read by gesture.js: a TRICKS key, or null for a stroke that
+  // means nothing in the air. Anywhere else a swipe is a tap.
+  swipe(key) {
     if (this.phase !== 'playing' || this.sk.mode !== 'air') return this.tap();
-    const key = TRICKS[dir] ? dir : dir.split('-')[0];
-    if (!TRICKS[key]) return this.airTap();
+    if (!TRICKS[key]) return;
     const s = this.sk;
     if (s.flip || s.primed) return; // one thing at a time: input during a trick is ignored
     this.startTrick(key);
