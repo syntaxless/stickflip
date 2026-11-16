@@ -92,7 +92,7 @@ multiplied by the number of tricks.
 in the corner adds up the score of each level you've cleared (ride a level
 again and your latest clear counts). After the last level, FINISH RUN puts the
 total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
-type them). PLAY AGAIN then starts over from level 1 with a fresh total. The table shows on the title screen too. It's stored on the device
+type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too. It's stored on the device
 for now; `src/leaderboard.js` is a small async interface, so it can later be
 backed by a shared database.
 
