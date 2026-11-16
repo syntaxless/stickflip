@@ -70,12 +70,13 @@ export class Game {
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
     // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
-    this.speed = level.speed || PHYS.ROLL_SPEED;
+    this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
   }
 
   reset() {
+    this.speed = this.baseSpeed; // riding speed (a quarter pipe raises it, see enterRamp)
     this.phase = 'ready';
     this.phaseTime = 0;
     this.time = 0;
@@ -94,7 +95,7 @@ export class Game {
       face: 1, // the way the skater faces: still right when riding back out fakie
       slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
-      qpAir: null, // { qp, t } while in the air above a quarter pipe
+      qpAir: null, // { qp, t, dur, v } while in the air above a quarter pipe
       charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
@@ -369,12 +370,15 @@ export class Game {
     }
   }
 
-  // Quarter pipe. Arcade rules: ride up the curve at riding speed, carry
+  // Quarter pipe. Arcade rules: ride up the curve at riding pace, carry
   // straight on up out of it at that same speed, then come straight back down
   // at it (QP_AIR_TIME in all), with no turning in the air: lots of hang time
   // for tricks. Then ride back down and out to the left, fakie.
   enterRamp(qp) {
     const s = this.sk;
+    // A quarter pipe speeds the rider up (QP_SPEED): faster up the curve and
+    // a faster ride out afterwards. (The air has its own QP_AIR_SPEED.)
+    this.speed = this.baseSpeed * PHYS.QP_SPEED;
     s.mode = 'ramp';
     s.slope = 0;
     const th = Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R)));
@@ -385,16 +389,21 @@ export class Game {
     const s = this.sk;
     const r = s.ramp;
     const { cx, cy, R } = r.qp;
-    r.th += (r.dir * this.speed * dt) / R;
+    // Keep the riding pace across the screen: the steeper the curve, the
+    // faster along it, so going up doesn't read as slowing down (capped near
+    // the top, where the curve turns vertical).
+    const pace = Math.min(PHYS.QP_RAMP_BOOST, 1 / Math.cos(r.th));
+    r.th += (r.dir * this.speed * pace * dt) / R;
     if (r.dir > 0 && r.th >= Math.PI / 2) {
       // out over the coping, straight up
       s.ramp = null;
       s.mode = 'air';
-      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME };
+      // the air's speed is its own (QP_AIR_SPEED), so its height stays put
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME, v: this.baseSpeed * PHYS.QP_AIR_SPEED };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
-      s.vy = -this.speed;
+      s.vy = -s.qpAir.v;
       s.poppedAt = s.x;
       this.emit('pop');
     } else if (r.dir < 0 && r.th <= 0) {
@@ -426,7 +435,7 @@ export class Game {
     const s = this.sk;
     const prevY = s.y;
     const prevX = s.x;
-    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -this.speed : this.speed; // steady up, steady down
+    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -s.qpAir.v : s.qpAir.v; // steady up, steady down
     else s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;

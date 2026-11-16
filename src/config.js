@@ -15,11 +15,15 @@ export const PHYS = Object.freeze({
   POP_V: 780, // take-off speed when popping out of a grind
   CHARGE_MIN: 0.12, // a hold shorter than this (s) is a plain ollie
   CHARGE_TIME: 0.6, // further seconds of holding to reach the highest ollie
-  CHARGE_BOOST: 0.35, // a full charge pops this much faster (0.35 -> about 1.8x as high)
+  CHARGE_BOOST: 0.12, // a full charge pops this much faster (about 1.25x as high): still too
+  // little air on flat ground for a backflip
   GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
   DRAW_CREDIT: 0.6, // time spent drawing a trick shape counts for up to this share of the trick
+  QP_SPEED: 1.35, // a quarter pipe speeds the rider up this much, for the rest of the run
+  QP_AIR_SPEED: 1.25, // and the air off it goes straight up and down at this times riding speed (sets its height)
+  QP_RAMP_BOOST: 1.6, // most a quarter pipe's curve speeds up to keep the riding pace across the screen
   QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
 });
