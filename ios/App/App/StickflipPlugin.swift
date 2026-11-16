@@ -5,15 +5,17 @@ import Capacitor
 // The app's own native features, called from src/native.js:
 //   haptic({ kind })            a tap on the phone's Taptic Engine
 //   submitScore({ score })      posts a run total to the Game Center leaderboard
-//   showAccessPoint({ visible }) shows or hides the Game Center button
+//   isSignedIn()                whether the player is signed in to Game Center
+//   showLeaderboard()           opens the Game Center leaderboard over the game
 @objc(StickflipPlugin)
-public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin {
+public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControllerDelegate {
     public let identifier = "StickflipPlugin"
     public let jsName = "Stickflip"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "submitScore", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "showAccessPoint", returnType: CAPPluginReturnNone),
+        CAPPluginMethod(name: "isSignedIn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "showLeaderboard", returnType: CAPPluginReturnPromise),
     ]
 
     // Must match the leaderboard ID created in App Store Connect.
@@ -39,7 +41,6 @@ public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin {
             if let signIn = signIn {
                 self?.bridge?.viewController?.present(signIn, animated: true)
             }
-            GKAccessPoint.shared.location = .topLeading
         }
     }
 
@@ -68,10 +69,25 @@ public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    @objc func showAccessPoint(_ call: CAPPluginCall) {
-        let visible = call.getBool("visible") ?? false
+    @objc func isSignedIn(_ call: CAPPluginCall) {
+        call.resolve(["signedIn": GKLocalPlayer.local.isAuthenticated])
+    }
+
+    @objc func showLeaderboard(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            GKAccessPoint.shared.isActive = visible && GKLocalPlayer.local.isAuthenticated
+            guard GKLocalPlayer.local.isAuthenticated, let host = self.bridge?.viewController else {
+                call.resolve(["shown": false])
+                return
+            }
+            let board = GKGameCenterViewController(leaderboardID: StickflipPlugin.leaderboardID,
+                                                   playerScope: .global, timeScope: .allTime)
+            board.gameCenterDelegate = self
+            host.present(board, animated: true)
+            call.resolve(["shown": true])
         }
+    }
+
+    public func gameCenterViewControllerDidFinish(_ gameCenterViewController: GKGameCenterViewController) {
+        gameCenterViewController.dismiss(animated: true)
     }
 }

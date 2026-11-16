@@ -308,6 +308,7 @@ export class Renderer {
     const cx = RES.W / 2;
 
     if (opts.screen?.type === 'entry') return this.drawEntry(opts.screen);
+    this.gameCenter = !!opts.gameCenter;
     if (opts.screen?.type === 'scores') return this.drawScores(opts.screen, opts.highScores || []);
     if (opts.screen?.type === 'unlock') return this.drawUnlock(opts.screen);
 
@@ -411,8 +412,15 @@ export class Renderer {
     if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     if (list.length) this.drawTable(list, y + 46, scr.highlight, 12);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
-    // Beat the game: start over from level 1 with a fresh total.
-    if (scr.t > 0.6) this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
+    // Beat the game: start over from level 1 with a fresh total. In the iOS
+    // app (signed in to Game Center) a GAME CENTER button sits beside it.
+    if (scr.t <= 0.6) return;
+    if (this.gameCenter) {
+      this.button('again', 'REPLAY', cx - 76, y + 114, 64, true);
+      this.button('gc', 'GAME CENTER', cx - 4, y + 114, 80, true);
+    } else {
+      this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
+    }
   }
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).

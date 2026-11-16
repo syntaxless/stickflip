@@ -39,11 +39,21 @@ export function submitToGameCenter(score) {
   if (NATIVE) call('submitScore', { score: Math.round(score) });
 }
 
-// The Game Center button in the corner: shown only on the high-score table,
-// so it never covers the game.
-let accessPoint = false;
-export function showGameCenterButton(visible) {
-  if (!NATIVE || visible === accessPoint) return;
-  accessPoint = visible;
-  call('showAccessPoint', { visible });
+// Whether to offer the GAME CENTER button on the high-score table: only in the
+// app, once the player is signed in. Checked again each time the table opens.
+let signedIn = false;
+export const gameCenterReady = () => signedIn;
+export function refreshGameCenter() {
+  if (!NATIVE) return;
+  try {
+    plugin?.isSignedIn?.()?.then((r) => (signedIn = !!r?.signedIn)).catch(() => {});
+  } catch {
+    /* no plugin: no button */
+  }
+}
+refreshGameCenter();
+
+// Opens the Game Center leaderboard over the game.
+export function openGameCenter() {
+  if (NATIVE) call('showLeaderboard');
 }

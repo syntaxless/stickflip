@@ -8,7 +8,7 @@ import { readStroke, readChargeStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
 import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
-import { NATIVE, haptics, submitToGameCenter, showGameCenterButton } from './native.js';
+import { NATIVE, haptics, submitToGameCenter, gameCenterReady, refreshGameCenter, openGameCenter } from './native.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -95,6 +95,7 @@ async function finishRun() {
   clears += 1;
   store.set('clears', clears);
   submitToGameCenter(score);
+  refreshGameCenter();
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, bonus, letters: saved.split(''), pos: 0, t: 0 };
@@ -139,6 +140,11 @@ function screenPress(clientX, clientY) {
     // REPLAY (the whole screen counts, so it's easy to hit): back to level 1
     // with a fresh run total. finishRun() already cleared the run.
     if (screen.t < 0.6) return;
+    // In the app, the table also has a GAME CENTER button; anywhere else is REPLAY.
+    if (clientX != null && gameCenterReady()) {
+      const p = toWorld(clientX, clientY);
+      if (renderer.hitButton(p.x, p.y) === 'gc') return openGameCenter();
+    }
     screen = null;
     loadLevel(0);
     return;
@@ -463,7 +469,6 @@ function frame(now) {
   renderer.consume(events);
   if (flip) nextScreen();
   if (screen) screen.t += dt;
-  showGameCenterButton(screen?.type === 'scores');
   if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {
     screen = null;
     loadLevel(SECRET_INDEX);
@@ -474,6 +479,7 @@ function frame(now) {
     total: run.total(levelIndex, game.phase === 'bailed' ? 0 : game.score), // running total, this level included
     screen,
     highScores,
+    gameCenter: gameCenterReady(),
     attract: levelIndex === 0,
   });
 
