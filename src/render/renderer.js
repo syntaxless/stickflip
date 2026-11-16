@@ -1,6 +1,7 @@
 import { WORLD, PHYS } from '../config.js';
 import { BAIL_MESSAGES } from '../game.js';
 import { PAL, RES } from './pixel.js';
+import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
 
 // DOS-style renderer. The game world is 960x540 units; it is drawn into a
@@ -87,7 +88,7 @@ export class Renderer {
     const inset = Math.ceil(opts.inset || 0);
     this.drawPopups(inset);
     this.drawHud(game, opts, inset);
-    this.drawOverlay(game);
+    this.drawOverlay(game, opts);
     g.flush();
   }
 
@@ -214,27 +215,38 @@ export class Renderer {
     g.text(`LEVEL ${game.levelNumber || 1}: ${game.level.name}`, L, 4, red);
     g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
     g.text(`HI ${pad(game.best || 0)}`, R, 13, red, 1, 'right');
+    if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 22, red, 1, 'right');
     if (game.combo.length && game.phase === 'playing') {
       g.text(game.combo.map((t) => t.name).join(' + '), L, 13, red);
     }
-    if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 22, red, 1, 'center');
+    if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 31, red, 1, 'center');
   }
 
   blink(rate = 3) {
     return Math.floor(this.time * rate * 2) % 2 === 0;
   }
 
-  drawOverlay(game) {
+  drawOverlay(game, opts = {}) {
     const g = this.g;
     this.buttons = [];
     const cx = RES.W / 2;
 
+    if (opts.screen?.type === 'entry') return this.drawEntry(opts.screen);
+    if (opts.screen?.type === 'scores') return this.drawScores(opts.screen, opts.highScores || []);
+
     if (game.phase === 'ready') {
       g.text('STICKFLIP', cx + 1, 37, ink, 4, 'center');
       g.text('STICKFLIP', cx, 36, red, 4, 'center');
-      g.text(game.level.hint, cx, 70, red, 1, 'center');
-      g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 80, red, 1, 'center');
-      if (this.blink()) g.text('TAP TO START', cx, 94, red, 1, 'center');
+      // Arcade attract mode: on the first level, take turns with the high scores.
+      const showTable = opts.attract && opts.highScores?.length && Math.floor(this.time / 4) % 2 === 1;
+      if (showTable) {
+        g.text('HIGH SCORES', cx, 64, red, 1, 'center');
+        this.drawTable(opts.highScores, 74, -1, 9);
+      } else {
+        g.text(game.level.hint, cx, 70, red, 1, 'center');
+        g.text('SWIPE IN THE AIR FOR MORE TRICKS.', cx, 80, red, 1, 'center');
+      }
+      if (this.blink()) g.text('TAP TO START', cx, showTable ? 124 : 94, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 37, ink, 3, 'center');
       g.text('BAIL!', cx, 36, red, 3, 'center');
@@ -248,7 +260,7 @@ export class Renderer {
   drawComplete(game) {
     const g = this.g;
     const cx = RES.W / 2;
-    const [x, y, w, h] = [36, 26, 248, 104];
+    const [x, y, w, h] = [36, 34, 248, 104];
     g.fill(x, y, w, h, ink);
     g.rect(x, y, w, h, red);
     g.rect(x + 2, y + 2, w - 4, h - 4, red);
@@ -262,7 +274,7 @@ export class Renderer {
     g.text(tip, cx, y + 60, red, 1, 'center');
 
     this.button('retry', 'RIDE AGAIN', x + 12, y + 78, 92, true);
-    this.button('next', game.hasNext ? 'NEXT LEVEL' : 'MORE SOON', x + w - 104, y + 78, 92, game.hasNext);
+    this.button('next', game.hasNext ? 'NEXT LEVEL' : 'FINISH RUN', x + w - 104, y + 78, 92, true);
   }
 
   button(id, label, x, y, w, enabled) {
@@ -277,6 +289,54 @@ export class Renderer {
       g.rect(x, y, w, h, red);
       g.text(label, x + w / 2, y + 4, red, 1, 'center');
     }
+  }
+
+  // A box like the level-complete one, for the end-of-run screens.
+  panel(title) {
+    const g = this.g;
+    const [x, y, w, h] = [56, 34, 208, 136];
+    g.fill(x, y, w, h, ink);
+    g.rect(x, y, w, h, red);
+    g.rect(x + 2, y + 2, w - 4, h - 4, red);
+    g.text(title, RES.W / 2, y + 9, red, 2, 'center');
+    return { x, y, w, h };
+  }
+
+  // Rows like "1. ABC  001234"; the row at `highlight` blinks.
+  drawTable(list, y, highlight = -1, rowH = 11) {
+    const cx = RES.W / 2;
+    list.forEach((e, i) => {
+      if (i === highlight && !this.blink(2)) return;
+      this.g.text(`${i + 1}. ${e.initials.padEnd(INITIALS)}  ${pad(e.score)}`, cx, y + i * rowH, red, 1, 'center');
+    });
+  }
+
+  // Initials entry: INITIALS letters, each with + and - buttons, then OK.
+  drawEntry(scr) {
+    const g = this.g;
+    const cx = RES.W / 2;
+    const { y } = this.panel('NEW HIGH SCORE!');
+    g.text(`RUN TOTAL ${pad(scr.score)}`, cx, y + 28, red, 1, 'center');
+    g.text('ENTER YOUR INITIALS', cx, y + 40, red, 1, 'center');
+    const left = cx - 72;
+    for (let i = 0; i < INITIALS; i++) {
+      const lx = left + i * 26;
+      this.button(`up${i}`, '+', lx, y + 52, 20, true);
+      if (i !== scr.pos || this.blink(2)) g.text(scr.letters[i], lx + 10, y + 74, red, 2, 'center');
+      if (i === scr.pos) g.line(lx + 2, y + 90, lx + 17, y + 90, red);
+      this.button(`dn${i}`, '-', lx, y + 94, 20, true);
+    }
+    this.button('ok', 'OK', left + INITIALS * 26 + 8, y + 73, 32, true);
+  }
+
+  drawScores(scr, list) {
+    const g = this.g;
+    const cx = RES.W / 2;
+    const { y } = this.panel('HIGH SCORES');
+    if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 28, red, 1, 'center');
+    if (list.length) this.drawTable(list, y + 44, scr.highlight);
+    else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
+    if (scr.t > 0.6 && this.blink()) g.text('TAP TO RIDE AGAIN', cx, y + 118, red, 1, 'center');
   }
 
   hitButton(lx, ly) {

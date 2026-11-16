@@ -88,6 +88,14 @@ in `src/config.js`.
 Tricks chain into a combo until you land on the ground, and the combo is
 multiplied by the number of tricks.
 
+**Runs and high scores.** A run takes you through the levels in order. TOTAL
+in the corner adds up the score of each level you've cleared (ride a level
+again and your latest clear counts). After the last level, FINISH RUN puts the
+total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
+type them). The table shows on the title screen too. It's stored on the device
+for now; `src/leaderboard.js` is a small async interface, so it can later be
+backed by a shared database.
+
 ## Design choices
 
 * **DOS look.** The game draws into a 320×180 framebuffer with a 3-colour
@@ -121,6 +129,8 @@ src/obstacles/          obstacle builders (rail, gap, stairs), each with surface
 src/levels/             one file per level + the ordered LEVELS list
 src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
 src/audio.js            PC-speaker style beeps
+src/leaderboard.js      top 5 high scores (on-device, swappable for a shared one)
+src/run.js              the run total across levels
 src/update.js           reloads an installed Home Screen app when a newer version is deployed
 icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
 manifest.webmanifest    Home Screen app settings (full screen, landscape)
