@@ -129,15 +129,17 @@ export class Renderer {
     return { x: Math.round(x / S), y: Math.round(y / S) };
   }
 
-  // The scenery only (ground and obstacles, no rider or HUD) into another
+  // The scene without the HUD (ground, obstacles and the rider) into another
   // framebuffer: main.js uses it to fill the bars around the game, so
-  // whatever runs off the edge of the game (a rail, a ramp) carries on there.
+  // whatever runs off the edge of the game (a rail, a ramp) carries on there,
+  // and the rider stays in view all the way to the edge of a wide phone.
   drawScene(g, game, cam) {
     g.clear(sky);
     g.ox = -cam.x;
     g.oy = -cam.y;
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
   }
@@ -166,14 +168,14 @@ export class Renderer {
     }
   }
 
-  drawSkater(game) {
-    const g = this.g;
+  // `advance` false redraws this frame's pose without moving the animation on.
+  drawSkater(game, g = this.g, advance = true) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
-      this.pose.update('bail', dt, 10);
+      if (advance) this.pose.update('bail', dt, 10);
       drawBoard(g, makeTransform(b.bx, b.by, b.bang * 0.15), b.bang);
       const onGround = b.y >= game.groundAt(b.x).y - 0.5 && b.vy === 0;
       const ang = onGround ? Math.sign(b.ang || 1) * Math.min(Math.abs(b.ang), Math.PI / 2) : b.ang;
@@ -191,7 +193,7 @@ export class Renderer {
     else if (s.mode === 'ramp') target = 'crouch';
     else if (s.charge) target = game.chargeLevel() > 0.5 ? 'charge' : 'crouch'; // crouch deeper the longer you hold
     else if (this.squash > 0) target = 'crouch';
-    this.pose.update(target, dt);
+    if (advance) this.pose.update(target, dt);
 
     // The board follows the ground (banks), tilts with the arc in the air,
     // and with the rail on a sloped grind. `face` is the way the skater faces:
