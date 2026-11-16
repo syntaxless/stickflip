@@ -249,14 +249,15 @@ export class Renderer {
     const L = 4 + inset;
     const R = RES.W - 4 - inset;
     g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}: ${game.level.name}`, L, 4, red);
-    g.text(`SCORE ${pad(game.score)}`, R, 4, red, 1, 'right');
-    g.text(`HI ${pad(game.best || 0)}`, R, 15, red, 1, 'right');
-    if (opts.total != null) g.text(`TOTAL ${pad(opts.total)}`, R, 26, red, 1, 'right');
-    if (game.phase === 'playing') this.drawSpeed(game, L, 26);
+    // Top right: just the running total for the run, with the speed under it.
+    // Tricks and combos pop up on screen; high scores wait for the end.
+    const total = opts.total ?? game.score;
+    g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
+    if (game.phase === 'playing') this.drawSpeed(game, R, 15);
     if (game.combo.length && game.phase === 'playing') {
-      // Under the level name, kept clear of the score column: the oldest
+      // Under the level name, kept clear of the right-hand column: the oldest
       // tricks drop off the front when the list gets too long.
-      const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(opts.total || 0)}`), g.textWidth(`HI ${pad(game.best || 0)}`)) - 8;
+      const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(total)}`), 75) - 8;
       const names = game.combo.map((t) => t.name);
       let text = names.join(' + ');
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
@@ -264,15 +265,15 @@ export class Renderer {
     }
   }
 
-  // SPEED and a bar of cells: the middle one is cruising speed.
-  drawSpeed(game, x, y) {
+  // SPEED and a bar of cells, right-aligned to `right`: the middle cell is cruising speed.
+  drawSpeed(game, right, y) {
     const g = this.g;
-    g.text('SPEED', x, y, red);
     const cells = 10;
     const lo = game.cruise * PHYS.SPEED_MIN;
     const hi = game.cruise * PHYS.SPEED_MAX;
     const n = Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo));
-    const bx = x + g.textWidth('SPEED') + 4;
+    const bx = right - cells * 4 + 1;
+    g.text('SPEED', bx - 4, y, red, 1, 'right');
     for (let i = 0; i < cells; i++) {
       if (i < n) g.fill(bx + i * 4, y, 3, 7, red);
       else g.rect(bx + i * 4, y, 3, 7, red);
