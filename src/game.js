@@ -90,6 +90,7 @@ export class Game {
       slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
       qpAir: null, // { qp, t } while in the air above a quarter pipe
+      charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
       flip: null, // { t, key, trick } while an air trick is in progress
@@ -153,13 +154,51 @@ export class Game {
   skaterTap() {
     const s = this.sk;
     if (s.mode === 'roll') {
-      this.takeOff(PHYS.OLLIE_V + Math.max(0, -s.slope * s.vx)); // rolling up a bank adds to the pop
+      this.ollie(1);
     } else if (s.mode === 'grind') {
       this.endGrind();
       this.takeOff(PHYS.POP_V);
     } else if (s.mode === 'air') {
       this.airTap();
     }
+  }
+
+  // An ollie from the ground; `power` 1 is a normal one. Rolling up a bank adds to the pop.
+  ollie(power) {
+    const s = this.sk;
+    s.charge = null;
+    this.takeOff((PHYS.OLLIE_V + Math.max(0, -s.slope * s.vx)) * power);
+  }
+
+  // Charged ollie: hold down on the ground to crouch, let go to pop. A quick
+  // tap is a normal ollie; holding longer pops higher, up to a cap.
+  startCharge() {
+    const s = this.sk;
+    if (this.phase !== 'playing' || s.mode !== 'roll' || s.charge) return false;
+    s.charge = { t: 0 };
+    return true;
+  }
+
+  // 0..1: how charged the ollie is (for the crouch).
+  chargeLevel() {
+    const c = this.sk.charge;
+    if (!c) return 0;
+    return Math.max(0, Math.min(1, (c.t - PHYS.CHARGE_MIN) / PHYS.CHARGE_TIME));
+  }
+
+  // Let go: ollie if still rolling. Returns whether it popped.
+  releaseCharge() {
+    const s = this.sk;
+    if (!s.charge) return false;
+    const k = this.chargeLevel();
+    s.charge = null;
+    if (this.phase !== 'playing' || s.mode !== 'roll') return false;
+    this.ollie(1 + k * PHYS.CHARGE_BOOST);
+    return true;
+  }
+
+  cancelCharge() {
+    this.sk.charge = null;
   }
 
   takeOff(speed) {
@@ -275,6 +314,7 @@ export class Game {
     }
 
     if (s.mode === 'roll') {
+      if (s.charge) s.charge.t += dt;
       s.x += s.vx * dt;
       if (s.support && (s.x > s.support.x2 || s.x < s.support.x1)) {
         s.mode = 'air';
@@ -304,7 +344,8 @@ export class Game {
       this.updateRamp(dt);
     } else if (s.mode === 'grind') {
       const surf = s.grind.surface;
-      const step = PHYS.GRIND_SPEED * dt;
+      const grindSpeed = this.speed * (PHYS.GRIND_SPEED / PHYS.ROLL_SPEED);
+      const step = grindSpeed * dt;
       const slope = slopeOf(surf);
       s.x += s.dir * step;
       s.y = surfaceY(surf, s.x);
@@ -312,7 +353,7 @@ export class Game {
       if (s.dir > 0 ? s.x > surf.x2 : s.x < surf.x1) {
         this.endGrind();
         s.mode = 'air';
-        s.vy = slope * s.dir * PHYS.GRIND_SPEED; // carry on down a sloped rail
+        s.vy = slope * s.dir * grindSpeed; // carry on down a sloped rail
         s.poppedAt = s.x;
       }
     } else if (s.mode === 'air') {
@@ -355,6 +396,7 @@ export class Game {
       s.y = cy + R;
       s.vx = -this.speed;
       s.slope = 0;
+      if (this.level.endAfterQuarter) this.finish(); // the quarter pipe is the finale
     } else {
       s.x = cx + R * Math.sin(r.th);
       s.y = cy + R * Math.cos(r.th);
@@ -507,6 +549,7 @@ export class Game {
     s.grind = null;
     s.ramp = null;
     s.qpAir = null;
+    s.charge = null;
     s.mode = 'bail';
     s.bail = {
       x: s.x,

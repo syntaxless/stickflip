@@ -15,6 +15,7 @@ export const POSES = {
   crouch: P({ head: [10, -83], neck: [7, -70], hip: [-3, -38], kneeB: [-16, -24], footB: [-13, -9], kneeF: [19, -26], footF: [14, -9], elbowB: [-8, -56], handB: [4, -46], elbowF: [20, -58], handF: [30, -50] }),
   air: P({ head: [4, -102], neck: [2, -89], hip: [0, -52], kneeB: [-16, -36], footB: [-13, -11], kneeF: [18, -38], footF: [14, -11], elbowB: [-20, -78], handB: [-36, -84], elbowF: [22, -80], handF: [38, -88] }),
   flip: P({ head: [4, -110], neck: [2, -97], hip: [0, -62], kneeB: [-20, -48], footB: [-16, -27], kneeF: [22, -50], footF: [18, -29], elbowB: [-22, -88], handB: [-38, -98], elbowF: [22, -88], handF: [40, -100] }),
+  charge: P({ head: [12, -70], neck: [9, -58], hip: [-4, -30], kneeB: [-20, -20], footB: [-13, -9], kneeF: [22, -22], footF: [14, -9], elbowB: [-6, -44], handB: [6, -36], elbowF: [22, -46], handF: [32, -40] }),
   prime: P({ head: [6, -90], neck: [4, -77], hip: [-2, -44], kneeB: [-16, -28], footB: [-13, -11], kneeF: [18, -30], footF: [14, -11], elbowB: [-22, -70], handB: [-38, -66], elbowF: [22, -70], handF: [38, -68] }),
   grind: P({ head: [0, -92], neck: [-1, -79], hip: [-3, -45], kneeB: [-14, -27], footB: [-13, -9], kneeF: [16, -29], footF: [14, -9], elbowB: [-24, -72], handB: [-42, -70], elbowF: [22, -74], handF: [40, -76] }),
   bail: P({ head: [14, -96], neck: [10, -82], hip: [0, -50], kneeB: [-20, -36], footB: [-30, -20], kneeF: [16, -30], footF: [24, -14], elbowB: [-6, -96], handB: [-14, -112], elbowF: [26, -92], handF: [36, -106] }),

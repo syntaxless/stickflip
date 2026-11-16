@@ -201,8 +201,11 @@ function press(clientX, clientY) {
   game.tap();
 }
 
-// Taps act on touch-down for the lowest latency. In the air, a touch is
-// followed until the finger lifts so it can be read as a tap or a swipe.
+// On the ground a touch charges an ollie: the skater crouches while the
+// finger is down and pops when it lifts, higher the longer it was held (a
+// quick tap is a normal ollie). Other taps act on touch-down for the lowest
+// latency. In the air, a touch is followed until the finger lifts so it can
+// be read as a tap or a swipe.
 // Every touch while playing also counts as a hold: if the finger is still
 // down when the skater reaches a rail, it locks a grind (drag forward for a
 // nose grind, back for a 5-0), and the lift is then ignored.
@@ -223,10 +226,12 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false };
+  stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY }], read: false, charge: false };
   canvas.setPointerCapture?.(e.pointerId);
+  // On the ground, a touch charges an ollie: crouch while held, pop on lift.
+  if (!screen && game.startCharge()) stroke.charge = true;
   // A tap that would lock a grind can't wait for the finger to lift.
-  if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
+  else if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
   else stroke.read = true;
   if (game.phase === 'playing') game.setHold(true);
 });
@@ -240,8 +245,9 @@ canvas.addEventListener('pointermove', (e) => {
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY });
-  const { read, points } = stroke;
+  const { read, points, charge } = stroke;
   stroke = null;
+  if (charge) game.releaseCharge();
   const grinded = game.setHold(false);
   if (!read || grinded) return;
   // Landed while the finger was down: don't turn the gesture into an ollie.
@@ -254,6 +260,7 @@ canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', (e) => {
   if (stroke && e.pointerId === stroke.id) {
     stroke = null;
+    game.cancelCharge();
     game.setHold(false);
   }
 });
@@ -275,12 +282,17 @@ window.addEventListener('keydown', (e) => {
     audio.toggleMute();
     return;
   }
+  if (e.code === 'KeyB') {
+    game.swipe('circle'); // backflip
+    return;
+  }
   if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault();
     audio.unlock();
     const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-    keyHold = { read: inAir && game.grindHint() !== 'ready' };
-    if (!keyHold.read) press();
+    keyHold = { read: inAir && game.grindHint() !== 'ready', charge: game.startCharge() };
+    if (keyHold.charge) keyHold.read = false;
+    else if (!keyHold.read) press();
     if (game.phase === 'playing') game.setHold(true);
     return;
   }
@@ -316,8 +328,9 @@ function screenKey(e) {
 
 window.addEventListener('keyup', (e) => {
   if ((e.code === 'Space' || e.code === 'Enter') && keyHold) {
-    const { read } = keyHold;
+    const { read, charge } = keyHold;
     keyHold = null;
+    if (charge) game.releaseCharge();
     const grinded = game.setHold(false);
     if (read && !grinded && game.phase === 'playing' && game.sk.mode === 'air') game.tap();
   } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && keyHold && game.hold) {
