@@ -120,7 +120,7 @@ in `src/config.js`.
    Ollie off the bank's lip up onto the top: the lower step and the risers are
    bails.
    Stars: finish, 150, 300.
-6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
+6. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
    ride up the quarter pipe and go straight up out of it and straight back
    down, at riding speed the whole way and without turning: over a second of
    hang time for tricks (FS AIR, plus any flip you finish before you drop back
