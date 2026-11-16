@@ -3,8 +3,9 @@ import Capacitor
 
 // The game's screen. Same as Capacitor's own, plus:
 // - registers the app's own native plugin (haptics + Game Center),
-// - keeps the status bar and home indicator out of the way, and asks iOS to
-//   let swipes near the screen edges reach the game first (it's all gestures).
+// - keeps the status bar out of the way.
+// (Overriding the home-indicator and edge-gesture properties isn't allowed from
+// outside UIKit on the current SDK, so those stay at their defaults.)
 class StickflipViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(StickflipPlugin())
@@ -21,6 +22,4 @@ class StickflipViewController: CAPBridgeViewController {
     }
 
     override var prefersStatusBarHidden: Bool { true }
-    override var prefersHomeIndicatorAutoHidden: Bool { true }
-    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .all }
 }
