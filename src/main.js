@@ -17,7 +17,7 @@ const low = document.createElement('canvas');
 low.width = RES.W;
 low.height = RES.H;
 const renderer = new Renderer(new Pix(low.getContext('2d')));
-const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false };
+const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 
 // ------------------------------------------------------------ progress
 
@@ -57,6 +57,12 @@ function loadLevel(i, autoStart = false) {
 
 // ------------------------------------------------------------ layout
 
+// Most game pixels the portrait zoom may hide at each side. The rider starts
+// 27 px from the left edge and the rail sits well inside, so 20 keeps all of
+// the action on screen.
+const MAX_PORTRAIT_CROP = 20;
+
+
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -67,11 +73,19 @@ function resize() {
   canvas.style.height = `${h}px`;
   // Whole device pixels per game pixel keeps every pixel the same size.
   const fit = Math.min(w / RES.W, h / RES.H) * view.dpr;
-  const k = fit >= 1 ? Math.floor(fit) : fit;
+  let k = fit >= 1 ? Math.floor(fit) : fit;
+  // In portrait the width is the limit, and rounding down to whole pixels can
+  // waste a lot of it. Zoom one step further if that only crops a sliver off
+  // each side (empty sky and ground; the HUD moves inward to stay visible).
+  if (h > w && fit >= 1) {
+    const crop = (RES.W - (w * view.dpr) / (k + 1)) / 2; // game pixels lost per side
+    if (crop <= MAX_PORTRAIT_CROP) k += 1;
+  }
   view.scale = k / view.dpr; // CSS px per game pixel
   view.ox = Math.round(((w - RES.W * view.scale) / 2) * view.dpr) / view.dpr;
   view.oy = Math.round(((h - RES.H * view.scale) / 2) * view.dpr) / view.dpr;
   view.portrait = h > w;
+  view.inset = Math.max(0, -view.ox / view.scale); // game pixels hidden at each side
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
@@ -182,7 +196,7 @@ function frame(now) {
   }
   audio.play(events, game);
   renderer.consume(events);
-  renderer.draw(game, dt, { portrait: view.portrait });
+  renderer.draw(game, dt, { portrait: view.portrait, inset: view.inset });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // Letterbox: navy sky above the ground line, black ground below it.
