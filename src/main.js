@@ -24,8 +24,16 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 
 // ------------------------------------------------------------ progress
 
+// Testing: on /unstable/ or a local copy, ?level=1..6 (or ?level=secret)
+// starts straight on that level. Test play keeps its own saves and its own
+// on-device high scores, so it never touches real progress or the shared table.
+const IS_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+const IS_UNSTABLE = location.pathname.includes('/unstable');
+const TEST_LEVEL = IS_LOCAL || IS_UNSTABLE ? new URLSearchParams(location.search).get('level') : null;
+const TESTING = TEST_LEVEL != null;
+
 // The /unstable/ preview shares an origin with the live game, so keep its saves apart.
-const SAVE_PREFIX = location.pathname.includes('/unstable') ? 'stickflip-unstable' : 'stickflip';
+const SAVE_PREFIX = (IS_UNSTABLE ? 'stickflip-unstable' : 'stickflip') + (TESTING ? '-test' : '');
 const store = {
   get(key, fallback) {
     try {
@@ -53,7 +61,7 @@ let game;
 // SCOREBOARD in config.js), with the on-device table as the fallback when it
 // can't be reached. Local copies (localhost) only ever use the device table.
 const localBoard = localLeaderboard(store);
-const shared = SCOREBOARD.url && SCOREBOARD.key && !/^(localhost|127\.|\[::1\])/.test(location.hostname);
+const shared = SCOREBOARD.url && SCOREBOARD.key && !IS_LOCAL && !TESTING;
 const board = shared ? withFallback(supabaseLeaderboard(SCOREBOARD), localBoard) : localBoard;
 let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
@@ -128,6 +136,7 @@ function loadLevel(i, autoStart = false) {
   game = new Game(level);
   game.levelNumber = i + 1;
   if (secret) game.levelLabel = 'SECRET';
+  if (TESTING) game.levelLabel = `TEST ${secret ? 'S' : i + 1}`;
   game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
   game.best = store.get(`best:${level.id}`, 0);
   renderer.reset();
@@ -366,6 +375,10 @@ function frame(now) {
 }
 
 resize();
+if (TESTING) {
+  const n = TEST_LEVEL.toLowerCase() === 'secret' ? SECRET_INDEX + 1 : parseInt(TEST_LEVEL, 10);
+  levelIndex = Number.isInteger(n) && n >= 1 && n <= SECRET_INDEX + 1 ? n - 1 : 0;
+}
 loadLevel(levelIndex);
 requestAnimationFrame(frame);
 watchForUpdates(() => game.phase === 'playing');
