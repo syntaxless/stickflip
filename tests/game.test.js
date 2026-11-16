@@ -297,11 +297,12 @@ test('euro gap: ollie off the bank up onto the top; early lands on the step, non
   assert.equal(play(euroGap, [1.3]).game.bailReason, 'stairsUp');
 });
 
-test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
+test('quarter pipe: grind in, pump and air out of the quarter, grind back and exit left', () => {
   const { game, seen } = playActs(quarter, [
     [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
-    [2.95, 'tap'],
-    [4.8, 'tap'], [4.8, 'hold', 'left'], [6, 'up'],
+    [2.5, 'tap'], // pump on the way up
+    [3.0, 'tap'], // kickflip in the air
+    [4.95, 'tap'], [4.95, 'hold', 'left'], [6.5, 'up'],
   ]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.ok(seen.has('50-50 GRIND') && seen.has('KICKFLIP') && seen.has('FS AIR'));
@@ -311,8 +312,28 @@ test('quarter pipe: grind in, air out of the quarter, grind back and exit left',
 
 test('quarter pipe: doing nothing slams the rail, a late flip in the air is a bail', () => {
   assert.equal(play(quarter, []).game.bailReason, 'slam');
-  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [3.4, 'tap']]);
+  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [2.5, 'tap'], [3.4, 'tap']]);
   assert.equal(game.bailReason, 'flip');
+});
+
+test('quarter pipe: the ramp slows you going up and gives the speed back coming down', () => {
+  const game = new Game(quarter);
+  game.reset();
+  game.sk.x = 700;
+  game.sk.mode = 'roll';
+  game.phase = 'playing';
+  game.sk.vx = game.speed;
+  const speeds = [];
+  let air = null;
+  for (let i = 0; i < 400 && !(game.sk.mode === 'roll' && game.sk.dir < 0); i++) {
+    game.update(STEP);
+    if (game.sk.ramp) speeds.push(game.sk.ramp.v);
+    if (game.sk.qpAir && !air) air = -game.sk.vy;
+  }
+  assert.ok(Math.min(...speeds) < game.speed * 0.8, 'slower near the top');
+  assert.ok(air < 300, 'without a pump it is only a small hop');
+  assert.equal(game.sk.vx, -game.speed, 'rolls out at the speed it went in');
+  assert.ok(!game.combo.length && game.score === 0, 'no FS AIR for a hop');
 });
 
 test('secret mega ramp: ollie off the kicker flies the big gap', () => {

@@ -183,9 +183,10 @@ export class Renderer {
       pitch = -s.ramp.th; // standing on the curve
     } else if (s.qpAir) {
       // Out of the quarter pipe: turn from facing up the wall to facing down it.
-      const p = Math.min(1, s.qpAir.t / ((2 * PHYS.QP_V) / PHYS.GRAVITY));
+      const p = Math.min(1, s.qpAir.t / s.qpAir.dur);
       face = Math.cos(p * Math.PI);
-      pitch = (-Math.PI / 2) * Math.abs(face);
+      // leaning out over the ramp at the coping, upright for most of the air
+      pitch = (-Math.PI / 2) * (1 - Math.sin(p * Math.PI)) ** 2;
     }
     const base = makeTransform(s.x, s.y, pitch);
     // Side view, so turning around the vertical axis is drawn by squashing x:
