@@ -219,7 +219,6 @@ export class Renderer {
     if (game.combo.length && game.phase === 'playing') {
       g.text(game.combo.map((t) => t.name).join(' + '), L, 13, red);
     }
-    if (opts.portrait) g.text('TURN DEVICE SIDEWAYS', RES.W / 2, 31, red, 1, 'center');
   }
 
   blink(rate = 3) {

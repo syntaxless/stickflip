@@ -2,7 +2,7 @@ import { WORLD } from './config.js';
 import { Game } from './game.js';
 import { LEVELS } from './levels/index.js';
 import { Renderer } from './render/renderer.js';
-import { Pix, RES } from './render/pixel.js';
+import { Pix, RES, PAL } from './render/pixel.js';
 import * as audio from './audio.js';
 import { classifyStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
@@ -19,6 +19,19 @@ const low = document.createElement('canvas');
 low.width = RES.W;
 low.height = RES.H;
 const renderer = new Renderer(new Pix(low.getContext('2d')));
+
+// In portrait there's empty navy above the game, so the "turn sideways" notice
+// goes there (drawn once, in the same pixel font) instead of over the title.
+const NOTE_H = 9;
+const note = document.createElement('canvas');
+note.width = RES.W;
+note.height = NOTE_H;
+{
+  const p = new Pix(note.getContext('2d'), RES.W, NOTE_H);
+  p.clear(PAL.sky);
+  p.text('TURN DEVICE SIDEWAYS', RES.W / 2, 1, PAL.red, 1, 'center');
+  p.flush();
+}
 const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 
 // ------------------------------------------------------------ progress
@@ -346,6 +359,12 @@ function frame(now) {
   ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
+  // Notice in the space above the game, a couple of rows clear of it.
+  const noteGap = (NOTE_H + 4) * view.scale;
+  if (view.portrait && view.oy >= noteGap) {
+    const y = view.oy - noteGap;
+    ctx.drawImage(note, view.ox * view.dpr, y * view.dpr, RES.W * view.scale * view.dpr, NOTE_H * view.scale * view.dpr);
+  }
   requestAnimationFrame(frame);
 }
 
