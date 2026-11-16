@@ -71,31 +71,45 @@ function rider(g, fx, fy, s) {
   drawBoard(g, makeTransform(fx / s, fy / s - 22, -0.3, s), 0, 0);
 }
 
-// Square icon on an N x N grid. `pad` keeps the art inside a safe zone
-// (maskable icons get cropped to a circle by Android).
-function icon(N, pad = 0) {
+// Draws text mirrored left-to-right (as if seen in a mirror), centred on x.
+function mirroredText(g, str, x, y, c, scale) {
+  const flipped = { textWidth: g.textWidth, fill: (fx, fy, w, h, col) => g.fill(2 * x - fx - w, fy, w, h, col) };
+  Pix.prototype.text.call(flipped, str, x, y, c, scale, 'center');
+}
+
+// Square icon on an N x N grid: "STICK" stacked over a mirrored "FLIP", in red
+// with a black drop shadow, over a strip of black ground. `k` is the letter
+// scale. Maskable icons get cropped to a circle by Android, so they keep the
+// lettering inside the middle 80%.
+function icon(N, k) {
   const g = new Pix(fakeCtx, N, N);
   g.clear(PAL.sky);
-  const inner = N - pad * 2;
-  const ground = pad + Math.round(inner * 0.84);
-  // Maskable icons fill the whole square, so the ground runs edge to edge.
+  const ground = N - Math.max(3, Math.round(N * 0.14));
   g.fill(0, ground, N, N - ground, PAL.ink);
-  const s = inner / 165;
-  rider(g, N / 2, ground - inner * 0.04, s);
+  const gap = Math.max(2, k * 2);
+  const blockH = 14 * k + gap;
+  const top = Math.round((ground - blockH) / 2);
+  const cx = N / 2;
+  const y2 = top + 7 * k + gap;
+  g.text('STICK', cx + 1, top + 1, PAL.ink, k, 'center');
+  g.text('STICK', cx, top, PAL.red, k, 'center');
+  mirroredText(g, 'FLIP', cx + 1, y2 + 1, PAL.ink, k);
+  mirroredText(g, 'FLIP', cx, y2, PAL.red, k);
   return g;
 }
 
-// Favicon: drawn small on purpose so the pixels stay crisp in a browser tab.
-const fav = icon(32);
-const fav32 = png(fav);
+// Favicon: drawn at its real size so the pixels stay crisp in a browser tab.
+const fav32 = png(icon(32, 1));
 save('favicon-32.png', fav32);
 writeFileSync(new URL('../favicon.ico', import.meta.url), ico(fav32, 32));
 
-// Home Screen icons: a 48-pixel drawing scaled up by whole numbers.
-save('apple-touch-icon.png', png(icon(60), 3)); // 180 x 180
-save('icon-192.png', png(icon(48), 4));
-save('icon-512.png', png(icon(64), 8));
-save('icon-maskable-512.png', png(icon(64, 8), 8));
+// Home Screen icons: small pixel drawings scaled up by whole numbers.
+// The lettering spans about two thirds of the width, so rounded corners and
+// Android's circle crop never clip it.
+save('apple-touch-icon.png', png(icon(90, 2), 2)); // 180 x 180
+save('icon-192.png', png(icon(96, 2), 2));
+save('icon-512.png', png(icon(128, 3), 4));
+save('icon-maskable-512.png', png(icon(128, 3), 4));
 
 // Share preview, 1200 x 630: a 240 x 126 scene scaled by 5.
 {
