@@ -1,5 +1,5 @@
 import { WORLD, PHYS } from '../config.js';
-import { BAIL_MESSAGES } from '../game.js';
+import { BAIL_MESSAGES, slopeOf } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
@@ -179,7 +179,7 @@ export class Renderer {
     let pitch = s.mode === 'air' ? boardPitch(s.vy) * face : s.mode === 'roll' ? Math.atan(s.slope) : 0;
     if (s.mode === 'grind') {
       const r = s.grind.surface;
-      if (r.y1 !== undefined) pitch = Math.atan2(r.y2 - r.y1, r.x2 - r.x1);
+      if (r.y1 !== undefined || r.arc) pitch = Math.atan(slopeOf(r, s.x));
       pitch += s.grind.type.pitch * face; // 5-0 tips the nose up, nose grind tips it down
     } else if (s.mode === 'ramp') {
       pitch = -s.ramp.th; // standing on the curve

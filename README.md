@@ -127,10 +127,12 @@ in `src/config.js`.
    in). Then ride back out fakie to the left, ollieing or grinding the rail
    again on the way. Stars: finish, 700, 1500.
 
-**Secret level: Mega Ramp.** Side-scrolling, three and a half screens wide:
-drop in from a high deck, fly off the kicker onto a deck with a raised rail
-(grind it, or ollie off the kicker to clear it), roll down a long bank and
-finish with a big air out of a tall quarter pipe. It's played after level 6
+**Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop
+in from a high deck and fly off the kicker at a raised, gently curved
+"rainbow" rail. Ollie off the kicker to clear the whole rail and land in the
+long bank that starts right at its end, or grind over the curve and pop (or
+roll) off the end into the bank. Finish with a big air out of a tall quarter
+pipe. Rails take an `arc` option for the curve. It's played after level 6
 from your third full run onwards (finished runs are counted on the device), and
 its score counts toward the run total.
 
