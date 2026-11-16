@@ -156,6 +156,9 @@ export class Game {
     } else if (s.mode === 'grind') {
       this.endGrind();
       this.takeOff(PHYS.POP_V);
+    } else if (s.mode === 'ramp' && s.ramp.dir > 0 && !s.ramp.pumped) {
+      s.ramp.pumped = true; // pump on the way up: pop off the coping into an air
+      this.emit('prime');
     } else if (s.mode === 'air') {
       this.airTap();
     }
@@ -319,29 +322,41 @@ export class Game {
     }
   }
 
-  // Quarter pipe: ride up the curve, go straight up out of it, come back down
-  // into it facing the other way and ride back out to the left.
+  // Quarter pipe. Riding up the curve slows you down and riding down it
+  // speeds you back up (RAMP_G), so you come out at the speed you went in.
+  // At the top you go straight up: just a little hop over the coping, or a
+  // proper air if you tapped (pumped) on the way up. You come back down into
+  // the ramp facing the other way and ride out to the left.
   enterRamp(qp) {
     const s = this.sk;
     s.mode = 'ramp';
     s.slope = 0;
-    s.ramp = { qp, th: Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R))), dir: 1 };
+    const th = Math.asin(Math.max(0, Math.min(1, (s.x - qp.cx) / qp.R)));
+    s.ramp = { qp, th, dir: 1, v: Math.abs(s.vx), pumped: false };
   }
 
   updateRamp(dt) {
     const s = this.sk;
     const r = s.ramp;
     const { cx, cy, R } = r.qp;
-    r.th += (r.dir * this.speed * dt) / R;
+    r.v -= r.dir * PHYS.RAMP_G * Math.sin(r.th) * dt;
+    if (r.dir > 0 && r.v < 30) {
+      // not enough speed to reach the top: roll back down
+      r.dir = -1;
+      s.dir = -1;
+      r.v = 30;
+    }
+    r.th += (r.dir * r.v * dt) / R;
     if (r.dir > 0 && r.th >= Math.PI / 2) {
       // out over the coping, straight up
+      const vy = r.v + (r.pumped ? PHYS.QP_POP : 0);
       s.ramp = null;
       s.mode = 'air';
-      s.qpAir = { qp: r.qp, t: 0 };
+      s.qpAir = { qp: r.qp, t: 0, v: r.v, pumped: r.pumped, dur: (2 * vy) / PHYS.GRAVITY };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
-      s.vy = -PHYS.QP_V;
+      s.vy = -vy;
       s.poppedAt = s.x;
       this.emit('pop');
     } else if (r.dir < 0 && r.th <= 0) {
@@ -383,12 +398,13 @@ export class Game {
       s.qpAir.t += dt;
       if (s.vy > 0 && s.y >= qp.cy) {
         if (s.flip) return this.bail('flip');
+        const { v, pumped } = s.qpAir;
         s.qpAir = null;
         s.dir = -1;
         s.y = qp.cy;
         s.mode = 'ramp';
-        s.ramp = { qp, th: Math.PI / 2, dir: -1 };
-        this.addTrick('FS AIR', 100);
+        s.ramp = { qp, th: Math.PI / 2, dir: -1, v, pumped: false };
+        if (pumped) this.addTrick('FS AIR', 100);
         this.emit('land');
         this.bankCombo();
       }

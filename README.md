@@ -88,10 +88,12 @@ in `src/config.js`.
    Ollie off the bank's lip up onto the top: the lower step and the risers are
    bails.
    Stars: finish, 150, 300.
-6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail,
-   ride up the quarter pipe and go straight up out of it (FS AIR, plus any flip
-   you finish before you drop back in), then ollie or grind the rail again on
-   the way back out to the left. Stars: finish, 700, 1500.
+6. **Quarter Pipe**: a rail in front of a quarter pipe. Ollie or grind the rail
+   and ride up the quarter pipe: it slows you down on the way up and gives the
+   speed back on the way down. Tap on the way up to pump and pop a real air off
+   the coping (FS AIR, plus any flip you finish before you drop back in);
+   without it you just hop over the coping. Then ollie or grind the rail again
+   on the way back out to the left. Stars: finish, 700, 1500.
 
 **Secret level: Mega Ramp.** Three screens wide and side-scrolling: drop in
 from a high deck, ollie off the kicker and fly the big gap onto the landing
