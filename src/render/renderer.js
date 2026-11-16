@@ -172,25 +172,22 @@ export class Renderer {
     this.pose.update(target, dt);
 
     // The board follows the ground (banks), tilts with the arc in the air,
-    // and with the rail on a sloped grind. Riding left, the skater is mirrored.
-    let face = s.dir;
-    let pitch = s.mode === 'air' ? boardPitch(s.vy) * s.dir : s.mode === 'roll' ? Math.atan(s.slope) : 0;
+    // and with the rail on a sloped grind. `face` is the way the skater faces:
+    // after a quarter pipe they ride back out fakie, still facing right.
+    const face = s.face;
+    let pitch = s.mode === 'air' ? boardPitch(s.vy) * face : s.mode === 'roll' ? Math.atan(s.slope) : 0;
     if (s.mode === 'grind') {
       const r = s.grind.surface;
       if (r.y1 !== undefined) pitch = Math.atan2(r.y2 - r.y1, r.x2 - r.x1);
-      pitch += s.grind.type.pitch * s.dir; // 5-0 tips the nose up, nose grind tips it down
+      pitch += s.grind.type.pitch * face; // 5-0 tips the nose up, nose grind tips it down
     } else if (s.mode === 'ramp') {
       pitch = -s.ramp.th; // standing on the curve
     } else if (s.qpAir) {
-      // Out of the quarter pipe: turn from facing up the wall to facing down it.
-      const p = Math.min(1, s.qpAir.t / s.qpAir.dur);
-      face = Math.cos(p * Math.PI);
-      // leaning out over the ramp at the coping, upright for most of the air
-      pitch = (-Math.PI / 2) * (1 - Math.sin(p * Math.PI)) ** 2;
+      pitch = -Math.PI / 2; // straight up and down, just as you left the wall
     }
     const base = makeTransform(s.x, s.y, pitch);
     // Side view, so turning around the vertical axis is drawn by squashing x:
-    // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1.
+    // cos() goes 1 -> 0 (edge-on) -> -1 (facing back) -> 1. Mirrored when facing left.
     const squashX = (tf, sx) => (p) => tf({ x: p.x * sx * face, y: p.y });
     let spin = 0; // board roll around its long axis
     let lift = 0;

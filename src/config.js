@@ -16,7 +16,7 @@ export const PHYS = Object.freeze({
   GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
   START_X: 80, // where the skater waits before the run
-  QP_AIR_G: 520, // gentle gravity above a quarter pipe: you go up at riding speed and hang there
+  QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
 });
 

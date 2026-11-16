@@ -86,6 +86,7 @@ export class Game {
       vx: 0,
       vy: 0,
       dir: 1, // 1 = riding right, -1 = riding back to the left (after a quarter pipe)
+      face: 1, // the way the skater faces: still right when riding back out fakie
       slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
       qpAir: null, // { qp, t } while in the air above a quarter pipe
@@ -319,10 +320,10 @@ export class Game {
     }
   }
 
-  // Quarter pipe. Arcade rules: ride up the curve at riding speed and carry
-  // straight on up out of it at that speed, under gentle gravity (QP_AIR_G),
-  // so there's lots of hang time for tricks. Come back down into the ramp
-  // facing the other way and ride out to the left.
+  // Quarter pipe. Arcade rules: ride up the curve at riding speed, carry
+  // straight on up out of it at that same speed, then come straight back down
+  // at it (QP_AIR_TIME in all), with no turning in the air: lots of hang time
+  // for tricks. Then ride back down and out to the left, fakie.
   enterRamp(qp) {
     const s = this.sk;
     s.mode = 'ramp';
@@ -340,7 +341,7 @@ export class Game {
       // out over the coping, straight up
       s.ramp = null;
       s.mode = 'air';
-      s.qpAir = { qp: r.qp, t: 0, dur: (2 * this.speed) / PHYS.QP_AIR_G };
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
@@ -375,7 +376,8 @@ export class Game {
     const s = this.sk;
     const prevY = s.y;
     const prevX = s.x;
-    s.vy += (s.qpAir ? PHYS.QP_AIR_G : PHYS.GRAVITY) * dt;
+    if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -this.speed : this.speed; // steady up, steady down
+    else s.vy += PHYS.GRAVITY * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;
     this.stepTrick(dt);

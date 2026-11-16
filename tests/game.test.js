@@ -315,7 +315,7 @@ test('quarter pipe: doing nothing slams the rail, a late flip in the air is a ba
   assert.equal(game.bailReason, 'flip');
 });
 
-test('quarter pipe: up at riding speed, then over a second of hang time for two tricks', () => {
+test('quarter pipe: straight up and down at riding speed, over a second of hang time for two tricks', () => {
   const { game, seen } = playActs(quarter, [
     [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
     [2.95, 'swipe', 'down-right'], // 360 flip
@@ -324,6 +324,14 @@ test('quarter pipe: up at riding speed, then over a second of hang time for two 
   assert.ok(seen.has('360 FLIP') && seen.has('KICKFLIP') && seen.has('FS AIR'), [...seen].join());
   assert.equal(game.phase, 'playing');
   assert.equal(game.sk.dir, -1);
+  assert.equal(game.sk.face, 1, 'no turning around: back out fakie');
+});
+
+test('quarter pipe: the air goes up and comes down at a steady riding speed', () => {
+  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']], 3.2);
+  assert.ok(game.sk.qpAir, 'in the air off the quarter');
+  assert.equal(Math.abs(game.sk.vy), game.speed);
+  assert.equal(game.sk.vx, 0);
 });
 test('secret mega ramp: ollie off the kicker flies the big gap', () => {
   const { game } = playActs(SECRET, [[1.05, 'tap'], [1.1, 'swipe', 'down-right']]);
