@@ -336,7 +336,8 @@ export class Renderer {
     if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 28, red, 1, 'center');
     if (list.length) this.drawTable(list, y + 44, scr.highlight);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
-    if (scr.t > 0.6 && this.blink()) g.text('TAP TO RIDE AGAIN', cx, y + 118, red, 1, 'center');
+    // Beat the game: start over from level 1 with a fresh total.
+    if (scr.t > 0.6) this.button('again', 'PLAY AGAIN FROM LEVEL 1', cx - 80, y + 114, 160, true);
   }
 
   hitButton(lx, ly) {

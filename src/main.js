@@ -92,6 +92,8 @@ function cycleLetter(i, step) {
 
 function screenPress(clientX, clientY) {
   if (screen.type === 'scores') {
+    // PLAY AGAIN (the whole screen counts, so it's easy to hit): back to level 1
+    // with a fresh run total. finishRun() already cleared the run.
     if (screen.t < 0.6) return;
     screen = null;
     loadLevel(0);
