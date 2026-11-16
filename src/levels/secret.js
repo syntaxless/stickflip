@@ -22,7 +22,7 @@ export default {
   hint: 'KICKER, RAIL, THEN THE BIG QUARTER.',
   secret: true,
   width: QP_X + QP_R + 90,
-  speed: 750,
+  speed: 600, // twice normal
   endAfterQuarter: true,
   obstacles: [
     bank({ x: -1000, run: 1300, y1: START, y2: START }), // drop-in deck
