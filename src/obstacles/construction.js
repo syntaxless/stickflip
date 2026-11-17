@@ -1,6 +1,8 @@
 import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
+import { rail } from './rail.js';
+import { pipe, post } from '../render/shaded.js';
 
 // Stage 3's construction site. Every piece is a plain box underneath (its sides
 // slam you, so ollie over it) drawn as chunky shaded pixel art: black outline,
@@ -102,6 +104,68 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
       g.pset(px, top + 2 * r, ink);
       g.line(px, top + 5, px, top + 10, ink);
       g.pset(px, top + 12, ink);
+    },
+  };
+}
+
+// A fire hydrant: red body, silver cap and side nozzles. Ollie over it.
+export function hydrant({ x, w = 24, h = 39, base = WORLD.GROUND }) {
+  return {
+    ...box({ x, w, h, base }),
+    type: 'hydrant',
+    draw(g) {
+      const [l, r, b] = [P(x), P(x + w) - 1, P(base) - 1];
+      const rows = P(h);
+      const t = b - rows + 1;
+      const red = PAL.flame;
+      const c = (l + r) >> 1;
+      // cap: a small dome, silver
+      g.fill(c - 2, t + 1, 5, 2, steel);
+      g.line(c - 1, t, c + 1, t, ink);
+      g.pset(c - 2, t + 1, ink);
+      g.pset(c + 2, t + 1, ink);
+      g.line(c - 1, t + 1, c, t + 1, shine);
+      g.pset(c, t - 1, ink);
+      // bonnet and body, outlined, lit from the left
+      g.fill(c - 3, t + 3, 7, rows - 5, red);
+      g.rect(c - 3, t + 3, 7, rows - 5, ink);
+      g.line(c - 2, t + 4, c - 2, b - 3, orange);
+      g.line(c - 4, t + 6, c + 4, t + 6, ink); // collar
+      g.line(c - 3, t + 6, c + 3, t + 6, steel);
+      // side nozzles
+      for (const nx of [c - 5, c + 4]) {
+        g.fill(nx, t + 8, 2, 3, steel);
+        g.rect(nx, t + 8, 2, 3, ink);
+      }
+      g.pset(c - 4, t + 8, shine);
+      // base plate
+      g.fill(c - 4, b - 1, 9, 2, ink);
+      g.line(c - 3, b - 1, c + 3, b - 1, steel);
+    },
+  };
+}
+
+// Scaffolding: a rail along the top plank (grind it like any rail) on a
+// braced pipe frame. Same physics as a rail.
+export function scaffold({ x, length, height, base = WORLD.GROUND }) {
+  const bar = rail({ x, length, height, base });
+  return {
+    ...bar,
+    type: 'scaffold',
+    draw(g, fx) {
+      const top = P(base - height);
+      const b = P(base) - 1;
+      const [l, r] = [P(x), P(x + length)];
+      // uprights every ~100 units with a cross brace in each bay
+      const n = Math.max(2, Math.round(length / 100));
+      const xs = Array.from({ length: n + 1 }, (_, i) => l + Math.round(((r - l) * i) / n));
+      for (let i = 0; i < n; i++) {
+        pipe(g, xs[i], top + 4, xs[i + 1], b - 3); // brace down
+        pipe(g, xs[i], b - 3, xs[i + 1], top + 4); // brace up
+        g.line(xs[i], b - Math.round((b - top) / 2), xs[i + 1], b - Math.round((b - top) / 2), ink); // mid tube
+      }
+      for (const px of xs) post(g, px, top + 3, b);
+      bar.draw(g, fx); // the grindable pipe on top, over the frame
     },
   };
 }

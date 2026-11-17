@@ -1,8 +1,9 @@
-import { rail } from '../obstacles/index.js';
+import { scaffold, sign } from '../obstacles/index.js';
 
-// Stage 3, section 3: a long rail. Ollie on, lock the grind with a timed tap and ride it out.
+// Stage 3, section 5: scaffolding. Ollie onto the top pipe, lock the grind
+// with a timed tap and ride it out.
 export default {
   id: 'long-rail',
-  name: 'Long Rail',
-  obstacles: [rail({ x: 300, length: 430, height: 50 })],
+  name: 'Scaffold Rail',
+  obstacles: [sign({ x: 200 }), scaffold({ x: 300, length: 430, height: 66 })],
 };
