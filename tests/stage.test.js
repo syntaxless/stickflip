@@ -215,7 +215,7 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 });
 
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
-  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.4, 0.95], [1.78], [0.9]];
+  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.4, 0.95], [1.4], [0.9]];
   clears.forEach((taps, i) => {
     const game = ride3(i, taps);
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
@@ -494,4 +494,30 @@ test('stage 5: a fully charged ollie clears the whole fun box (it is no longer t
     if (g.phase === 'playing' && landed !== null && landed >= end) clears++;
   }
   assert.ok(clears >= 6, `${clears} charge timings clear a ${end - Math.min(...box.ground.map((s) => s.x1))}-wide box`);
+});
+
+test('stage 3: the Big Drop has two routes: land and ollie the barrel, or one charged ollie off the edge over both', () => {
+  const sec = stage3.sections[5].x;
+  const run = (act) => {
+    const g = new Game(stage3, null, { index: 5, score: 0 });
+    g.tap();
+    const s = {};
+    let t = 0;
+    while (t < 6 && g.phase === 'playing' && g.sk.x < sec + 900) {
+      act(g, t, s);
+      g.update(STEP);
+      t += STEP;
+    }
+    return { g, s };
+  };
+  // route 1: roll off, land, tap
+  const a = run((g, t, s) => { if (!s.d && t >= 1.4) { g.tap(); s.d = 1; } });
+  assert.equal(a.g.phase, 'playing', `drop then ollie: ${a.g.bailReason}`);
+  // route 2: hold to charge, let go on the platform before the edge
+  const b = run((g, t, s) => {
+    if (!s.c && t >= 0.05) { g.startCharge(); s.c = 1; }
+    if (s.c && !s.r && t >= 0.8) { s.x = g.sk.x; g.releaseCharge(); s.r = 1; }
+  });
+  assert.equal(b.g.phase, 'playing', `charged ollie off the edge: ${b.g.bailReason}`);
+  assert.ok(b.s.x < sec + 400, 'took off from the platform');
 });
