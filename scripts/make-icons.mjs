@@ -14,16 +14,18 @@ mkdirSync(OUT, { recursive: true });
 const fakeCtx = { createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) };
 
 // Encode RGBA pixels as a PNG, scaling each pixel up to `k` x `k`.
-function png(g, k = 1) {
+// `opaque` writes plain RGB with no alpha channel (the App Store icon must not have one).
+function png(g, k = 1, { opaque = false } = {}) {
   const W = g.w * k;
   const H = g.h * k;
-  const raw = Buffer.alloc((W * 4 + 1) * H);
+  const ch = opaque ? 3 : 4;
+  const raw = Buffer.alloc((W * ch + 1) * H);
   for (let y = 0; y < H; y++) {
-    const row = y * (W * 4 + 1);
+    const row = y * (W * ch + 1);
     raw[row] = 0; // no filter
     for (let x = 0; x < W; x++) {
       const s = (Math.floor(y / k) * g.w + Math.floor(x / k)) * 4;
-      for (let c = 0; c < 4; c++) raw[row + 1 + x * 4 + c] = g.data[s + c];
+      for (let c = 0; c < ch; c++) raw[row + 1 + x * ch + c] = g.data[s + c];
     }
   }
   const chunk = (type, data) => {
@@ -38,7 +40,7 @@ function png(g, k = 1) {
   ihdr.writeUInt32BE(W, 0);
   ihdr.writeUInt32BE(H, 4);
   ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // RGBA
+  ihdr[9] = opaque ? 2 : 6; // RGB or RGBA
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),
@@ -102,6 +104,16 @@ save('apple-touch-icon.png', png(icon(90, 2), 2)); // 180 x 180
 save('icon-192.png', png(icon(96, 2), 2));
 save('icon-512.png', png(icon(128, 3), 4));
 save('icon-maskable-512.png', png(icon(128, 3), 4));
+
+// iOS app (ios/): the App Store icon, 1024 x 1024 with no transparency, and
+// the launch screen, the title small in the middle of plain navy (iOS crops
+// the square to the screen, so it has to stay central).
+const IOS = new URL('../ios/App/App/Assets.xcassets/', import.meta.url);
+writeFileSync(new URL('AppIcon.appiconset/AppIcon-512@2x.png', IOS), png(icon(128, 3), 8, { opaque: true }));
+const splash = png(icon(683, 4), 4, { opaque: true }); // 2732 x 2732
+for (const name of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+  writeFileSync(new URL(`Splash.imageset/${name}`, IOS), splash);
+}
 
 // Fills a convex quad (corners in order) pixel by pixel.
 function fillQuad(g, q, color) {

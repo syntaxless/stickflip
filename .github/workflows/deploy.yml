@@ -50,7 +50,7 @@ jobs:
             [ -e "$from/index.html" ] || return 0
             cp "$from/index.html" "$to/"
             # icons, favicon and Home Screen manifest, when the branch has them
-            for f in icons favicon.ico manifest.webmanifest; do
+            for f in icons favicon.ico manifest.webmanifest privacy.html; do
               [ -e "$from/$f" ] && cp -r "$from/$f" "$to/"
             done
             if [ -d "$from/src" ]; then

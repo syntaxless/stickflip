@@ -8,6 +8,7 @@ import { readStroke, readChargeStroke } from './gesture.js';
 import { watchForUpdates } from './update.js';
 import { localLeaderboard, supabaseLeaderboard, withFallback, INITIALS } from './leaderboard.js';
 import { Run } from './run.js';
+import { NATIVE, haptics, submitToGameCenter, gameCenterReady, refreshGameCenter, openGameCenter } from './native.js';
 
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
@@ -31,7 +32,9 @@ const LEVELS = STAGES;
 // Testing: on /unstable/ or a local copy, ?level=1..6 starts stage 1 at that
 // checkpoint (or ?level=secret on the Mega Ramp). Test play keeps its own saves and its own
 // on-device high scores, so it never touches real progress or the shared table.
-const IS_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
+// The iOS app is served from capacitor://localhost but is a live copy of the
+// game: it plays real runs and posts to the shared table.
+const IS_LOCAL = !NATIVE && /^(localhost|127\.|\[::1\])/.test(location.hostname);
 const IS_UNSTABLE = location.pathname.includes('/unstable');
 const TEST_LEVEL = IS_LOCAL || IS_UNSTABLE ? new URLSearchParams(location.search).get('level') : null;
 const TESTING = TEST_LEVEL != null;
@@ -130,6 +133,8 @@ async function finishRun() {
   store.set('level', 0);
   store.set('checkpoint', null);
   await refreshScores(stageIndex);
+  submitToGameCenter(score, LEVELS[stageIndex].id);
+  refreshGameCenter();
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, bonus, stageIndex, letters: saved.split(''), pos: 0, t: 0 };
@@ -183,6 +188,11 @@ function screenPress(clientX, clientY) {
     // fresh run total. finishRun() already cleared the run.
     if (screen.t < 0.6) return;
     const again = screen.stageIndex ?? 0;
+    // In the app, the table also has a GAME CENTER button; anywhere else is REPLAY / STAGES.
+    if (clientX != null && gameCenterReady()) {
+      const p = toWorld(clientX, clientY);
+      if (renderer.hitButton(p.x, p.y) === 'gc') return openGameCenter(LEVELS[again].id);
+    }
     screen = null;
     if (unlocked > 1) screen = selectScreen();
     else loadLevel(again);
@@ -513,7 +523,7 @@ function frame(now) {
   let flip = false;
   for (const e of events) {
     if (e.type === 'bail') {
-      if (navigator.vibrate) navigator.vibrate(60);
+      if (navigator.vibrate && !NATIVE) navigator.vibrate(60);
       run.recordBail();
       saveRun();
     }
@@ -529,6 +539,7 @@ function frame(now) {
     }
   }
   audio.play(events, game);
+  haptics(events);
   renderer.consume(events);
   if (flip) nextScreen();
   if (screen) screen.t += dt;
@@ -542,6 +553,7 @@ function frame(now) {
     total: run.total(slotOf(levelIndex), game.phase === 'bailed' ? game.checkpoint.score : game.score), // running total, this level included
     screen,
     highScores,
+    gameCenter: gameCenterReady(),
     attract: levelIndex !== SECRET_INDEX && game.section === 0,
     stagesButton: unlocked > 1 && levelIndex !== SECRET_INDEX && game.section === 0,
   });
