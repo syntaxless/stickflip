@@ -15,7 +15,7 @@ const CLEARS = [
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
-  [[0.7, 'tap'], [0.7, 'hold'], [1.74, 'up'], [4.66, 'tap'], [4.66, 'hold'], [7.16, 'up']], // Quarter Pipe (a replay starts on the Euro Gap top: roll off the lip, land, ollie onto the rail)
+  [[0.7, 'tap'], [0.7, 'hold'], [1.74, 'up']], // Quarter Pipe (a replay starts on the Euro Gap top: roll off the lip, land, ollie onto the rail)
 ];
 
 // Plays from checkpoint `index` with `acts`, until `until(game)` or 12 s.
@@ -58,10 +58,16 @@ for (let i = 0; i < CLEARS.length - 1; i++) {
   });
 }
 
-test('stage 1: the quarter pipe is the finale, ridden back out to the left', () => {
+test('stage 1: the quarter pipe is the finale, the stage ends on landing its air', () => {
   const { game } = ride(6, CLEARS[6], () => false);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.equal(game.sk.dir, -1);
+  assert.equal(game.sk.ramp.dir, -1, 'finished as the rider lands back into the pipe');
+});
+
+test('clouds drift behind stages 1 and 2 only', () => {
+  assert.equal(stage1.clouds, true);
+  assert.equal(STAGES[1].clouds, true);
+  for (const s of STAGES.slice(2)) assert.ok(!s.clouds, s.id);
 });
 
 test('a bail replays from the last checkpoint, with the score banked before it', () => {

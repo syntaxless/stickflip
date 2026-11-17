@@ -80,7 +80,7 @@ test('gap: doing nothing earns nothing', () => {
 test('gap: the Euro to Rail bonus needs the jump from the Euro Gap top, not a roll-off and a second ollie', () => {
   // from the replay spawn on top of the Euro Gap: roll off, land, then ollie onto the rail
   const viaStreet = play(STAGES[0], 6, [[0.7, 'tap'], [0.7, 'hold']]);
-  assert.equal(viaStreet.game.phase, 'playing');
+  assert.notEqual(viaStreet.game.phase, 'bailed');
   assert.deepEqual(viaStreet.earned, []);
 });
 
