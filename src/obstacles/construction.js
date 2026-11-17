@@ -157,6 +157,45 @@ export function hydrant({ x, w = 54, h = 90, base = WORLD.GROUND }) {
   };
 }
 
+// A traffic barrel: an orange drum with white reflective bands, a flat top ring
+// and a wider base. Ollie over it (its sides slam you, the top is no place to land).
+export function trafficBarrel({ x, w = 60, h = 96, base = WORLD.GROUND }) {
+  return {
+    ...box({ x, w, h, base }),
+    type: 'traffic-barrel',
+    draw(g) {
+      const [l, r, b] = [P(x), P(x + w) - 1, P(base) - 1];
+      const t = b - P(h) + 1;
+      const orangeDark = [190, 90, 0];
+      const whiteDark = [190, 190, 200];
+      // body, a pixel narrower at the top than the base, outlined
+      const inset = (y) => (y < t + 4 ? 2 : y > b - 4 ? 0 : 1);
+      for (let y = t; y <= b; y++) {
+        const i = inset(y);
+        const band = Math.floor((y - t - 4) / 5);
+        const striped = y > t + 3 && y < b - 3 && band % 2 === 1;
+        const [lit, mid, dark] = striped ? [white, white, whiteDark] : [[255, 170, 60], orange, orangeDark];
+        g.line(l + i, y, r - i, y, mid);
+        g.line(l + i + 1, y, l + i + 3, y, lit); // lit left side
+        g.line(r - i - 2, y, r - i, y, dark); // shaded right side
+        g.pset(l + i, y, ink);
+        g.pset(r - i, y, ink);
+      }
+      // top ring and a dark hole at the very top, base lip
+      g.line(l + 2, t, r - 2, t, ink);
+      g.line(l + 3, t + 1, r - 3, t + 1, ink);
+      g.line(l + 3, t + 2, l + 6, t + 2, shine);
+      g.line(l, b, r, b, ink);
+      g.line(l + 1, b - 1, r - 1, b - 1, orangeDark);
+      // band outlines
+      for (let y = t + 4; y < b - 3; y += 5) {
+        g.pset(l + inset(y), y, ink);
+        g.pset(r - inset(y), y, ink);
+      }
+    },
+  };
+}
+
 // Scaffolding: a rail along the top plank (grind it like any rail) on a
 // braced pipe frame. Same physics as a rail.
 export function scaffold({ x, length, height, base = WORLD.GROUND }) {
