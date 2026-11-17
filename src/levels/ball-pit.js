@@ -8,5 +8,5 @@ const G = WORLD.GROUND;
 export default {
   id: 'ball-pit',
   name: 'Ball Pit',
-  obstacles: [swingSet({ x: 120 }), bank({ x: 280, run: 120, y1: G, y2: G - 60 }), ballPit({ x: 400, width: 240 })],
+  obstacles: [swingSet({ x: 120 }), bank({ x: 280, run: 120, y1: G, y2: G - 60 }), ballPit({ x: 400, width: 320 })],
 };

@@ -240,7 +240,10 @@ export class Renderer {
     const horizon = P(WORLD.GROUND);
     if (game.level.morning) this.drawMorningSky(g, cam);
     for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
-      const shift = Math.round(cam.x * factor);
+      // The bars around the game draw this scene again from a wider frame: `px`
+      // is the true camera, `left` how far that frame reaches left of the game,
+      // so the layers line up with the game picture instead of jumping at its edge.
+      const shift = Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
       const T = sky2.width;
       for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 40; tile++) {
         for (const b of sky2.list) {
@@ -268,7 +271,7 @@ export class Renderer {
   drawClouds(g, cam) {
     const [ox, oy] = [g.ox, g.oy];
     g.ox = 0;
-    g.oy = -Math.round(cam.y * 0.15);
+    g.oy = -Math.round((cam.py ?? cam.y) * 0.15) + (cam.top || 0);
     const layers = [
       // factor, drift px/s, tile width, cloud count, base y, spread, scale, colour
       [0.04, 1.5, 260, 3, 18, 26, 0.6, [136, 195, 255]],
@@ -276,7 +279,7 @@ export class Renderer {
       [0.16, 4, 360, 2, 46, 50, 1.2, [188, 224, 255]],
     ];
     for (const [factor, drift, T, count, base, spread, scale, colour] of layers) {
-      const shift = Math.round(cam.x * factor + this.time * drift);
+      const shift = Math.round((cam.px ?? cam.x) * factor + this.time * drift) - (cam.left || 0);
       for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 60; tile++) {
         for (let i = 0; i < count; i++) {
           const h = hash(i * 31 + 7, Math.round(factor * 100));
@@ -340,10 +343,11 @@ export class Renderer {
       const next = topAt(x + 1);
       if (top < bottom && game.level.wood) {
         this.drawWood(g, x, top, bottom);
-      } else if (top < bottom && game.groundAt(x * S + S / 2).material === 'concrete') {
-        // a poured concrete slab (a bank, the Euro Gap) down to the street, then the street's own layers
+      } else if (top < bottom && ['concrete', 'wood'].includes(game.groundAt(x * S + S / 2).material)) {
+        // a poured concrete slab (a bank, the Euro Gap) or a wooden ramp down to the street, then the street's own layers
         const base = Math.max(top, G);
-        this.drawConcrete(g, x, top, base);
+        if (game.groundAt(x * S + S / 2).material === 'wood') this.drawWood(g, x, top, base);
+        else this.drawConcrete(g, x, top, base);
         g.fill(x, base, 1, bottom - base, ink);
         this.drawGround(g, x, base, bottom, !!game.level.sidewalk);
       } else if (top < bottom) {

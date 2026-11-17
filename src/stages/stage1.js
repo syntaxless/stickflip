@@ -16,7 +16,7 @@ export default stage({
   name: 'Stage 1',
   sections: LEVELS,
   // the ramp starts well after the rail so you can land and roll before going up
-  extra: [bank({ x: 3 * W - 90, run: 160, y1: G, y2: STAIR_TOP }), bank({ x: 3 * W + 70, run: 50, y1: STAIR_TOP, y2: STAIR_TOP })],
+  extra: [bank({ x: 3 * W - 90, run: 160, y1: G, y2: STAIR_TOP, material: 'concrete' }), bank({ x: 3 * W + 70, run: 50, y1: STAIR_TOP, y2: STAIR_TOP, material: 'concrete' })],
   // Quarter Pipe's rail is close to the Euro Gap's lip (so the ollie from the top
   // lands on it), so a replay starts on the street right after the Euro Gap, at the
   // section's left edge: 220 (0.67 s) to the rail, and a tap window over half a second.

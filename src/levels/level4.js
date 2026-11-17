@@ -11,9 +11,9 @@ export default {
   id: 'bank-to-bank',
   name: 'Bank to Bank',
   obstacles: [
-    bank({ x: 250, run: 130, y1: G, y2: LIP }),
+    bank({ x: 250, run: 130, y1: G, y2: LIP, material: 'wood' }),
     water({ x: 380, width: 160 }),
-    bank({ x: 540, run: 130, y1: LIP, y2: G }),
+    bank({ x: 540, run: 130, y1: LIP, y2: G, material: 'wood' }),
   ],
   stars: [0, 200, 450],
 };
