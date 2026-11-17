@@ -428,7 +428,18 @@ export class Game {
           s.slope = ground.slope || 0;
         }
       }
-      if (this.hitSolid()) return this.bail('slam');
+      const hit = this.hitSolid();
+      if (hit) {
+        // A slappy: ride straight into a low curb with the finger held and
+        // the trucks slap up onto it, grinding with no ollie at all.
+        if (!hit.slappy || !this.hold) return this.bail('slam');
+        this.hold.used = true;
+        s.charge = null;
+        s.x = Math.max(hit.slappy.x1, Math.min(hit.slappy.x2, s.x + s.dir * PHYS.NOSE));
+        this.startGrind(hit.slappy, this.grindKey());
+        s.grind.slappy = true;
+        return;
+      }
       if (s.x > this.width + 40 || s.x < (s.dir < 0 ? this.finishLeft : -40)) return this.finish();
     } else if (s.mode === 'ramp') {
       this.updateRamp(dt);
@@ -592,9 +603,9 @@ export class Game {
     const s = this.sk;
     for (const r of this.solids) {
       const inX = (px) => px > r.x && px < r.x + r.w;
-      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + s.dir * PHYS.NOSE))) return true;
+      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + s.dir * PHYS.NOSE))) return r;
     }
-    return false;
+    return null;
   }
 
   // ------------------------------------------------------------ tricks
@@ -616,9 +627,9 @@ export class Game {
 
   endGrind() {
     const s = this.sk;
-    const { dist, type } = s.grind;
+    const { dist, type, slappy } = s.grind;
     s.grind = null;
-    this.addTrick(type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
+    this.addTrick(slappy ? `SLAPPY ${type.name}` : type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
   }
 
   land(surface) {

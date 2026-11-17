@@ -7,3 +7,4 @@ export { stepsUp } from './steps-up.js';
 export { quarterPipe } from './quarter-pipe.js';
 export { box } from './box.js';
 export { ring } from './ring.js';
+export { trashCan } from './trash-can.js';

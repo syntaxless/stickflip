@@ -1,7 +1,8 @@
 import { box } from '../obstacles/index.js';
 
 // Stage 2, section 1: a long, low curb. Ollie over it, or onto it and roll
-// along the top (a timed tap grinds it); hit its side and you slam.
+// along the top (a timed tap grinds it), or slappy it: ride into it with the
+// finger held and grind with no ollie. Hit its side any other way and you slam.
 export default {
   id: 'curb',
   name: 'Curb',
