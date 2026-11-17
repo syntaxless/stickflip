@@ -13,7 +13,7 @@ const P = (v) => Math.round(v / S);
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
 const snap = (v) => Math.round(v / S) * S;
-const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark } = PAL;
 
 // The ground, top to bottom: a thin surface strip the rider rolls on
 // (asphalt, or a sidewalk in Stage 3), a thin grass layer, a chunky dirt
@@ -221,22 +221,15 @@ export class Renderer {
 
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
-    // Dark grey ground with a maroon outline along its top and down every
-    // step, drop and gap wall.
     const bottom = g.h + cam.y;
     const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
-    let prev = topAt(cam.x - 1);
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
         this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
-        // a lower neighbour means this column's side shows
-        const drop = Math.max(prev, next);
-        g.line(x, top, x, Math.max(top, Math.min(drop, bottom) - 1), edge);
       }
-      prev = top;
       top = next;
     }
   }
@@ -259,7 +252,7 @@ export class Renderer {
         if (hb < 3) c = kerb;
         else if (hb < 5) c = crack;
         else if (hb === 5 && hash(x, y) % 2 === 0) c = fleck;
-        if (y === top) c = kerb; // lit top edge
+        if (y === top) c = sidewalk ? crack : kerb; // top edge (a sidewalk's is darker, to show against the light sky)
         else if (y === surfaceEnd - 1) c = crack; // dark underside
         if (sidewalk && x % 28 === 0 && y > top) c = crack; // slab joint
       } else if (y < grassEnd) {
