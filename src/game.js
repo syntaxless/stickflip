@@ -56,15 +56,24 @@ export class Game {
   // `entry` ({ speed }) rolls the rider straight in from the left edge, still
   // moving: the next screen of a continuous run. Without it the rider waits at
   // the start for a tap.
-  constructor(level, entry = null) {
+  //
+  // A stage (see stages/compose.js) is a long level with named sections. A
+  // bail replays from the start of the section it happened in (keeping the
+  // score banked before it); `checkpoint` ({ index, score }) starts there.
+  constructor(level, entry = null, checkpoint = null) {
     this.level = level;
     this.entry = entry;
+    this.sections = level.sections || [{ name: level.name, x: 0 }];
+    this.checkpoint = checkpoint || { index: 0, score: 0 };
+    this.finishLeft = level.finishLeft ?? -40;
     this.surfaces = level.obstacles.flatMap((o) => o.surfaces);
     this.solids = level.obstacles.flatMap((o) => o.solids);
     // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
     // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
+    // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
+    this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
@@ -76,20 +85,23 @@ export class Game {
     this.phase = 'ready';
     this.phaseTime = 0;
     this.time = 0;
-    this.score = 0;
+    const cp = this.checkpoint;
+    this.section = cp.index;
+    this.score = cp.score;
     this.combo = []; // tricks done since leaving the ground: { name, points }
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.stars = 0;
     this.hold = null; // { dir, used } while the finger (or Space) is held down
+    const startX = this.sections[cp.index].x + PHYS.START_X;
     this.sk = {
-      x: PHYS.START_X,
-      y: this.groundAt(PHYS.START_X).y,
+      x: startX,
+      y: this.groundAt(startX).y,
       vx: 0,
       vy: 0,
       dir: 1, // 1 = riding right, -1 = riding back to the left (after a quarter pipe)
       face: 1, // the way the skater faces: still right when riding back out fakie
-      slope: this.groundAt(PHYS.START_X).slope || 0, // of the ground being rolled on
+      slope: this.groundAt(startX).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
       qpAir: null, // { qp, t, dur, v } while in the air above a quarter pipe
       charge: null, // { t } while holding down on the ground to charge an ollie
@@ -110,6 +122,26 @@ export class Game {
       this.speed = this.clampSpeed(entry.speed || this.baseSpeed);
       this.start();
     }
+  }
+
+  get sectionName() {
+    return this.sections[this.section].name;
+  }
+
+  // Back to the very start of the stage (from the bail screen).
+  restartStage() {
+    this.checkpoint = { index: 0, score: 0 };
+    this.reset();
+    this.start();
+  }
+
+  // Riding into the next section makes it the checkpoint.
+  checkSection() {
+    const next = this.sections[this.section + 1];
+    if (!next || this.sk.dir < 0 || this.sk.x < next.x) return;
+    this.section += 1;
+    this.checkpoint = { index: this.section, score: this.score };
+    this.emit('checkpoint', { index: this.section, name: next.name, score: this.score });
   }
 
   clampSpeed(v) {
@@ -361,11 +393,12 @@ export class Game {
     this.time += dt;
     this.phaseTime += dt;
     const s = this.sk;
+    const fromX = s.x;
 
     if (this.phase === 'ready') return;
     if (this.phase === 'bailed') return this.updateBail(dt);
     if (this.phase === 'complete') {
-      s.x += s.vx * dt; // roll on off-screen
+      if (!this.level.sections) s.x += s.vx * dt; // roll on off-screen (a stage just stops: the camera follows)
       return;
     }
 
@@ -395,8 +428,19 @@ export class Game {
           s.slope = ground.slope || 0;
         }
       }
-      if (this.hitSolid()) return this.bail('slam');
-      if (s.x > this.width + 40 || s.x < -40) return this.finish();
+      const hit = this.hitSolid();
+      if (hit) {
+        // A slappy: ride straight into a low curb with the finger held and
+        // the trucks slap up onto it, grinding with no ollie at all.
+        if (!hit.slappy || !this.hold) return this.bail('slam');
+        this.hold.used = true;
+        s.charge = null;
+        s.x = Math.max(hit.slappy.x1, Math.min(hit.slappy.x2, s.x + s.dir * PHYS.NOSE));
+        this.startGrind(hit.slappy, this.grindKey());
+        s.grind.slappy = true;
+        return;
+      }
+      if (s.x > this.width + 40 || s.x < (s.dir < 0 ? this.finishLeft : -40)) return this.finish();
     } else if (s.mode === 'ramp') {
       this.updateRamp(dt);
     } else if (s.mode === 'grind') {
@@ -415,6 +459,20 @@ export class Game {
       }
     } else if (s.mode === 'air') {
       this.updateAir(dt);
+    }
+    if (this.phase === 'playing') this.passHazards(fromX);
+    if (this.phase === 'playing') this.checkSection();
+  }
+
+  // Going through a ring: the whole rider has to fit, feet above its bottom
+  // and head below its top. Clean through counts as a trick.
+  passHazards(fromX) {
+    const s = this.sk;
+    if (s.dir < 0) return;
+    for (const h of this.hazards) {
+      if (fromX >= h.x || s.x < h.x) continue;
+      if (s.y > h.bottom || s.y - PHYS.RIDER_HEIGHT < h.top) return this.bail(h.reason);
+      this.addTrick(h.trick, h.points);
     }
   }
 
@@ -545,9 +603,9 @@ export class Game {
     const s = this.sk;
     for (const r of this.solids) {
       const inX = (px) => px > r.x && px < r.x + r.w;
-      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + s.dir * PHYS.NOSE))) return true;
+      if (s.y > r.y + 6 && s.y <= r.y + r.h + 1 && (inX(s.x) || inX(s.x + s.dir * PHYS.NOSE))) return r;
     }
-    return false;
+    return null;
   }
 
   // ------------------------------------------------------------ tricks
@@ -569,9 +627,9 @@ export class Game {
 
   endGrind() {
     const s = this.sk;
-    const { dist, type } = s.grind;
+    const { dist, type, slappy } = s.grind;
     s.grind = null;
-    this.addTrick(type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
+    this.addTrick(slappy ? `SLAPPY ${type.name}` : type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
   }
 
   land(surface) {

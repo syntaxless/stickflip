@@ -1,5 +1,5 @@
 import { WORLD } from '../config.js';
-import { PAL } from '../render/pixel.js';
+import { pipe, post } from '../render/shaded.js';
 
 // A set of stairs going down to the right, starting from a raised platform at
 // x. `steps` is the number of drops; each is `rise` tall, with `run`-long treads
@@ -24,15 +24,13 @@ export function stairs({ x, steps = 5, run = 46, rise = 16, handrail = true, rai
     draw(g) {
       if (!handrail) return;
       const P = (v) => Math.round(v / 3);
-      const bar = PAL.ink; // never highlighted
       // posts down to the tread below each one
       for (const px of [x + run * 0.5, end - run * 0.5]) {
         const ry = rail.y1 + ((rail.y2 - rail.y1) * (px - x)) / (end - x);
         const i = Math.floor((px - x) / run) + 1;
-        g.line(P(px), P(ry) + 1, P(px), P(top + i * rise) - 1, PAL.ink);
+        post(g, P(px), P(ry) + 3, P(top + i * rise) - 1);
       }
-      g.line(P(x), P(rail.y1), P(end), P(rail.y2), bar);
-      g.line(P(x), P(rail.y1) + 1, P(end), P(rail.y2) + 1, bar);
+      pipe(g, P(x), P(rail.y1), P(end), P(rail.y2));
     },
   };
 }

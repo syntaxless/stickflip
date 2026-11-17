@@ -10,7 +10,43 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, edge } = PAL;
+// A world position snapped to a whole game pixel. The rider's anchor is drawn
+// snapped, so its limbs round the same way every frame instead of shimmering.
+const snap = (v) => Math.round(v / S) * S;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark } = PAL;
+
+// The ground, top to bottom: a thin surface strip the rider rolls on
+// (asphalt, or a sidewalk in Stage 3), a thin grass layer, a chunky dirt
+// layer, then plain black.
+const ASPHALT_H = 4;
+const GRASS_H = 3;
+const DIRT_H = 12;
+
+// Cheap deterministic hash of a world pixel, so the asphalt texture is the same
+// every frame and scrolls with the stage instead of shimmering.
+const hash = (x, y) => {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+};
+
+// Stage 3's skyline: a repeating row of buildings per layer, drawn faint
+// behind everything and scrolled at a fraction of the camera (parallax).
+// Widths and heights come from the same hash, so every tile is the same.
+function makeSkyline(seed, count, minW, maxW, minH, maxH) {
+  const list = [];
+  let x = 0;
+  for (let i = 0; i < count; i++) {
+    const h = hash(i, seed);
+    const w = minW + (h % (maxW - minW + 1));
+    const hgt = minH + (hash(seed, i * 3 + 1) % (maxH - minH + 1));
+    list.push({ x, w, h: hgt, antenna: hash(i, seed + 9) % 5 === 0, roof: hash(i, seed + 5) % 4 === 0 });
+    x += w + (hash(i, seed + 2) % 4);
+  }
+  return { list, width: x };
+}
+const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
+const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -87,6 +123,7 @@ export class Renderer {
     this.cam = cam; // main.js extends the ground past the game's edges from here
     g.ox = -cam.x;
     g.oy = -cam.y;
+    this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
     this.drawSkater(game);
@@ -124,22 +161,59 @@ export class Renderer {
     const s = game.sk;
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
-    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
-    const y = Math.min(0, fy - 330);
-    return { x: Math.round(x / S), y: Math.round(y / S) };
+    // Look ahead the way the rider is going (back to the left after a quarter pipe).
+    // The rider is drawn snapped to a whole pixel (see snap), and so is the lead,
+    // so the rider holds the same spot on screen while the stage pans past.
+    const lead = Math.round((s.dir < 0 ? (WORLD.W * 2) / 3 : WORLD.W / 3) / S);
+    const x = Math.max(0, Math.min(Math.round((game.width - WORLD.W) / S), Math.round(fx / S) - lead));
+    const y = Math.min(0, fy - (game.level.camTop ?? 330));
+    return { x, y: Math.round(y / S) };
   }
 
-  // The scenery only (ground and obstacles, no rider or HUD) into another
+  // The scene without the HUD (ground, obstacles and the rider) into another
   // framebuffer: main.js uses it to fill the bars around the game, so
-  // whatever runs off the edge of the game (a rail, a ramp) carries on there.
+  // whatever runs off the edge of the game (a rail, a ramp) carries on there,
+  // and the rider stays in view all the way to the edge of a wide phone.
   drawScene(g, game, cam) {
     g.clear(sky);
     g.ox = -cam.x;
     g.oy = -cam.y;
+    this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
+  }
+
+  // Stage 3: two faint building layers, slower than the stage. Drawn in screen
+  // space, standing on the horizon (it moves with the camera's height).
+  drawSkyline(g, game, cam) {
+    if (!game.level.skyline) return;
+    const [ox, oy] = [g.ox, g.oy];
+    g.oy = -cam.y;
+    const horizon = P(WORLD.GROUND);
+    for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
+      const shift = Math.round(cam.x * factor);
+      const T = sky2.width;
+      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 40; tile++) {
+        for (const b of sky2.list) {
+          const bx = tile * T + b.x - shift;
+          if (bx > g.w || bx + b.w < 0) continue;
+          g.ox = 0;
+          g.fill(bx, horizon - b.h, b.w, b.h + 60, colour); // down past the horizon: ground covers it
+          if (b.roof) g.fill(bx + 2, horizon - b.h - 2, b.w - 4, 2, colour);
+          if (b.antenna) g.line(bx + (b.w >> 1), horizon - b.h - 7, bx + (b.w >> 1), horizon - b.h, colour);
+          if (windows) {
+            for (let wy = horizon - b.h + 3; wy < horizon - 3; wy += 5) {
+              for (let wx = bx + 2; wx < bx + b.w - 2; wx += 4) if (hash(wx - bx + b.x, wy) % 3 === 0) g.pset(wx, wy, PAL.window);
+            }
+          }
+        }
+      }
+    }
+    g.ox = ox;
+    g.oy = oy;
   }
 
   drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
@@ -147,39 +221,67 @@ export class Renderer {
 
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
-    // Dark grey ground with a maroon outline along its top and down every
-    // step, drop and gap wall.
     const bottom = g.h + cam.y;
     const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
-    let prev = topAt(cam.x - 1);
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
-        g.fill(x, top, 1, bottom - top, groundCol);
-        // a lower neighbour means this column's side shows
-        const drop = Math.max(prev, next);
-        g.line(x, top, x, Math.max(top, Math.min(drop, bottom) - 1), edge);
+        g.fill(x, top, 1, bottom - top, ink);
+        this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
       }
-      prev = top;
       top = next;
     }
   }
 
-  drawSkater(game) {
-    const g = this.g;
+  // One ground column. All textures are blocks two pixels square in a few
+  // tones, hashed on the world pixel so they hold still and scroll with the
+  // stage: the surface in greys with the odd speckle (a sidewalk also has
+  // a dark joint every 28 px), the grass in greens, the dirt in muted browns
+  // with the odd grey stone. Below that the ground is plain black.
+  drawGround(g, x, top, bottom, sidewalk) {
+    const surfaceEnd = top + ASPHALT_H;
+    const grassEnd = surfaceEnd + GRASS_H;
+    const dirtEnd = grassEnd + DIRT_H;
+    const end = Math.min(bottom, dirtEnd);
+    for (let y = top; y < end; y++) {
+      const hb = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
+      let c;
+      if (y < surfaceEnd) {
+        c = groundCol;
+        if (hb < 3) c = kerb;
+        else if (hb < 5) c = crack;
+        else if (hb === 5 && hash(x, y) % 2 === 0) c = fleck;
+        if (y === top) c = sidewalk ? crack : kerb; // top edge (a sidewalk's is darker, to show against the light sky)
+        else if (y === surfaceEnd - 1) c = crack; // dark underside
+        if (sidewalk && x % 28 === 0 && y > top) c = crack; // slab joint
+      } else if (y < grassEnd) {
+        c = y === surfaceEnd ? shade : hb < 6 ? blade : hb < 11 ? grass : shade;
+      } else {
+        const dy = y - grassEnd;
+        c = hb < 4 ? dirtLight : hb < 6 ? dirtDark : dirt;
+        if (dy === 0) c = dirtDark; // the shadow under the grass
+        // a stone: a 2x2 block now and then, lit on its top-left pixel
+        if (hash((x >> 1) + 5, (y >> 1) + 9) % 53 === 0) c = (x & 1) === 0 && (y & 1) === 0 ? stone : stoneDark;
+      }
+      g.pset(x, y, c);
+    }
+  }
+
+  // `advance` false redraws this frame's pose without moving the animation on.
+  drawSkater(game, g = this.g, advance = true) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
-      this.pose.update('bail', dt, 10);
-      drawBoard(g, makeTransform(b.bx, b.by, b.bang * 0.15), b.bang);
+      if (advance) this.pose.update('bail', dt, 10);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang * 0.15), b.bang);
       const onGround = b.y >= game.groundAt(b.x).y - 0.5 && b.vy === 0;
       const ang = onGround ? Math.sign(b.ang || 1) * Math.min(Math.abs(b.ang), Math.PI / 2) : b.ang;
       const hip = this.pose.pose.hip;
       // rotate around the hip, which sits at the bail body position
-      const base = makeTransform(b.x, b.y - (onGround ? 12 : 40), ang);
+      const base = makeTransform(snap(b.x), b.y - (onGround ? 12 : 40), ang);
       drawFigure(g, (p) => base({ x: p.x - hip.x, y: p.y - hip.y }), this.pose.pose);
       return;
     }
@@ -191,7 +293,7 @@ export class Renderer {
     else if (s.mode === 'ramp') target = 'crouch';
     else if (s.charge) target = game.chargeLevel() > 0.5 ? 'charge' : 'crouch'; // crouch deeper the longer you hold
     else if (this.squash > 0) target = 'crouch';
-    this.pose.update(target, dt);
+    if (advance) this.pose.update(target, dt);
 
     // The board follows the ground (banks), tilts with the arc in the air,
     // and with the rail on a sloped grind. `face` is the way the skater faces:
@@ -207,7 +309,7 @@ export class Renderer {
     } else if (s.qpAir) {
       pitch = -Math.PI / 2; // straight up and down, just as you left the wall
     }
-    let base = makeTransform(s.x, s.y, pitch);
+    let base = makeTransform(snap(s.x), s.y, pitch);
     if (s.flip?.trick.body === 'backflip') {
       // Head over heels, backwards (counter-clockwise when riding right),
       // turning around the middle of the body.
@@ -266,7 +368,9 @@ export class Renderer {
     const g = this.g;
     const L = 4 + inset;
     const R = RES.W - 4 - inset;
-    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}: ${game.level.name}`, L, 4, red);
+    // A stage's sections are numbered after it: 1-3 is stage 1's third.
+    const sec = game.sections.length > 1 ? `-${game.section + 1}` : '';
+    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}${sec}: ${game.sectionName}`, L, 4, red);
     // Top right: just the running total for the run, with the speed under it.
     // Tricks and combos pop up on screen; high scores wait for the end.
     const total = opts.total ?? game.score;
@@ -308,8 +412,10 @@ export class Renderer {
     const cx = RES.W / 2;
 
     if (opts.screen?.type === 'entry') return this.drawEntry(opts.screen);
+    this.gameCenter = !!opts.gameCenter;
     if (opts.screen?.type === 'scores') return this.drawScores(opts.screen, opts.highScores || []);
     if (opts.screen?.type === 'unlock') return this.drawUnlock(opts.screen);
+    if (opts.screen?.type === 'select') return this.drawSelect(opts.screen);
 
     if (game.phase === 'ready') {
       // Arcade attract mode: on the first level, the title takes turns with the high scores.
@@ -327,11 +433,16 @@ export class Renderer {
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
+      // More than one stage open: a way back to the stage list.
+      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, 158, 60, true);
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
+      const ready = game.phaseTime >= PHYS.BAIL_RETRY_DELAY;
+      if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
+      // Past the first checkpoint, the whole stage can be started over.
+      if (ready && game.checkpoint.index > 0) this.button('restart', 'RESTART STAGE', cx - 45, 92, 90, true);
     }
   }
 
@@ -406,13 +517,31 @@ export class Renderer {
   drawScores(scr, list) {
     const g = this.g;
     const cx = RES.W / 2;
-    const { y } = this.panel('HIGH SCORES');
+    const { y } = this.panel(scr.title || 'HIGH SCORES');
     this.drawBonus(scr, y);
     if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     if (list.length) this.drawTable(list, y + 46, scr.highlight, 12);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
-    // Beat the game: start over from level 1 with a fresh total.
-    if (scr.t > 0.6) this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
+    // Beat the game: start over from level 1 with a fresh total. In the iOS
+    // app (signed in to Game Center) a GAME CENTER button sits beside it.
+    if (scr.t <= 0.6) return;
+    if (this.gameCenter) {
+      this.button('again', scr.next || 'REPLAY', cx - 76, y + 114, 64, true);
+      this.button('gc', 'GAME CENTER', cx - 4, y + 114, 80, true);
+    } else {
+      this.button('again', scr.next || 'REPLAY', cx - 40, y + 114, 80, true);
+    }
+  }
+
+  // Pick a stage: one button each, locked ones greyed out until the stage
+  // before has been finished.
+  drawSelect(scr) {
+    const cx = RES.W / 2;
+    const { y } = this.panel('STAGES');
+    scr.stages.forEach((st, i) => {
+      const open = i < scr.unlocked;
+      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
+    });
   }
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).

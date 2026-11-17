@@ -1,8 +1,9 @@
 // A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: navy sky, dark grey ground outlined in maroon, black rider and
+// Palette: navy sky, pixel-art asphalt ground outlined in maroon, black rider and
 // obstacles, a brown (wood) board with white wheels, and red for all text.
+// Street furniture (the trash can, construction cones and barriers) is shaded pixel art in grey, silver and black.
 
 export const RES = { W: 320, H: 180 };
 
@@ -10,18 +11,42 @@ export const PAL = {
   sky: [0, 0, 128],
   ink: [0, 0, 0],
   red: [255, 85, 85],
-  ground: [40, 40, 40],
+  ground: [64, 64, 64], // asphalt
+  crack: [40, 40, 40],
+  fleck: [96, 96, 96],
+  kerb: [88, 88, 88],
+  grass: [48, 112, 44], // thin grass layer: base, light blades, dark blades
+  blade: [92, 154, 62],
+  shade: [30, 78, 34],
+  dirt: [74, 52, 34], // chunky dirt below it: muted browns and a few grey stones
+  dirtLight: [96, 68, 44],
+  dirtDark: [52, 36, 24],
+  stone: [112, 112, 118],
+  stoneDark: [72, 72, 80],
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
+  fire: [255, 255, 85],
+  flame: [255, 85, 85],
+  steel: [128, 128, 128],
+  shine: [192, 192, 192],
+  orange: [255, 128, 0],
+  far: [0, 0, 128], // Stage 3's faint skyline, far and near layers (same as the sky elsewhere)
+  near: [0, 0, 128],
+  window: [0, 0, 128],
 };
 
-// The secret level has its own palette, from the 16 original named HTML
-// colours: purple sky and yellow text (solids stay black). `red` is the text
-// colour's name everywhere, whatever colour it is.
+// Palettes are the base PAL with a few colours swapped. The secret level has
+// purple sky and yellow text from the 16 original named HTML colours (solids
+// stay black). `red` is the text colour's name everywhere, whatever colour it is.
+// The construction site (Stage 3) has a light grey sky with a faint skyline,
+// and darker red text so it reads on grey; its surface is a light concrete
+// sidewalk (the other stages ride on dark asphalt).
+const BASE = Object.fromEntries(Object.entries(PAL).map(([k, v]) => [k, [...v]]));
 export const PALETTES = {
-  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255] },
-  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255] },
+  normal: BASE,
+  secret: { ...BASE, sky: [128, 0, 128], red: [255, 255, 0], fire: [255, 255, 0], flame: [255, 0, 0], far: [128, 0, 128], near: [128, 0, 128], window: [128, 0, 128] },
+  site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.
