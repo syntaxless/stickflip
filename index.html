@@ -10,10 +10,22 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Stickflip: a tap-to-play stick figure skateboarding game." />
     <title>Stickflip</title>
-    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="manifest" id="lnk-manifest" href="manifest.webmanifest" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" id="lnk-touch" href="icons/apple-touch-icon.png" />
+    <!-- The unstable build (served from /unstable/) has its own orange BETA icon and
+         manifest so it can't be mistaken for the real one on the Home Screen. This
+         does nothing on the live site or in the app, whose paths aren't /unstable/. -->
+    <script>
+      if (location.pathname.indexOf('/unstable') === 0) {
+        document.getElementById('lnk-manifest').href = 'icons/beta/manifest.webmanifest';
+        document.getElementById('lnk-touch').href = 'icons/beta/apple-touch-icon.png';
+        for (const l of document.querySelectorAll('link[rel="icon"]')) l.href = 'icons/beta/favicon-32.png';
+        const t = document.querySelector('meta[name="theme-color"]');
+        if (t) t.content = '#FF8000';
+      }
+    </script>
     <!-- Share previews (Messages, Slack, X...). Crawlers need absolute URLs. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Stickflip" />
