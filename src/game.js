@@ -592,7 +592,6 @@ export class Game {
         this.addTrick('FS AIR', 100);
         this.emit('land');
         this.bankCombo();
-        if (this.level.endAtQuarterLanding) this.finish(); // landing the quarter pipe air is the finale
       }
       return;
     }
