@@ -314,6 +314,7 @@ export class Renderer {
     if (opts.screen?.type === 'entry') return this.drawEntry(opts.screen);
     if (opts.screen?.type === 'scores') return this.drawScores(opts.screen, opts.highScores || []);
     if (opts.screen?.type === 'unlock') return this.drawUnlock(opts.screen);
+    if (opts.screen?.type === 'select') return this.drawSelect(opts.screen);
 
     if (game.phase === 'ready') {
       // Arcade attract mode: on the first level, the title takes turns with the high scores.
@@ -331,6 +332,8 @@ export class Renderer {
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
+      // More than one stage open: a way back to the stage list.
+      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, 158, 60, true);
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
@@ -413,13 +416,24 @@ export class Renderer {
   drawScores(scr, list) {
     const g = this.g;
     const cx = RES.W / 2;
-    const { y } = this.panel('HIGH SCORES');
+    const { y } = this.panel(scr.title || 'HIGH SCORES');
     this.drawBonus(scr, y);
     if (scr.score != null) g.text(`YOUR RUN: ${pad(scr.score)}`, cx, y + 30, red, 1, 'center');
     if (list.length) this.drawTable(list, y + 46, scr.highlight, 12);
     else g.text('NO SCORES YET', cx, y + 60, red, 1, 'center');
     // Beat the game: start over from level 1 with a fresh total.
-    if (scr.t > 0.6) this.button('again', 'REPLAY', cx - 40, y + 114, 80, true);
+    if (scr.t > 0.6) this.button('again', scr.next || 'REPLAY', cx - 40, y + 114, 80, true);
+  }
+
+  // Pick a stage: one button each, locked ones greyed out until the stage
+  // before has been finished.
+  drawSelect(scr) {
+    const cx = RES.W / 2;
+    const { y } = this.panel('STAGES');
+    scr.stages.forEach((st, i) => {
+      const open = i < scr.unlocked;
+      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
+    });
   }
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).

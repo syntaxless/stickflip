@@ -5,3 +5,5 @@ export { stairs } from './stairs.js';
 export { bank } from './bank.js';
 export { stepsUp } from './steps-up.js';
 export { quarterPipe } from './quarter-pipe.js';
+export { box } from './box.js';
+export { ring } from './ring.js';

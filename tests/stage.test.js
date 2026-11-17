@@ -85,3 +85,60 @@ test('restarting the stage goes back to the first section with no score', () => 
   assert.equal(game.score, 0);
   assert.equal(game.phase, 'playing');
 });
+
+// ------------------------------------------------------------ stage 2
+
+const stage2 = STAGES[1];
+
+function ride2(index, taps) {
+  const game = new Game(stage2, null, { index, score: 0 });
+  game.tap();
+  const queue = [...taps];
+  const events = [];
+  const next = stage2.sections[index + 1]?.x ?? Infinity;
+  let t = 0;
+  while (t < 10 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll')) {
+    while (queue.length && queue[0] <= t + 1e-9) {
+      queue.shift();
+      game.tap();
+    }
+    game.update(STEP);
+    t += STEP;
+    events.push(...game.drainEvents());
+  }
+  return { game, events };
+}
+
+test('stage 2 is Curb, Step Up, Trash Can and Ring of Fire', () => {
+  assert.deepEqual(
+    stage2.sections.map((s) => s.name),
+    ['Curb', 'Step Up', 'Trash Can', 'Ring of Fire'],
+  );
+});
+
+test('stage 2: a timed ollie gets past each section', () => {
+  for (const [i, t] of [[0, 0.8], [1, 1.0], [2, 0.9]]) {
+    const { game } = ride2(i, [t]);
+    assert.equal(game.phase, 'playing', `section ${i + 1} bailed: ${game.bailReason}`);
+    assert.equal(game.section, i + 1);
+  }
+});
+
+test('curb: hit its side and you slam; land on it and you roll along the top', () => {
+  assert.equal(ride2(0, []).game.bailReason, 'slam');
+  const { events } = ride2(0, [0.6]);
+  assert.ok(events.some((e) => e.type === 'land' && e.y < 450), 'landed up on the curb');
+});
+
+test('trash can: no ollie slams, and the lid is no place to land', () => {
+  assert.equal(ride2(2, []).game.bailReason, 'slam');
+  const late = ride2(2, [1.1]).game;
+  assert.equal(late.phase, 'bailed');
+});
+
+test('ring of fire: through it is a trick and finishes the stage; too high or too low burns', () => {
+  const { game, events } = ride2(3, [0.9]);
+  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
+  assert.ok(events.some((e) => e.type === 'trick' && e.name === 'RING OF FIRE'));
+  assert.equal(ride2(3, [1.1]).game.bailReason, 'fire', 'a late, high ollie: head in the flames');
+});

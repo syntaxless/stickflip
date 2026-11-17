@@ -72,6 +72,8 @@ export class Game {
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
     // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
+    // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
+    this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
@@ -391,6 +393,7 @@ export class Game {
     this.time += dt;
     this.phaseTime += dt;
     const s = this.sk;
+    const fromX = s.x;
 
     if (this.phase === 'ready') return;
     if (this.phase === 'bailed') return this.updateBail(dt);
@@ -446,7 +449,20 @@ export class Game {
     } else if (s.mode === 'air') {
       this.updateAir(dt);
     }
+    if (this.phase === 'playing') this.passHazards(fromX);
     if (this.phase === 'playing') this.checkSection();
+  }
+
+  // Going through a ring: the whole rider has to fit, feet above its bottom
+  // and head below its top. Clean through counts as a trick.
+  passHazards(fromX) {
+    const s = this.sk;
+    if (s.dir < 0) return;
+    for (const h of this.hazards) {
+      if (fromX >= h.x || s.x < h.x) continue;
+      if (s.y > h.bottom || s.y - PHYS.RIDER_HEIGHT < h.top) return this.bail(h.reason);
+      this.addTrick(h.trick, h.points);
+    }
   }
 
   // Quarter pipe. Arcade rules: ride up the curve at riding pace, carry

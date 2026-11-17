@@ -46,7 +46,8 @@ export function cleanInitials(initials) {
 // A shared table in Supabase, reached through its REST API with the public
 // anon key. The table's row level security only allows reading and adding
 // scores (see the setup SQL). Calls throw when offline, slow or refused.
-export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, fetchFn = (...a) => fetch(...a), timeoutMs = 5000 } = {}) {
+// `stage` picks the stage's own table (rows carry the stage id).
+export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, stage = null, fetchFn = (...a) => fetch(...a), timeoutMs = 5000 } = {}) {
   const base = `${url.replace(/\/+$/, '')}/rest/v1/scores`;
   // New-style publishable keys (sb_publishable_...) go in the apikey header
   // only; legacy anon keys are JWTs and are also sent as the bearer token.
@@ -67,7 +68,8 @@ export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, fetchFn =
     }
   }
   async function top() {
-    const res = await call(`?select=initials,score,created_at&order=score.desc,created_at.asc&limit=${size}`);
+    const only = stage ? `&stage=eq.${encodeURIComponent(stage)}` : '';
+    const res = await call(`?select=initials,score,created_at${only}&order=score.desc,created_at.asc&limit=${size}`);
     return (await res.json()).map((e) => ({ initials: e.initials, score: e.score, date: e.created_at }));
   }
   return {
@@ -78,7 +80,7 @@ export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, fetchFn =
     },
     async submit(initials, score) {
       const name = cleanInitials(initials);
-      await call('', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ initials: name, score }) });
+      await call('', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(stage ? { initials: name, score, stage } : { initials: name, score }) });
       const list = await top();
       // The newest matching row ranks last among equal scores, so take the last match.
       for (let i = list.length - 1; i >= 0; i--) if (list[i].initials === name && list[i].score === score) return i;

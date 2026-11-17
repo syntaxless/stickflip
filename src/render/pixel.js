@@ -14,14 +14,16 @@ export const PAL = {
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
+  fire: [255, 255, 85],
+  flame: [255, 85, 85],
 };
 
 // The secret level has its own palette, from the 16 original named HTML
 // colours: purple sky and yellow text (solids stay black). `red` is the text
 // colour's name everywhere, whatever colour it is.
 export const PALETTES = {
-  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255] },
-  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255] },
+  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85] },
+  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.

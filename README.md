@@ -117,6 +117,18 @@ section you bailed in, with the score you'd banked before it, and the bail
 screen's RESTART STAGE goes back to the top. A reload carries on from the
 last checkpoint.
 
+**Stage select.** Finishing a stage opens the next one (on this device).
+Once there's more than one, the end-of-run REPLAY button reads STAGES and
+opens the stage list, and the title screen has a STAGES button. Each stage
+has its own top 5 (a `stage` column in the shared table; Stage 1 keeps the
+scores from before stages).
+
+**Stage 2** (street): Curb (ollie over a long, low curb, or land on it and
+roll or grind along the top), Step Up (ollie up three steps onto a ledge,
+then drop off its end), Trash Can (a tall can: a well-timed ollie clears it)
+and Ring of Fire (a kicker, a gap, and a burning ring to fly through: feet
+below it or head above it is a bail; clean through is a RING OF FIRE trick).
+
 **Stage 1** is the six original levels in order, joined by a bank up to Five
 Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
 finale: ride back out to the left to finish.
@@ -182,7 +194,8 @@ live site posts to the shared table: the /unstable/ preview and local copies
 ## Testing a level
 
 On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to start
-Stage 1 at its Nth checkpoint (1-6), or `?level=secret` for the secret level, e.g.
+Stage 1 at its Nth checkpoint (1-6), `?level=S-N` for stage S (`?level=2-4`:
+Ring of Fire), or `?level=secret` for the secret level, e.g.
 `https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
 Test play keeps its own saves and on-device high scores, so it never touches
 your real progress or the shared table. It does nothing on the live site.

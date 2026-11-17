@@ -19,6 +19,7 @@ export const PHYS = Object.freeze({
   // little air on flat ground for a backflip
   GRIND_WINDOW: 0.2, // a tap locks a grind only this many seconds (or fewer) before touching the rail
   NOSE: 18, // distance from the feet to the board's nose (used for collisions)
+  RIDER_HEIGHT: 60, // feet to the top of the head, for fitting through a ring (a little forgiving)
   START_X: 80, // where the skater waits before the run
   DRAW_CREDIT: 0.6, // time spent drawing a trick shape counts for up to this share of the trick
   QP_SPEED: 1.35, // a quarter pipe speeds the rider up this much, for the rest of the run
