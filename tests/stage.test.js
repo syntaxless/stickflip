@@ -451,3 +451,10 @@ test('stage 1: a Quarter Pipe replay can be cleared by a rail tap anywhere in a 
   assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.5, `window ${ok[0]}..${ok[ok.length - 1]}`);
   assert.ok(sec.start < 0);
 });
+
+test('stage 5: the Big Set is three concrete steps with no rail to grind', () => {
+  const set = stage5.obstacles.find((o) => o.type === 'concrete-set');
+  assert.ok(set);
+  assert.equal(set.surfaces.length, 0);
+  assert.equal(set.ground.filter((s) => s.bail === 'stairs').length, 2);
+});

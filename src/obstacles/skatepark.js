@@ -100,6 +100,33 @@ export function curbCut({ x }) {
   };
 }
 
+// A concrete set: big steps down to the street with no rail, in poured concrete
+// (the platform from `from` to the top step is concrete too). Ollie or flip down.
+export function concreteSet({ x, steps = 3, run = 100, rise = 48, from = 0 }) {
+  const base = stairs({ x, steps, run, rise, handrail: false });
+  const top = G - steps * rise;
+  const end = x + (steps - 1) * run;
+  const yAt = (wx) => (wx < x ? top : wx >= end ? G : top + (Math.floor((wx - x) / run) + 1) * rise);
+  return {
+    ...base,
+    type: 'concrete-set',
+    ground: base.ground.map((seg) => ({ ...seg, under: true })),
+    draw(g) {
+      fillShape(g, P(from), P(end) - 1, (px) => P(yAt(px * 3)), (px, y, d) => {
+        if (d < 2) return CONCRETE_LIT; // lit top edge
+        if (d > 3 && (px * 7 + y * 13) % 61 === 0) return CONCRETE_DARK; // a crack
+        if ((px * 3 + y * 5) % 19 === 0) return CONCRETE_LIT; // speckle
+        if (px % 28 === 0) return CONCRETE_DARK; // slab joint
+        return CONCRETE;
+      });
+      for (let i = 1; i <= steps; i++) {
+        const px = P(x + (i - 1) * run);
+        g.line(px, P(yAt(px * 3 - 3)), px, P(yAt(px * 3 + 3)) - 1, ink); // riser outline
+      }
+    },
+  };
+}
+
 // A fun box: a wooden trapezoid sitting on the flat street, with a rail along
 // its flat top. Ride up one end, ollie onto the rail and grind it, or ride it.
 export function funBox({ x, topHeight = 50, up = 110, top = 190, down = 110, barHeight = 34 }) {
