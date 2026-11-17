@@ -58,10 +58,11 @@ for (let i = 0; i < CLEARS.length - 1; i++) {
   });
 }
 
-test('stage 1: the quarter pipe is the finale, the stage ends on landing its air', () => {
+test('stage 1: the quarter pipe is the finale, the stage ends once the rider has ridden down the curve', () => {
   const { game } = ride(6, CLEARS[6], () => false);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.equal(game.sk.ramp.dir, -1, 'finished as the rider lands back into the pipe');
+  assert.equal(game.sk.mode, 'roll', 'finished at the bottom of the curve');
+  assert.equal(game.sk.dir, -1);
 });
 
 test('clouds drift behind stages 1 and 2 only', () => {

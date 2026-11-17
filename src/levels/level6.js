@@ -2,7 +2,7 @@ import { rail, quarterPipe } from '../obstacles/index.js';
 
 // Level 6: a long rail in front of a quarter pipe. Grind the rail, ride
 // up the quarter pipe and air straight out of it (lots of hang time for
-// tricks), drop back in (in Stage 1 that landing ends the stage; on its own
+// tricks), drop back in (in Stage 1 the stage ends at the bottom of the curve; on its own
 // the level ends riding back out to the left). The rail starts 220 in from the screen's left edge, close
 // enough that an ollie off the top of the Euro Gap (the stage's join into this
 // section) lands on it: tap at the lip, then a second tap to lock the grind.

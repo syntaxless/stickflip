@@ -6,7 +6,7 @@ import { WORLD } from '../config.js';
 // Stage 1: a rock, then the six original levels as one ride. Each keeps its own screen
 // (and name, now a checkpoint). Two joins: a bank up to Five Stair's raised
 // start, and a drop off the top of the Euro Gap stairs down to the street
-// before the Quarter Pipe (the finale: landing its air finishes the stage).
+// before the Quarter Pipe (the finale: riding back down its curve after the air finishes the stage).
 const W = WORLD.W;
 const G = WORLD.GROUND;
 const STAIR_TOP = G - 5 * 16; // Five Stair's platform
@@ -21,7 +21,7 @@ export default stage({
   // lands on it), so a replay starts on the street right after the Euro Gap, at the
   // section's left edge: 220 (0.67 s) to the rail, and a tap window over half a second.
   starts: { 6: 0 },
-  endAtQuarterLanding: true, // landing back into the quarter pipe ends the stage
+  endAfterQuarter: true, // the stage ends when the rider has ridden down the quarter pipe
   clouds: true,
   camTop: 100, // only raise the camera when the rider gets this close to the top
 });
