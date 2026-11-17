@@ -328,20 +328,20 @@ function ride5(index, taps) {
 test('stage 5 is the skate park: seven checkpoints', () => {
   assert.deepEqual(
     stage5.sections.map((s) => s.name),
-    ['Ledges', 'Flat Bar', 'Hubba', 'Bowl', 'Fun Box', 'Big Set', 'Final Gap'],
+    ['Ledges', 'Flat Bar', 'Hubba', 'Curb Cut', 'Fun Box', 'Big Set', 'Cop Car'],
   );
   assert.equal(stage5.id, 'stage-5');
 });
 
 test('stage 5: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.3, 1.3], [0.35, 0.9], [0.85], [], [0.5, 1.0], [0.95], [0.85]];
+  const clears = [[0.3, 1.3], [0.35, 0.9], [0.8], [], [0.55], [0.8], [0.85]];
   clears.forEach((taps, i) => {
     const game = ride5(i, taps);
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage5.sections[i].name} bailed: ${game.bailReason}`);
   });
 });
 
-test('stage 5: the bowl is a free ride, the rest bail without an ollie', () => {
+test('stage 5: the curb cut is a free ride, the rest bail without an ollie', () => {
   assert.notEqual(ride5(3, []).phase, 'bailed');
   for (const i of [0, 1, 2, 4, 5, 6]) {
     if (i === 4) continue; // the fun box can be ridden over with no ollie
@@ -389,4 +389,22 @@ test('stage 1: an ollie off the top of the Euro Gap lands on the Quarter Pipe ra
   }
   assert.ok(seen.has('grind'), `no grind on the rail (${game.phase} ${game.bailReason})`);
   assert.equal(game.phase, 'playing');
+});
+
+test('stage 5: an ollie off the wooden ramp can land on the cop car\'s light bar and grind it', () => {
+  const game = new Game(stage5, null, { index: 6, score: 0 });
+  game.tap();
+  const q = [0.65, 1.2];
+  const x6 = stage5.sections[6].x;
+  let grinded = false;
+  for (let t = 0; t < 8 && game.phase === 'playing'; t += STEP) {
+    while (q.length && q[0] <= t + 1e-9) {
+      q.shift();
+      game.tap();
+    }
+    game.update(STEP);
+    if (game.sk.mode === 'grind' && game.sk.x > x6) grinded = true;
+  }
+  assert.ok(grinded, 'grinded the light bar');
+  assert.equal(ride5(6, []).bailReason, 'slam', 'rolling into the car slams');
 });

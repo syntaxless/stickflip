@@ -13,4 +13,5 @@ export { trashCan } from './trash-can.js';
 export { rock } from './rock.js';
 export { water } from './water.js';
 export { cone, barrier, sawhorse, sign, hydrant, scaffold } from './construction.js';
+export { hubba, curbCut, funBox, woodRamp, copCar } from './skatepark.js';
 export { toyBlocks, slideChute, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';

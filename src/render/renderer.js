@@ -243,7 +243,12 @@ export class Renderer {
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
     const bottom = g.h + cam.y;
-    const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
+    // (a piece flagged `under`, like the fun box, sits on the flat street: its own
+    // draw paints the shape, so the street column under it is the flat one)
+    const topAt = (x) => {
+      const gs = game.groundAt(x * S + S / 2);
+      return Math.min(bottom, P(gs.under ? WORLD.GROUND : gs.y));
+    };
     const patches = game.level.obstacles.filter((o) => o.dirt).map((o) => o.dirt);
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
