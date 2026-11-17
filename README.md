@@ -148,7 +148,7 @@ surface, swing sets behind.
 **Stage 5** (skate park, the hardest, rough first pass): Ledges (two concrete
 ledges), Flat Bar, Hubba (a solid concrete wall down stairs, grind its top
 edge), Curb Cut (a driveway entrance between two curbs), Fun Box (a wooden
-trapezoid with a rail on top), Big Set (three big steps with a handrail) and
+trapezoid with a rail on top), Big Set (three big concrete steps, no rail) and
 Cop Car (a wooden ramp up to a police car: grind its light bar). Sunset sky
 with a dusk skyline.
 

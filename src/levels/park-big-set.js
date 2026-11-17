@@ -1,10 +1,10 @@
-import { stairs } from '../obstacles/index.js';
+import { concreteSet } from '../obstacles/index.js';
 
-// Stage 5, section 6: the big set: three big steps (about three times the
-// size of the usual ones) with a handrail. Ollie all the way down, or lock a
-// grind on the rail.
+// Stage 5, section 6: the big set: three big concrete steps (about three times
+// the size of the usual ones), no rail. Ollie or flip all the way down. The
+// concrete platform starts after the bank that leads up to it.
 export default {
   id: 'park-big-set',
   name: 'Big Set',
-  obstacles: [stairs({ x: 380, steps: 3, run: 100, rise: 48, railHeight: 50 })],
+  obstacles: [concreteSet({ x: 380, steps: 3, run: 100, rise: 48, from: 72 })],
 };
