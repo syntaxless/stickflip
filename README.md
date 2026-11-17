@@ -132,7 +132,7 @@ below it or head above it is a bail; clean through is a RING OF FIRE trick).
 **Stage 3** (construction site): Rock (a tiny rock stops the board dead, so
 ollie it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap
 (a jersey barrier you can ollie onto or grind, then a gap right behind it),
-Barricade (a sawhorse across the street), Scaffold Rail, Big Set (six stairs with a
+Barricade (a sawhorse across the street), Scaffold Rail, Big Drop (a drop off a high platform to a traffic barrel; was six stairs with a
 handrail) and Big Gap (a tall kicker and a 240-unit gap). Road signs stand
 behind the action as decor.
 
