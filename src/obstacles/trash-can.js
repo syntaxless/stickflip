@@ -3,8 +3,10 @@ import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
 
 // A street trash can: a box to ollie over (its sides slam you, and the lid is
-// no place to land), drawn as an old ribbed metal can with a domed lid.
-export function trashCan({ x, w = 54, h = 114, base = WORLD.GROUND }) {
+// no place to land). Drawn as chunky shaded pixel art: a black outline, a grey
+// body with a lighter panel lit from the left, dark slots with a glint beside
+// each, and a flat lid with a handle.
+export function trashCan({ x, w = 66, h = 102, base = WORLD.GROUND }) {
   const can = box({ x, w, h, base });
   return {
     ...can,
@@ -12,32 +14,55 @@ export function trashCan({ x, w = 54, h = 114, base = WORLD.GROUND }) {
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const [l, t, r, b] = [P(x), P(base - h), P(x + w) - 1, P(base) - 1];
-      const lid = t + 3; // the rim of the lid: the body starts under it
-      // The body tapers in a pixel each side toward the bottom.
-      const inset = (y) => (y > lid + (b - lid) * 0.55 ? 2 : 1);
-      for (let y = lid + 1; y <= b; y++) {
-        const i = inset(y);
-        g.line(l + i, y, r - i, y, PAL.ground);
-        g.pset(l + i, y, PAL.edge);
-        g.pset(r - i, y, PAL.edge);
-      }
-      g.line(l + 2, b, r - 2, b, PAL.edge);
-      // Ribs down the body, and a band a third of the way down.
-      for (let rx = l + 4; rx <= r - 4; rx += 3) g.line(rx, lid + 3, rx, b - 2, PAL.ink);
-      const band = lid + Math.round((b - lid) * 0.3);
-      g.line(l + 1, band, r - 1, band, PAL.edge);
-      // Side handles.
-      g.line(l - 1, band + 2, l - 1, band + 5, PAL.edge);
-      g.line(r + 1, band + 2, r + 1, band + 5, PAL.edge);
-      // The lid: a rim that overhangs, a low dome, and a handle on top.
-      g.line(l - 1, lid, r + 1, lid, PAL.edge);
-      g.line(l - 1, lid - 1, r + 1, lid - 1, PAL.edge);
-      g.line(l + 1, lid - 2, r - 1, lid - 2, PAL.ground);
-      g.line(l + 1, lid - 3, r - 1, lid - 3, PAL.edge);
-      g.pset(l, lid - 2, PAL.edge);
-      g.pset(r, lid - 2, PAL.edge);
+      const { ink, steel, shine, wheel: white } = PAL;
       const mid = Math.round((l + r) / 2);
-      g.line(mid - 1, lid - 4, mid + 1, lid - 4, PAL.edge);
+
+      // Handle: a little hoop on top of the lid.
+      g.line(mid - 4, t, mid + 3, t, ink);
+      g.line(mid - 4, t + 1, mid + 3, t + 1, steel);
+      g.line(mid - 3, t + 1, mid, t + 1, shine);
+      g.pset(mid - 4, t + 1, ink);
+      g.pset(mid + 3, t + 1, ink);
+      g.pset(mid - 4, t + 2, ink);
+      g.pset(mid + 3, t + 2, ink);
+
+      // Lid: overhangs the body a pixel each side, light on the left.
+      const [ll, lr] = [l, r];
+      g.line(ll + 1, t + 3, lr - 1, t + 3, ink);
+      for (const y of [t + 4, t + 5]) {
+        g.line(ll, y, lr, y, steel);
+        g.line(ll + 1, y, ll + Math.round((lr - ll) * 0.6), y, shine);
+        g.line(ll + 1, y, ll + 3, y, white);
+        g.pset(ll, y, ink);
+        g.pset(lr, y, ink);
+      }
+      g.line(ll + 1, t + 6, lr - 1, t + 6, ink);
+
+      // Body: tapers in a pixel toward the bottom.
+      const top = t + 7;
+      const inset = (y) => (y > top + (b - top) * 0.6 ? 3 : 2);
+      for (let y = top; y <= b; y++) {
+        const i = inset(y);
+        g.line(l + i, y, r - i, y, steel);
+        g.pset(l + i, y, ink);
+        g.pset(r - i, y, ink);
+      }
+      g.line(l + 3, b, r - 3, b, ink);
+
+      // The lit panel, with a notch out of its bottom-left corner.
+      const [pl, pr, pt, pb] = [l + 4, l + Math.round((r - l) * 0.7), top + 2, b - 3];
+      g.fill(pl, pt, pr - pl + 1, pb - pt + 1, shine);
+      g.pset(pl, pb, steel);
+
+      // Slots: dark, two pixels wide, with a white glint down the right of
+      // each one in the light, and a last one in the shade.
+      const [st, sb] = [pt + 2, pb - 3];
+      let sx = pl + 2;
+      for (; sx + 2 <= pr; sx += 4) {
+        g.fill(sx, st, 2, sb - st + 1, ink);
+        g.line(sx + 2, st + 1, sx + 2, sb - 1, white);
+      }
+      if (sx + 1 < r - 3) g.fill(sx, st, 2, sb - st + 1, ink);
     },
   };
 }
