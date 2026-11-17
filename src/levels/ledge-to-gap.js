@@ -5,5 +5,5 @@ import { barrier, gap, sign } from '../obstacles/index.js';
 export default {
   id: 'ledge-to-gap',
   name: 'Barrier Gap',
-  obstacles: [sign({ x: 200 }), barrier({ x: 300, w: 220, h: 36 }), gap({ x: 520, width: 160 })],
+  obstacles: [sign({ x: 200 }), barrier({ x: 300, w: 320, h: 36 }), gap({ x: 620, width: 160 })],
 };

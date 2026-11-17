@@ -222,7 +222,7 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 });
 
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
-  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.4, 0.95], [1.4], [0.9]];
+  const clears = [[0.85, 1.8], [0.8], [0.5, 1.45], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
   clears.forEach((taps, i) => {
     const game = ride3(i, taps);
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
@@ -280,8 +280,9 @@ test('stage 4 is the playground: seven checkpoints', () => {
 });
 
 test('stage 4: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.95], [], [0.9], [0.35, 0.9], [0.35, 0.9], [0.85], [0.85]];
+  const clears = [[0.95], [], null, [0.35, 0.9], [0.35, 0.9], [0.85], [0.85]]; // the sandbox needs a charged ollie (below)
   clears.forEach((taps, i) => {
+    if (!taps) return;
     const game = ride4(i, taps, i === 1); // the slide is grinded: roll off the top with the finger held
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage4.sections[i].name} bailed: ${game.bailReason}`);
   });
@@ -510,7 +511,7 @@ test('stage 3: the Big Drop has two routes: land and ollie the barrel, or one ch
     g.tap();
     const s = {};
     let t = 0;
-    while (t < 6 && g.phase === 'playing' && g.sk.x < sec + 900) {
+    while (t < 6 && g.phase === 'playing' && g.sk.x < sec + 1000) {
       act(g, t, s);
       g.update(STEP);
       t += STEP;
@@ -518,15 +519,15 @@ test('stage 3: the Big Drop has two routes: land and ollie the barrel, or one ch
     return { g, s };
   };
   // route 1: roll off, land, tap
-  const a = run((g, t, s) => { if (!s.d && t >= 1.4) { g.tap(); s.d = 1; } });
+  const a = run((g, t, s) => { if (!s.d && t >= 2.2) { g.tap(); s.d = 1; } });
   assert.equal(a.g.phase, 'playing', `drop then ollie: ${a.g.bailReason}`);
   // route 2: hold to charge, let go on the platform before the edge
   const b = run((g, t, s) => {
     if (!s.c && t >= 0.05) { g.startCharge(); s.c = 1; }
-    if (s.c && !s.r && t >= 0.8) { s.x = g.sk.x; g.releaseCharge(); s.r = 1; }
+    if (s.c && !s.r && t >= 1.3) { s.x = g.sk.x; g.releaseCharge(); s.r = 1; }
   });
   assert.equal(b.g.phase, 'playing', `charged ollie off the edge: ${b.g.bailReason}`);
-  assert.ok(b.s.x < sec + 400, 'took off from the platform');
+  assert.ok(b.s.x < sec + 550, 'took off from the platform');
 });
 
 test('stage 1: the First Gap is gravel and the Euro Gap is concrete (looks only, same physics)', () => {
@@ -538,4 +539,70 @@ test('stage 1: the First Gap is gravel and the Euro Gap is concrete (looks only,
 test('stage 3: the Big Drop platform and its ramp up are concrete', () => {
   const concrete = stage3.obstacles.filter((o) => o.ground.some((s) => s.material === 'concrete'));
   assert.ok(concrete.length >= 3, 'the ramp, its flat and the platform');
+});
+
+// ------------------------------------------------------------ level tweaks (stages 3 and 4)
+
+// Plays a checkpoint with a custom driver, `act(game, t)`, until the next section's roll or 8 s.
+function drive(stage, index, act) {
+  const game = new Game(stage, null, { index, score: 0 });
+  game.tap();
+  const next = stage.sections[index + 1]?.x ?? Infinity;
+  for (let t = 0; t < 8 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll'); t += STEP) {
+    act(game, t);
+    game.update(STEP);
+  }
+  return game;
+}
+
+test('stage 4: the sandbox is too wide for a normal ollie; a fully charged one clears it, in a window over 0.15 s', () => {
+  const plain = drive(stage4, 2, (g, t) => { if (!g.sk.did && t >= 0.8) { g.tap(); g.sk.did = 1; } });
+  assert.equal(plain.phase, 'bailed', 'a plain ollie falls in');
+  for (let at = 0.5; at < 1.0; at += 0.02) {
+    const g = drive(stage4, 2, (gm, t) => { if (!gm.sk.did && at < 0.9 && t >= at) { gm.tap(); gm.sk.did = 1; } });
+    if (g.phase === 'playing' || g.phase === 'complete') assert.fail(`a plain ollie at ${at} cleared the sandbox`);
+  }
+  const clears = (hold) => {
+    const g = drive(stage4, 2, (gm, t) => {
+      if (!gm.sk.s) { gm.startCharge(); gm.sk.s = 1; }
+      if (!gm.sk.r && t >= hold) { gm.releaseCharge(); gm.sk.r = 1; }
+    });
+    return g.phase === 'complete' || g.phase === 'playing';
+  };
+  const ok = [];
+  for (let h = 0.3; h < 1.2; h += 0.01) if (clears(h)) ok.push(h);
+  assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.15, `charged window ${ok[0]}..${ok[ok.length - 1]}`);
+  const sand = stage4.obstacles.find((o) => o.type === 'gap' || o.ground.some((s) => s.bail === 'gap' && s.x2 - s.x1 > 200));
+  assert.ok(sand.ground[0].x2 - sand.ground[0].x1 >= 260, 'wider than a plain ollie flies (about 240)');
+});
+
+test('stage 3: the Barricade takes two jumps (two sawhorses with room to land between)', () => {
+  const horses = stage3.sections[3] && stage3.obstacles.filter((o) => o.type === 'sawhorse' && o.solids.length);
+  const here = horses.filter((o) => o.solids[0].x >= stage3.sections[3].x && o.solids[0].x < stage3.sections[4].x);
+  assert.equal(here.length, 2);
+  assert.ok(here[1].solids[0].x - (here[0].solids[0].x + here[0].solids[0].w) >= 200, 'room to land and pop again');
+  assert.equal(ride3(3, [0.6]).phase, 'bailed', 'one jump is not enough');
+  assert.equal(ride3(3, [0.55, 1.5]).phase === 'bailed', false);
+});
+
+test('stage 3: the Barrier Gap barrier is longer, and the Big Drop sits farther from the scaffold rail', () => {
+  const barrier = stage3.obstacles.find((o) => o.type === 'barrier');
+  assert.ok(barrier.solids[0].w >= 300);
+  const rail = stage3.obstacles.find((o) => o.type === 'scaffold');
+  const ramp = stage3.obstacles.filter((o) => o.type === 'bank' && o.ground[0].y1 === 450 && o.ground[0].y2 < 450).find((o) => o.ground[0].x1 > 4 * 960);
+  const railEnd = Math.max(...rail.surfaces.map((s) => s.x2));
+  assert.ok(ramp.ground[0].x1 - railEnd >= 300, `${ramp.ground[0].x1 - railEnd} of street between the rail and the ramp`);
+});
+
+test('stage 3: the Big Gap kicker is a broken slab of concrete and the gap is filled with rubble', () => {
+  const slab = stage3.obstacles.find((o) => o.type === 'broken-slab');
+  assert.equal(slab.ground[0].material, 'concrete');
+  assert.equal(stage3.obstacles.find((o) => o.type === 'broken-gap').dirt.kind, 'rubble');
+});
+
+test('stage 4: the slide is held up by a ladder (open underneath), not a ramp of ground', () => {
+  const ladder = stage4.obstacles.find((o) => o.type === 'slide-ladder');
+  assert.ok(ladder);
+  assert.ok(ladder.ground.every((s) => s.under), 'the street runs beneath it');
+  assert.ok(!stage4.obstacles.some((o) => o.type === 'bank' && o.ground[0].x1 > 960 && o.ground[0].x1 < 1920));
 });

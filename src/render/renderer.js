@@ -355,8 +355,9 @@ export class Renderer {
         const wx = x * S + S / 2;
         if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
           g.fill(x, G + 2, 1, bottom - G - 2, ink);
-          const gravel = patches.some((p) => wx >= p.x1 && wx < p.x2 && p.kind === 'gravel');
-          if (gravel) this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
+          const kind = patches.find((p) => wx >= p.x1 && wx < p.x2)?.kind;
+          if (kind === 'gravel') this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
+          else if (kind === 'rubble') this.drawRubble(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
           else this.drawGround(g, x, G + 2, bottom, false, 0, 0);
         }
       }
@@ -386,6 +387,24 @@ export class Renderer {
       let c = GRAVEL[hb % GRAVEL.length];
       if (hash(x, y) % 9 === 0) c = hb % 2 ? GRAVEL_DARK : GRAVEL_LIT; // speckle
       if (y === top) c = GRAVEL_DARK;
+      g.pset(x, y, c);
+    }
+  }
+
+  // Broken concrete and dirt: chunky 3x3 pieces of slab in greys, with brown dirt
+  // and the odd rust-coloured bit of rebar showing between them.
+  drawRubble(g, x, top, end) {
+    for (let y = top; y < end; y++) {
+      const hb = hash(Math.floor(x / 3), Math.floor((y + (Math.floor(x / 3) % 2)) / 3)) % 13;
+      let c;
+      if (hb < 6) c = CONC;
+      else if (hb < 8) c = CONC_LIT;
+      else if (hb < 10) c = CONC_DARK;
+      else if (hb < 12) c = dirtDark;
+      else c = [150, 80, 40]; // rust
+      if (hash(x, y) % 7 === 0) c = hb % 2 ? CONC_DARK : dirt; // speckle
+      if (x % 3 === 2 || y % 3 === 2) c = hb < 10 ? CONC_DARK : dirtDark; // the cracks between pieces
+      if (y === top) c = [84, 80, 76];
       g.pset(x, y, c);
     }
   }

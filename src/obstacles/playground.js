@@ -81,6 +81,62 @@ export function slideChute({ x1, y1, x2, y2, base = WORLD.GROUND }) {
   };
 }
 
+// The slide's ladder and deck: a sloped ladder (side rails and rungs) leading up
+// to a small platform on legs, standing on the street. You ride up it like a
+// ramp: the ground under it is the street, so it is open underneath.
+export function slideLadder({ x, run = 120, rise = 70, deck = 60 }) {
+  const G = WORLD.GROUND;
+  const ground = [
+    { x1: x, x2: x + run, y1: G, y2: G - rise, landable: true, under: true },
+    { x1: x + run, x2: x + run + deck, y1: G - rise, y2: G - rise, landable: true, under: true },
+  ];
+  return {
+    type: 'slide-ladder',
+    surfaces: [],
+    solids: [],
+    ground,
+    draw(g) {
+      const [a, m, e] = [P(x), P(x + run), P(x + run + deck) - 1];
+      const [street, top] = [P(G), P(G - rise)];
+      const floor = street - 1;
+      const slopeY = (px) => street + Math.round(((px - a) * (top - street)) / Math.max(1, m - a));
+      // legs under the platform: two posts down to the street
+      for (const px of [m + 4, e - 6]) {
+        g.line(px, top + 4, px, floor, ink);
+        g.line(px + 1, top + 4, px + 1, floor, steel);
+        g.line(px + 2, top + 4, px + 2, floor, ink);
+      }
+      // the ladder: an upper side rail along the riding line, a lower one 8 px below, and rungs between
+      for (let px = a; px <= m; px++) {
+        const y = slopeY(px);
+        g.pset(px, y, YELLOW);
+        g.pset(px, y + 1, [210, 170, 40]);
+        g.pset(px, y + 2, ink);
+        g.pset(px, y - 1, ink);
+        g.pset(px, y + 8, ink);
+        g.pset(px, y + 9, steel);
+        g.pset(px, y + 10, ink);
+      }
+      for (let px = a + 3; px < m; px += 6) {
+        const y = slopeY(px);
+        g.line(px, y + 3, px, y + 7, ink);
+        g.line(px + 1, y + 3, px + 1, y + 7, white);
+        g.line(px + 2, y + 3, px + 2, y + 7, ink);
+      }
+      // the deck: a thick yellow platform with a dark underside, and a red guard post at the slide's top
+      g.fill(m, top, e - m + 1, 3, YELLOW);
+      g.line(m, top - 1, e, top - 1, ink);
+      g.line(m, top, e, top, white);
+      g.line(m, top + 2, e, top + 2, [210, 170, 40]);
+      g.line(m, top + 3, e, top + 3, ink);
+      g.line(e, top - 10, e, top - 1, ink);
+      g.line(e - 1, top - 10, e - 1, top - 1, RED);
+      g.line(m, top - 10, m, top - 1, ink);
+      g.line(m + 1, top - 10, m + 1, top - 1, RED);
+    },
+  };
+}
+
 // A sandbox: a gap in the street filled with sand. Ollie over it.
 export function sandbox({ x, width }) {
   return pit(gap({ x, width }), x, width, (g, l, r, top, bottom) => {

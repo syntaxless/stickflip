@@ -20,8 +20,10 @@ export default stage({
   id: 'stage-3',
   name: 'Stage 3',
   sections: [rock, coneRow, ledgeToGap, sawhorse, longRail, bigDrop, bigGap],
-  // the ramp starts well after the scaffold rail so you can land and roll first
-  extra: [bank({ x: 5 * W - 90, run: 160, y1: G, y2: SET_TOP, material: 'concrete' }), bank({ x: 5 * W + 70, run: 50, y1: SET_TOP, y2: SET_TOP, material: 'concrete' })],
+  // the ramp starts well after the scaffold rail (330 of flat street between) so you can land and roll first
+  extra: [bank({ x: 5 * W, run: 60 }), bank({ x: 5 * W + 60, run: 160, y1: G, y2: SET_TOP, material: 'concrete' }), bank({ x: 5 * W + 220, run: 50, y1: SET_TOP, y2: SET_TOP, material: 'concrete' })],
+  // a replay starts on the street just before the ramp, with the scaffold well behind
+  starts: { 5: -40 },
   camTop: 100,
   palette: 'site', // light grey sky
   sidewalk: true, // rides on a concrete sidewalk
