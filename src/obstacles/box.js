@@ -1,6 +1,8 @@
 import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 
+const { ink, steel, shine, wheel: white } = PAL;
+
 const SLAPPY_MAX = 36; // the tallest curb you can slap onto without an ollie
 
 // A block standing on the street: a curb, a trash can. Its sides slam you if
@@ -19,13 +21,18 @@ export function box({ x, w, h, landable = false, grindable = false, lid = false,
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const [l, t, r, b] = [P(x), P(top), P(x + w) - 1, P(base) - 1];
-      g.fill(l, t, r - l + 1, b - t + 1, PAL.ground);
-      g.rect(l, t, r - l + 1, b - t + 1, PAL.edge);
+      // concrete block: black outline, grey body, silver lit top and a glint
+      g.fill(l, t, r - l + 1, b - t + 1, steel);
+      g.rect(l, t, r - l + 1, b - t + 1, ink);
+      g.line(l + 1, t + 1, r - 1, t + 1, shine);
+      g.line(l + 1, t + 2, Math.min(r - 1, l + 1 + Math.round((r - l) * 0.5)), t + 2, shine);
+      g.pset(l + 2, t + 1, white);
+      g.line(l + 1, b - 1, r - 1, b - 1, ink); // shadow at the foot
       if (lid) {
         // a lid that sticks out a pixel each side, and a couple of ridges
-        g.line(l - 1, t, r + 1, t, PAL.edge);
-        g.line(l - 1, t + 1, r + 1, t + 1, PAL.edge);
-        for (const f of [0.33, 0.66]) g.line(l + 2, t + Math.round((b - t) * f), r - 2, t + Math.round((b - t) * f), PAL.edge);
+        g.line(l - 1, t, r + 1, t, ink);
+        g.line(l - 1, t + 1, r + 1, t + 1, shine);
+        for (const f of [0.33, 0.66]) g.line(l + 2, t + Math.round((b - t) * f), r - 2, t + Math.round((b - t) * f), ink);
       }
     },
   };

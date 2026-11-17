@@ -1,5 +1,5 @@
 import { WORLD } from '../config.js';
-import { PAL } from '../render/pixel.js';
+import { pipe } from '../render/shaded.js';
 
 // A quarter pipe against the right side of the screen: a curve of `radius`
 // from the street at x up to vertical, with a deck behind it. The skater
@@ -19,7 +19,7 @@ export function quarterPipe({ x, radius }) {
     // The ramp itself is ground; this adds the coping, a little pipe on the lip.
     draw(g) {
       const P = (v) => Math.round(v / 3);
-      g.line(P(x + radius) - 1, P(top) - 1, P(x + radius) + 2, P(top) - 1, PAL.ink);
+      pipe(g, P(x + radius) - 2, P(top) - 3, P(x + radius) + 2, P(top) - 3);
     },
   };
 }

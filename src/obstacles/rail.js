@@ -1,5 +1,5 @@
 import { WORLD } from '../config.js';
-import { PAL } from '../render/pixel.js';
+import { pipe, post } from '../render/shaded.js';
 
 // A flat, low grind rail standing on two posts.
 //
@@ -40,18 +40,12 @@ export function rail({ x, length, height, base = WORLD.GROUND, arc = 0 }) {
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const ground = P(base);
-      // Always black: no highlight or warning, the timing is on you.
-      const bar = PAL.ink;
-      for (const wx of [x + 22, x2 - 22]) {
-        const px = P(wx);
-        g.line(px, P(yAt(wx)) + 2, px, ground - 1, PAL.ink);
-        g.line(px - 2, ground - 1, px + 2, ground - 1, PAL.ink);
-      }
+      // Shaded steel, same look whatever the timing: no highlight or warning.
+      for (const wx of [x + 22, x2 - 22]) post(g, P(wx), P(yAt(wx)) + 3, ground - 1);
       const n = arc ? 24 : 1;
       for (let i = 0; i < n; i++) {
         const [ax, bx] = [x + (length * i) / n, x + (length * (i + 1)) / n];
-        g.line(P(ax), P(yAt(ax)), P(bx), P(yAt(bx)), bar);
-        g.line(P(ax), P(yAt(ax)) + 1, P(bx), P(yAt(bx)) + 1, bar);
+        pipe(g, P(ax), P(yAt(ax)), P(bx), P(yAt(bx)));
       }
     },
   };
