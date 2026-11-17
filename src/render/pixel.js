@@ -1,16 +1,16 @@
 // A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: navy sky, pixel-art asphalt ground outlined in maroon, black rider and
+// Palette: bright blue sky, a stacked pixel-art ground, black rider and
 // obstacles, a brown (wood) board with white wheels, and red for all text.
 // Street furniture (the trash can, construction cones and barriers) is shaded pixel art in grey, silver and black.
 
 export const RES = { W: 320, H: 180 };
 
 export const PAL = {
-  sky: [0, 0, 128],
+  sky: [110, 180, 255], // bright blue
   ink: [0, 0, 0],
-  red: [255, 85, 85],
+  red: [170, 0, 0], // dark red text so it reads on the sky
   ground: [64, 64, 64], // asphalt
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
@@ -31,9 +31,9 @@ export const PAL = {
   steel: [128, 128, 128],
   shine: [192, 192, 192],
   orange: [255, 128, 0],
-  far: [0, 0, 128], // Stage 3's faint skyline, far and near layers (same as the sky elsewhere)
-  near: [0, 0, 128],
-  window: [0, 0, 128],
+  far: [110, 180, 255], // Stage 3's faint skyline, far and near layers (same as the sky elsewhere)
+  near: [110, 180, 255],
+  window: [110, 180, 255],
 };
 
 // Palettes are the base PAL with a few colours swapped. The secret level has
