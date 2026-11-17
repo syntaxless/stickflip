@@ -190,16 +190,16 @@ broken slab of sidewalk as the kicker and a 240-unit gap full of rubble). Road s
 stand behind the action as decor.
 
 **Stage 4** (playground, a first pass): Toy Blocks (a pyramid of blocks, one
-ollie), Slide (ride up the ladder and roll off the deck with your finger held to
-grind the chute down), Sandbox (a wide sand pit: it takes a charged ollie), Seesaw
-(grind the plank), Monkey Bars (a higher grind), Block Tower (ollie up five block
-steps) and Ball Pit (a kicker and a 240-unit gap).
+ollie), Slide (a tall platform and a yellow chute that curves out flat at the bottom: ollie onto it
+with your finger held to lock the grind), Sandbox (a wide sand pit: it takes a charged ollie), Seesaw
+(grind the plank), Monkey Bars (a higher grind), Block Tower (a stack of three toy blocks: ollie up onto the top) and Ball Pit (a kicker and a 240-unit gap).
 
 **Stage 5** (skate park, the hardest, a first pass): Ledges (two concrete ledges),
 Flat Bar, Hubba (a solid concrete wall down stairs, grind its top edge), Curb Cut
 (a driveway cut down into the street between two curbs), Fun Box (a long wooden
 trapezoid with a rail on top), Big Set (three big concrete steps, no rail) and Cop
-Car (a wooden ramp up to a police car: grind its light bar).
+Car (a wooden ramp up to a police car: grind its light bar and the car blows up in a cartoon
+blast once the grind is over, leaving a smoking wreck; ollie over it and nothing happens).
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie

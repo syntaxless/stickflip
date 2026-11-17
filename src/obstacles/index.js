@@ -14,4 +14,4 @@ export { rock } from './rock.js';
 export { water } from './water.js';
 export { cone, barrier, sawhorse, sign, hydrant, trafficBarrel, scaffold } from './construction.js';
 export { hubba, curbCut, concreteSet, funBox, woodRamp, copCar } from './skatepark.js';
-export { toyBlocks, slideChute, slideLadder, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
+export { toyBlocks, playSlide, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
