@@ -145,6 +145,11 @@ plank), Monkey Bars (a higher grind), Block Tower (ollie up three block steps)
 and Ball Pit (a kicker and a 240-unit gap). Bright blue sky, red rubber-mat
 surface, swing sets behind.
 
+**Stage 5** (skate park, the hardest, rough first pass): Ledges (two concrete
+ledges), Flat Bar, Hubba (a ledge down stairs), Bowl (a ride), Fun Box (a bank,
+a top with a rail, a bank), Big Set (six stairs with a handrail) and Final Gap
+(a 250-unit gap off a tall kicker). Sunset sky with a dusk skyline.
+
 **Stage 1** is the six original levels in order, joined by a bank up to Five
 Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
 finale: ride back out to the left to finish.

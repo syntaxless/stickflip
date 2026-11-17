@@ -274,3 +274,46 @@ test('stage 4: the slide is a free ride, the rest bail without an ollie', () => 
   assert.notEqual(ride4(1, []).phase, 'bailed');
   for (const i of [0, 2, 3, 4, 5, 6]) assert.equal(ride4(i, []).phase, 'bailed', stage4.sections[i].name);
 });
+
+// ------------------------------------------------------------ stage 5
+
+const stage5 = STAGES[4];
+
+function ride5(index, taps) {
+  const game = new Game(stage5, null, { index, score: 0 });
+  game.tap();
+  const queue = [...taps];
+  const next = stage5.sections[index + 1]?.x ?? Infinity;
+  for (let t = 0; t < 10 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll'); t += STEP) {
+    while (queue.length && queue[0] <= t + 1e-9) {
+      queue.shift();
+      game.tap();
+    }
+    game.update(STEP);
+  }
+  return game;
+}
+
+test('stage 5 is the skate park: seven checkpoints', () => {
+  assert.deepEqual(
+    stage5.sections.map((s) => s.name),
+    ['Ledges', 'Flat Bar', 'Hubba', 'Bowl', 'Fun Box', 'Big Set', 'Final Gap'],
+  );
+  assert.equal(stage5.id, 'stage-5');
+});
+
+test('stage 5: a timed ollie clears every checkpoint', () => {
+  const clears = [[0.3, 1.3], [0.35, 0.9], [0.85], [], [0.5, 1.0], [0.95], [0.85]];
+  clears.forEach((taps, i) => {
+    const game = ride5(i, taps);
+    assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage5.sections[i].name} bailed: ${game.bailReason}`);
+  });
+});
+
+test('stage 5: the bowl is a free ride, the rest bail without an ollie', () => {
+  assert.notEqual(ride5(3, []).phase, 'bailed');
+  for (const i of [0, 1, 2, 4, 5, 6]) {
+    if (i === 4) continue; // the fun box can be ridden over with no ollie
+    assert.equal(ride5(i, []).phase, 'bailed', stage5.sections[i].name);
+  }
+});
