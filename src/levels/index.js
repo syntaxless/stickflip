@@ -1,5 +1,5 @@
-// Ordered list of levels. To add a level, create levelN.js next to this file
-// (one obstacle per level, fixed screen) and append it here.
+// The sections of Stage 1, in order (stage1.js composes them into one strip),
+// and the secret Mega Ramp. The other stages import their sections directly.
 import firstRock from './first-rock.js';
 import level1 from './level1.js';
 import level2 from './level2.js';

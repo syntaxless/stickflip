@@ -15,5 +15,4 @@ export default {
     water({ x: 380, width: 160 }),
     bank({ x: 540, run: 130, y1: LIP, y2: G, material: 'wood' }),
   ],
-  stars: [0, 200, 450],
 };

@@ -26,7 +26,7 @@ import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS } from './config.js'
 const PIT_DEPTH = 40;
 
 // Height of a (possibly sloped or curved) surface at x.
-export function surfaceY(surf, x) {
+function surfaceY(surf, x) {
   if (surf.qp) {
     const { cx, cy, R } = surf.qp;
     const d = Math.max(0, Math.min(R, x - cx));
@@ -95,7 +95,6 @@ export class Game {
     this.boomAt = null; // when the cop car blew up (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
-    this.stars = 0;
     this.hold = null; // { dir, used } while the finger (or Space) is held down
     this.tilt = 0; // a seesaw plank under a grind: 0 level .. 1 tipped down to the ground
     this.setSeesaw(0);
@@ -716,10 +715,8 @@ export class Game {
   }
 
   finish() {
-    const s = this.level.stars || [0];
-    this.stars = s.filter((t) => this.score >= t).length;
     this.setPhase('complete');
-    this.emit('complete', { score: this.score, stars: this.stars });
+    this.emit('complete', { score: this.score });
   }
 
   // -------------------------------------------------------------- bails

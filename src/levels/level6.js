@@ -10,5 +10,4 @@ export default {
   id: 'quarter-pipe',
   name: 'Quarter Pipe',
   obstacles: [rail({ x: 220, length: 240, height: 64 }), quarterPipe({ x: 760, radius: 120 })],
-  stars: [0, 700, 1500],
 };

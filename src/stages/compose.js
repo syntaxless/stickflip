@@ -31,7 +31,6 @@ export function stage({ id, name, sections, extra = [], starts = {}, ...rest }) 
     sections: marks,
     obstacles,
     width: sections.length * SECTION_W,
-    stars: [0],
     ...rest,
   };
 }

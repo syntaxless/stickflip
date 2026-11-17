@@ -9,7 +9,7 @@ const J = ['head', 'neck', 'hip', 'kneeB', 'footB', 'kneeF', 'footF', 'elbowB', 
 
 const P = (o) => Object.fromEntries(J.map((k) => [k, { x: o[k][0], y: o[k][1] }]));
 
-export const POSES = {
+const POSES = {
   idle: P({ head: [2, -104], neck: [1, -90], hip: [0, -56], kneeB: [-9, -32], footB: [-12, -9], kneeF: [11, -32], footF: [13, -9], elbowB: [-6, -72], handB: [-8, -57], elbowF: [8, -72], handF: [11, -57] }),
   roll: P({ head: [5, -99], neck: [3, -86], hip: [-1, -51], kneeB: [-8, -30], footB: [-13, -9], kneeF: [14, -31], footF: [14, -9], elbowB: [-14, -70], handB: [-24, -60], elbowF: [16, -72], handF: [27, -64] }),
   crouch: P({ head: [10, -83], neck: [7, -70], hip: [-3, -38], kneeB: [-16, -24], footB: [-13, -9], kneeF: [19, -26], footF: [14, -9], elbowB: [-8, -56], handB: [4, -46], elbowF: [20, -58], handF: [30, -50] }),
@@ -40,7 +40,7 @@ export class PoseBlender {
 
 // How big the rider and board are drawn, relative to their poses (the
 // physics doesn't change): smaller, so the screen reads as a place to ride.
-export const RIDER_SIZE = 0.72;
+const RIDER_SIZE = 0.72;
 
 // A transform from skater-local world units to framebuffer pixels.
 // (x, y) is the anchor in world units, `ang` a rotation in radians.
