@@ -599,6 +599,61 @@ function drawLetterbox() {
   ctx.drawImage(outer.cv, ox - left * k, oy - top * k, W * k, H * k);
 }
 
+// Tester-only quick jump (/unstable/ and local copies; never on the live site
+// or in the iOS app, which are neither). A TEST button opens a grid of every
+// stage and checkpoint plus the Mega Ramp; tapping one reloads into the same
+// ?level= jump, so it plays on the separate test saves and never touches
+// progress or the shared board.
+function setupTestMenu() {
+  if (!(IS_LOCAL || IS_UNSTABLE)) return;
+  const css = document.createElement('style');
+  css.textContent = `
+    #tm-btn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);z-index:50;
+      font:700 12px/1 monospace;color:#fff;background:#e8730c;border:2px solid #000;padding:6px 10px;border-radius:4px;opacity:.85}
+    #tm{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.88);color:#fff;font:600 13px monospace;overflow:auto;
+      padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 12px) 16px calc(env(safe-area-inset-left,0px) + 12px);-webkit-overflow-scrolling:touch}
+    #tm h2{margin:0 0 8px;font:700 14px monospace;color:#e8730c;display:flex;justify-content:space-between;align-items:center}
+    #tm .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+    #tm .st{width:100%;color:#9cf;font-size:12px}
+    #tm button{font:700 12px monospace;color:#fff;background:#2a2a2a;border:2px solid #666;border-radius:4px;padding:9px 11px;min-height:40px;min-width:40px}
+    #tm button.go{background:#e8730c;border-color:#fff}
+    #tm .x{background:#600;border-color:#fff}`;
+  document.head.appendChild(css);
+  const btn = document.createElement('button');
+  btn.id = 'tm-btn';
+  btn.textContent = 'TEST';
+  const panel = document.createElement('div');
+  panel.id = 'tm';
+  panel.hidden = true;
+  const jump = (q) => {
+    const u = new URL(location.href);
+    u.searchParams.set('level', q);
+    location.href = u.toString();
+  };
+  const add = (parent, tag, text, cls) => {
+    const el = document.createElement(tag);
+    el.textContent = text;
+    if (cls) el.className = cls;
+    parent.appendChild(el);
+    return el;
+  };
+  const head = add(panel, 'h2', 'JUMP TO (TEST SAVES ONLY)');
+  add(head, 'button', 'CLOSE', 'x').onclick = () => (panel.hidden = true);
+  LEVELS.forEach((st, si) => {
+    const row = add(panel, 'div', '', 'row');
+    add(row, 'div', `STAGE ${si + 1}`, 'st');
+    (st.sections || []).forEach((sec, ci) => {
+      add(row, 'button', `${ci + 1} ${sec.name}`.toUpperCase()).onclick = () => jump(si === 0 ? String(ci + 1) : `${si + 1}-${ci + 1}`);
+    });
+  });
+  const row = add(panel, 'div', '', 'row');
+  add(row, 'button', 'MEGA RAMP (SECRET)', 'go').onclick = () => jump('secret');
+  btn.onclick = () => (panel.hidden = !panel.hidden);
+  for (const el of [btn, panel]) el.addEventListener('pointerdown', (e) => e.stopPropagation());
+  document.body.append(btn, panel);
+}
+setupTestMenu();
+
 resize();
 let startCheckpoint = levelIndex < SECRET_INDEX ? savedCheckpoint : null;
 if (TESTING) {
