@@ -1,3 +1,4 @@
+import { GAPS } from './gaps.js';
 import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
@@ -66,6 +67,7 @@ export class Game {
     this.sections = level.sections || [{ name: level.name, x: 0 }];
     this.checkpoint = checkpoint || { index: 0, score: 0 };
     this.finishLeft = level.finishLeft ?? -40;
+    this.gaps = GAPS.filter((g) => g.stage === level.id);
     this.surfaces = level.obstacles.flatMap((o) => o.surfaces);
     this.solids = level.obstacles.flatMap((o) => o.solids);
     // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
@@ -89,6 +91,7 @@ export class Game {
     this.section = cp.index;
     this.score = cp.score;
     this.combo = []; // tricks done since leaving the ground: { name, points }
+    this.gapsDone = new Set(); // named gaps earned this attempt
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.stars = 0;
@@ -642,6 +645,20 @@ export class Game {
     this.emit('trick', { name, points });
   }
 
+  // A named gap (src/gaps.js): this take-off and this landing, once per attempt.
+  checkGaps(kind) {
+    const s = this.sk;
+    for (const g of this.gaps) {
+      if (this.gapsDone.has(g.id) || (g.on !== 'any' && g.on !== kind)) continue;
+      const ox = this.sections[g.section]?.x ?? 0;
+      if (s.x < ox + g.to[0] || s.x > ox + g.to[1]) continue;
+      if (g.from && (s.poppedAt === null || s.poppedAt < ox + g.from[0] || s.poppedAt > ox + g.from[1])) continue;
+      this.gapsDone.add(g.id);
+      this.addTrick(g.name, g.points);
+      this.emit('gap', { name: g.name, points: g.points });
+    }
+  }
+
   startGrind(surface, key = '50-50') {
     const s = this.sk;
     s.mode = 'grind';
@@ -650,6 +667,7 @@ export class Game {
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
     this.emit('grind', { key });
+    this.checkGaps('grind');
   }
 
   endGrind() {
@@ -669,6 +687,7 @@ export class Game {
     s.slope = surface ? 0 : ground.slope || 0;
     s.primed = false;
     this.emit('land');
+    this.checkGaps('land');
     this.bankCombo();
   }
 

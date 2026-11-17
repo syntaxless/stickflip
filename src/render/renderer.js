@@ -69,7 +69,7 @@ export class Renderer {
     // replaces the old one instead of piling on top of it. Trick names show in
     // the HUD's combo line; the slot is for the points, banked on landing,
     // when the rider is down on the ground and out of the way.
-    this.popups = { bank: null };
+    this.popups = { bank: null, gap: null };
     this.squash = 0;
     this.buttons = [];
     this.time = 0;
@@ -91,6 +91,9 @@ export class Renderer {
           break;
         case 'bank':
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
+          break;
+        case 'gap':
+          this.popup('gap', `${e.name} +${e.points}`);
           break;
         case 'bail': {
           const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
@@ -131,7 +134,7 @@ export class Renderer {
   }
 
   popup(slot, text) {
-    this.popups[slot] = { text, life: 1.1 };
+    this.popups[slot] = { text, life: slot === 'gap' ? 1.8 : 1.1 };
   }
 
   // ----------------------------------------------------------- drawing
@@ -177,7 +180,7 @@ export class Renderer {
       if (p && (p.life -= dt) <= 0) this.popups[k] = null;
     }
     // Bails and the level-end box use the middle of the screen: clear the way.
-    if (game.phase !== 'playing') this.popups = { bank: null };
+    if (game.phase !== 'playing') this.popups = { bank: null, gap: null };
   }
 
   // Camera position in pixels. Fixed-screen levels never move it.
@@ -439,7 +442,7 @@ export class Renderer {
 
   // Centred under the HUD (which ends about y 33).
   drawPopups(inset = 0) {
-    const rows = [['bank', 42]];
+    const rows = [['bank', 42], ['gap', 53]];
     for (const [slot, y] of rows) {
       const p = this.popups[slot];
       if (!p || (p.life < 0.3 && Math.floor(p.life * 20) % 2)) continue; // blink out

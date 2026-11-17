@@ -182,6 +182,12 @@ finale: ride back out to the left to finish.
    (FS AIR, plus any flip you finish before you drop back in). Then ride back out fakie to the left, ollieing or grinding the rail
    again on the way. The rail sits close to the Euro Gap's lip so an ollie off the top lands on it; a bail here restarts the rider back on top of the Euro Gap (`starts` in `src/stages/stage1.js`) to roll off the lip with room to tap. Stars: finish, 700, 1500.
 
+**Gap bonuses.** Named gaps like the classic skate games: take off from one
+place and land (or grind) on another and the jump pops up as, say, EURO TO
+RAIL +500. A gap counts as a trick in the combo and can be earned once per
+attempt. Every gap (name, points, where you must take off and land) is one
+line in `src/gaps.js`, so renaming or tuning is a one-line change.
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop
 in from a high deck and fly off the kicker at a raised, gently curved
 "rainbow" rail. Ollie off the kicker to clear the whole rail and land in the
