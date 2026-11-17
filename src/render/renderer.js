@@ -13,6 +13,12 @@ const P = (v) => Math.round(v / S);
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
 const snap = (v) => Math.round(v / S) * S;
+const CONC = [190, 190, 196];
+const CONC_LIT = [226, 226, 230];
+const CONC_DARK = [128, 128, 138];
+const GRAVEL = [[150, 148, 144], [176, 170, 158], [124, 120, 116], [188, 168, 130], [160, 156, 150], [138, 130, 118]];
+const GRAVEL_LIT = [220, 214, 200];
+const GRAVEL_DARK = [84, 80, 76];
 const WOOD_A = [176, 108, 50];
 const WOOD_B = [160, 96, 44];
 const WOOD_LIGHT = [214, 146, 76];
@@ -283,6 +289,12 @@ export class Renderer {
       const next = topAt(x + 1);
       if (top < bottom && game.level.wood) {
         this.drawWood(g, x, top, bottom);
+      } else if (top < bottom && game.groundAt(x * S + S / 2).material === 'concrete') {
+        // a poured concrete slab (a bank, the Euro Gap) down to the street, then the street's own layers
+        const base = Math.max(top, G);
+        this.drawConcrete(g, x, top, base);
+        g.fill(x, base, 1, bottom - base, ink);
+        this.drawGround(g, x, base, bottom, !!game.level.sidewalk);
       } else if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
         // raised ground (ramps, banks, stair platforms) is solid earth down to where the street's own dirt ends
@@ -292,10 +304,38 @@ export class Renderer {
         const wx = x * S + S / 2;
         if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
           g.fill(x, G + 2, 1, bottom - G - 2, ink);
-          this.drawGround(g, x, G + 2, bottom, false, 0, 0);
+          const gravel = patches.some((p) => wx >= p.x1 && wx < p.x2 && p.kind === 'gravel');
+          if (gravel) this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
+          else this.drawGround(g, x, G + 2, bottom, false, 0, 0);
         }
       }
       top = next;
+    }
+  }
+
+  // A poured concrete column from `top` down to `base`: a lit top edge, the odd
+  // crack and speckle, a slab joint every 28 px (like the Big Set).
+  drawConcrete(g, x, top, base) {
+    for (let y = top; y < base; y++) {
+      const d = y - top;
+      let c = CONC;
+      if (d < 2) c = CONC_LIT;
+      else if (d > 3 && (x * 7 + y * 13) % 61 === 0) c = CONC_DARK;
+      else if ((x * 3 + y * 5) % 19 === 0) c = CONC_LIT;
+      else if (x % 28 === 0) c = CONC_DARK;
+      g.pset(x, y, c);
+    }
+    g.pset(x, top - 1, ink); // outline along the top edge
+  }
+
+  // Loose gravel: chunky 2x2 stones in greys and tans, speckled, dark in the gaps.
+  drawGravel(g, x, top, end) {
+    for (let y = top; y < end; y++) {
+      const hb = hash(x >> 1, y >> 1) % 12;
+      let c = GRAVEL[hb % GRAVEL.length];
+      if (hash(x, y) % 9 === 0) c = hb % 2 ? GRAVEL_DARK : GRAVEL_LIT; // speckle
+      if (y === top) c = GRAVEL_DARK;
+      g.pset(x, y, c);
     }
   }
 
