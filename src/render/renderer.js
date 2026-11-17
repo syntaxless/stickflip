@@ -10,7 +10,15 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, edge } = PAL;
+
+// Cheap deterministic hash of a world pixel, so the asphalt texture is the same
+// every frame and scrolls with the stage instead of shimmering.
+const hash = (x, y) => {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+};
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -161,12 +169,34 @@ export class Renderer {
       const next = topAt(x + 1);
       if (top < bottom) {
         g.fill(x, top, 1, bottom - top, groundCol);
+        this.drawAsphalt(g, x, top, bottom);
         // a lower neighbour means this column's side shows
         const drop = Math.max(prev, next);
         g.line(x, top, x, Math.max(top, Math.min(drop, bottom) - 1), edge);
       }
       prev = top;
       top = next;
+    }
+  }
+
+  // Chunky asphalt texture for one ground column: a lighter kerb row along the
+  // top, scattered light grit, and short dark cracks (2-4 px dashes).
+  drawAsphalt(g, x, top, bottom) {
+    g.pset(x, top + 1, kerb);
+    for (let y = top + 2; y < bottom; y++) {
+      const h = hash(x, y) % 211;
+      if (h < 2) {
+        g.pset(x, y, fleck);
+        continue;
+      }
+      // a dash starts at x - i and is 2-4 px long
+      for (let i = 0; i < 4; i++) {
+        const sx = x - i;
+        if (hash(sx, y) % 211 === 2 && i < 2 + (hash(y, sx) % 3)) {
+          g.pset(x, y, crack);
+          break;
+        }
+      }
     }
   }
 

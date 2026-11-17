@@ -1,7 +1,7 @@
 // A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
 // CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: navy sky, dark grey ground outlined in maroon, black rider and
+// Palette: navy sky, pixel-art asphalt ground outlined in maroon, black rider and
 // obstacles, a brown (wood) board with white wheels, and red for all text.
 // Street furniture (the trash can) is shaded pixel art in grey, silver and black.
 
@@ -11,7 +11,10 @@ export const PAL = {
   sky: [0, 0, 128],
   ink: [0, 0, 0],
   red: [255, 85, 85],
-  ground: [40, 40, 40],
+  ground: [64, 64, 64],
+  crack: [40, 40, 40],
+  fleck: [96, 96, 96],
+  kerb: [88, 88, 88],
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
@@ -25,8 +28,14 @@ export const PAL = {
 // colours: purple sky and yellow text (solids stay black). `red` is the text
 // colour's name everywhere, whatever colour it is.
 export const PALETTES = {
-  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85], steel: [128, 128, 128], shine: [192, 192, 192] },
-  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [40, 40, 40], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0], steel: [128, 128, 128], shine: [192, 192, 192] },
+  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [64, 64, 64],
+  crack: [40, 40, 40],
+  fleck: [96, 96, 96],
+  kerb: [88, 88, 88], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85], steel: [128, 128, 128], shine: [192, 192, 192] },
+  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [64, 64, 64],
+  crack: [40, 40, 40],
+  fleck: [96, 96, 96],
+  kerb: [88, 88, 88], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0], steel: [128, 128, 128], shine: [192, 192, 192] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.
