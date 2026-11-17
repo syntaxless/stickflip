@@ -464,15 +464,18 @@ export class Game {
     if (this.phase === 'playing') this.checkSection();
   }
 
-  // Going through a ring: the whole rider has to fit, feet above its bottom
-  // and head below its top. Clean through counts as a trick.
+  // A ring of fire. Head above its top: you hit the flames. Head inside its
+  // opening (a charged ollie): clean through, a trick with a bonus. Head still
+  // below the opening (any smaller ollie, even none): you pass under it and
+  // nothing happens.
   passHazards(fromX) {
     const s = this.sk;
     if (s.dir < 0) return;
     for (const h of this.hazards) {
       if (fromX >= h.x || s.x < h.x) continue;
-      if (s.y > h.bottom || s.y - PHYS.RIDER_HEIGHT < h.top) return this.bail(h.reason);
-      this.addTrick(h.trick, h.points);
+      const head = s.y - PHYS.RIDER_HEIGHT;
+      if (head < h.top) return this.bail(h.reason);
+      if (head < h.bottom) this.addTrick(h.trick, h.points);
     }
   }
 

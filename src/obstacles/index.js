@@ -2,6 +2,7 @@
 export { rail } from './rail.js';
 export { gap } from './gap.js';
 export { dirtGap } from './dirt-gap.js';
+export { brokenGap } from './broken-gap.js';
 export { stairs } from './stairs.js';
 export { bank } from './bank.js';
 export { stepsUp } from './steps-up.js';
