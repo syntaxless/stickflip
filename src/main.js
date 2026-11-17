@@ -1,6 +1,6 @@
 import { WORLD, SCOREBOARD } from './config.js';
 import { Game } from './game.js';
-import { LEVELS, SECRET } from './levels/index.js';
+import { STAGES, SECRET } from './stages/index.js';
 import { Renderer } from './render/renderer.js';
 import { Pix, RES, setPalette } from './render/pixel.js';
 import * as audio from './audio.js';
@@ -24,8 +24,12 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 
 // ------------------------------------------------------------ progress
 
-// Testing: on /unstable/ or a local copy, ?level=1..6 (or ?level=secret)
-// starts straight on that level. Test play keeps its own saves and its own
+// A stage plays like one long level (see stages/compose.js), so the run is a
+// trip through the stages, then the Mega Ramp for a good enough score.
+const LEVELS = STAGES;
+
+// Testing: on /unstable/ or a local copy, ?level=1..6 starts stage 1 at that
+// checkpoint (or ?level=secret on the Mega Ramp). Test play keeps its own saves and its own
 // on-device high scores, so it never touches real progress or the shared table.
 const IS_LOCAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
 const IS_UNSTABLE = location.pathname.includes('/unstable');
@@ -53,6 +57,9 @@ const store = {
 };
 
 let levelIndex = Math.min(store.get('level', 0), LEVELS.length - 1);
+// The checkpoint reached in the stage in progress ({ index, score }), so a
+// reload carries on from it.
+const savedCheckpoint = store.get('checkpoint', null);
 let game;
 
 // ------------------------------------------------------------ run + high scores
@@ -69,13 +76,14 @@ let highScores = [];
 const refreshScores = () => board.top().then((list) => (highScores = list));
 refreshScores();
 
-// The secret level plays after level 6 from the third full clear of the run
-// onwards, and counts toward the run total like any other level.
+// The Mega Ramp: finish the last stage with at least SECRET_SCORE points in
+// that one run (before the no-bail bonus) and you're taken there. It counts
+// toward the run total like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_AFTER_CLEARS = 2; // full clears needed before the run that unlocks it
-let clears = store.get('clears', 0);
+const SECRET_SCORE = 5000;
 
-let run = new Run(LEVELS.length + 1, store.get('run', null));
+let run = new Run(LEVELS.length + 1, store.get('stage-run', null));
+const saveRun = () => store.set('stage-run', run);
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -88,9 +96,11 @@ async function finishRun() {
   const bonus = run.bonus();
   const score = run.total() + bonus;
   run = new Run(LEVELS.length + 1);
-  store.set('run', run);
-  clears += 1;
-  store.set('clears', clears);
+  saveRun();
+  // A reload now starts a fresh run from the top (it used to drop you back
+  // on the last level alone, and finishing that counted as a whole run).
+  store.set('level', 0);
+  store.set('checkpoint', null);
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
     screen = { type: 'entry', score, bonus, letters: saved.split(''), pos: 0, t: 0 };
@@ -149,14 +159,15 @@ function screenPress(clientX, clientY) {
 
 // `entry` ({ speed }) rolls straight onto the screen at that speed: the levels
 // play as one continuous ride, each a screen the rider flips onto.
-function loadLevel(i, autoStart = false, entry = null) {
+function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
   levelIndex = i;
   if (i === 0) refreshScores(); // the title screen shows the table
   const secret = i === SECRET_INDEX;
   if (!secret) store.set('level', i);
+  store.set('checkpoint', checkpoint);
   const level = secret ? SECRET : LEVELS[i];
   const prev = game;
-  game = new Game(level, entry);
+  game = new Game(level, entry, checkpoint);
   // A finger still down from the last screen keeps charging on this one.
   if (entry && prev?.sk.charge && game.startCharge()) {
     game.sk.charge.t = prev.sk.charge.t;
@@ -169,8 +180,6 @@ function loadLevel(i, autoStart = false, entry = null) {
   if (secret) game.levelLabel = 'BONUS';
   setPalette(secret ? 'secret' : 'normal');
   if (TESTING) game.levelLabel = `TEST ${secret ? 'S' : i + 1}`;
-  game.hasNext = i + 1 < LEVELS.length || (i === LEVELS.length - 1 && clears >= SECRET_AFTER_CLEARS);
-  if (i === LEVELS.length - 1 && game.hasNext) game.nextLabel = 'BONUS LEVEL';
   game.best = store.get(`best:${level.id}`, 0);
   renderer.reset(!!entry);
   if (autoStart) game.tap();
@@ -180,7 +189,7 @@ function loadLevel(i, autoStart = false, entry = null) {
 function nextScreen() {
   const last = LEVELS.length - 1;
   if (levelIndex < last) loadLevel(levelIndex + 1, false, { speed: game.speed });
-  else if (levelIndex === last && clears >= SECRET_AFTER_CLEARS) unlockSecret();
+  else if (levelIndex === last && run.total() >= SECRET_SCORE) unlockSecret();
   else finishRun();
 }
 
@@ -229,6 +238,14 @@ function toWorld(clientX, clientY) {
 function press(clientX, clientY) {
   if (screen) return screenPress(clientX, clientY);
   if (game.phase === 'complete') return; // between screens / end of the run
+  if (game.phase === 'bailed' && clientX != null) {
+    const p = toWorld(clientX, clientY);
+    if (renderer.hitButton(p.x, p.y) === 'restart') {
+      game.restartStage();
+      store.set('checkpoint', null);
+      return;
+    }
+  }
   game.tap();
 }
 
@@ -442,11 +459,12 @@ function frame(now) {
     if (e.type === 'bail') {
       if (navigator.vibrate) navigator.vibrate(60);
       run.recordBail();
-      store.set('run', run);
+      saveRun();
     }
+    if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score });
     if (e.type === 'complete') {
       run.recordClear(levelIndex, e.score);
-      store.set('run', run);
+      saveRun();
       if (e.score > game.best) {
         game.best = e.score;
         store.set(`best:${game.level.id}`, e.score);
@@ -465,10 +483,10 @@ function frame(now) {
   renderer.draw(game, dt, {
     portrait: view.portrait,
     inset: view.inset,
-    total: run.total(levelIndex, game.phase === 'bailed' ? 0 : game.score), // running total, this level included
+    total: run.total(levelIndex, game.phase === 'bailed' ? game.checkpoint.score : game.score), // running total, this level included
     screen,
     highScores,
-    attract: levelIndex === 0,
+    attract: levelIndex === 0 && game.section === 0,
   });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -509,10 +527,19 @@ function drawLetterbox() {
 }
 
 resize();
+let startCheckpoint = levelIndex < SECRET_INDEX ? savedCheckpoint : null;
 if (TESTING) {
-  const n = TEST_LEVEL.toLowerCase() === 'secret' ? SECRET_INDEX + 1 : parseInt(TEST_LEVEL, 10);
-  levelIndex = Number.isInteger(n) && n >= 1 && n <= SECRET_INDEX + 1 ? n - 1 : 0;
+  // ?level=secret, or ?level=N: stage 1 from its Nth checkpoint
+  const sections = LEVELS[0].sections.length;
+  const n = parseInt(TEST_LEVEL, 10);
+  if (TEST_LEVEL.toLowerCase() === 'secret') levelIndex = SECRET_INDEX;
+  else {
+    levelIndex = 0;
+    const i = Number.isInteger(n) && n >= 1 && n <= sections ? n - 1 : 0;
+    startCheckpoint = i ? { index: i, score: 0 } : null;
+  }
 }
-loadLevel(levelIndex);
+if (startCheckpoint && !LEVELS[levelIndex]?.sections?.[startCheckpoint.index]) startCheckpoint = null;
+loadLevel(levelIndex, false, null, startCheckpoint);
 requestAnimationFrame(frame);
 watchForUpdates(() => game.phase === 'playing');
