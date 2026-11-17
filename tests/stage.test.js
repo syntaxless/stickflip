@@ -749,3 +749,49 @@ test('backgrounds: sky layers in the wide frame behind the bars line up with the
     }
   }
 });
+
+// ------------------------------------------- the cop and the Oslo sign
+
+test('stage 5: the cop sits at the wheel (the driver side, on the right as you look at the car), and only after the blast does he jump out and run off right', () => {
+  const car = stage5.obstacles.find((o) => o.type === 'cop-car');
+  const [l, r] = [Math.round(450 / 3), Math.round(582 / 3) - 1];
+  const skin = [255, 212, 165].join();
+  const cops = (boom) => {
+    const hits = [];
+    const g = { fill: (x, y, w, h, c) => { if (c.join() === skin) hits.push([x, y, w, h]); }, rect() {}, line() {}, pset(x, y, c) { if (c.join() === skin) hits.push([x, y, 1, 1]); }, circle() {}, text() {} };
+    car.draw(g, { time: 1.3, boom });
+    return hits;
+  };
+  const whole = cops(null);
+  assert.ok(whole.length && whole.every(([x]) => x > (l + r) / 2 && x < r), 'in the car, on the right half of the windscreen');
+  assert.equal(cops(0.05).length, whole.length, 'still in the car as the blast goes off');
+  let last = r - 20;
+  for (const age of [0.3, 0.6, 1.0, 1.4]) {
+    const c = cops(age);
+    assert.ok(c.length > 0, `a cop outside the car at ${age}`);
+    const x = Math.min(...c.map(([cx]) => cx));
+    assert.ok(x > last, `running away to the right at ${age}`);
+    last = x;
+  }
+  assert.ok(Math.min(...cops(1.4).map(([cx]) => cx)) > r + 30, 'well clear of the wreck');
+});
+
+test('stage 2: the Oslo City Limits sign is background decor only, and Step Up still clears', () => {
+  const sign = stage2.obstacles.find((o) => o.type === 'city-sign');
+  assert.ok(sign, 'the sign is in 2-2');
+  assert.equal(sign.surfaces.length + sign.solids.length + (sign.ground || []).length, 0);
+  const g = { fill() {}, rect() {}, line() {}, pset() {}, circle() {}, text(s) { texts.push(s); } };
+  const texts = [];
+  sign.draw(g);
+  assert.ok(texts.includes('OSLO') && texts.includes('CITY LIMITS'));
+});
+
+test('cop sprites: every row is the same width and every letter is in the palette; the car fills the 44 x 32 footprint', async () => {
+  const { CAR_SPRITE, COP_SPRITES, SPRITE_PALETTE } = await import('../src/obstacles/cop-sprites.js');
+  for (const rows of [CAR_SPRITE, ...Object.values(COP_SPRITES)]) {
+    assert.ok(rows.every((r) => r.length === rows[0].length));
+    for (const r of rows) for (const ch of r) assert.ok(ch === '.' || SPRITE_PALETTE[ch], `letter ${ch}`);
+  }
+  assert.equal(CAR_SPRITE.length, 32);
+  assert.equal(CAR_SPRITE[0].length, 44);
+});

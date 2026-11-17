@@ -1,6 +1,7 @@
 import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
+import { CAR_SPRITE, COP_SPRITES, blit } from './cop-sprites.js';
 import { rail } from './rail.js';
 import { stairs } from './stairs.js';
 
@@ -192,86 +193,37 @@ export function copCar({ x, w = 132, h = 99 }) {
       const [l, r] = [P(x), P(x + w) - 1];
       const b = P(G) - 1;
       const age = fx.boom ?? null; // seconds since the blast, or null while the car is whole
-      if (age === null || age < 0.3) drawCar(g, l, r, b, barY, fx);
+      if (age === null || age < 0.3) drawCar(g, l, r, b, barY, fx, age === null || age < 0.12);
       else drawWreck(g, l, r, b, age, fx.time || 0);
       if (age !== null) drawBlast(g, l, r, b, age, fx.time || 0);
+      if (age !== null) drawCop(g, r, b, age); // out of the door and away
     },
   };
 }
 
-// A cop car seen from the side, nose to the right: white body with black lower
-// door panels, pale-blue windows, a gold badge on the door and a flashing light
-// bar on the roof (that bar is the grindable bit; its top edge sits at barY).
-function drawCar(g, l, r, b, barY, fx) {
+// A cop car seen head-on: black bumper, big headlights, a white hood with a gold star,
+// a wide windscreen with the cop at the wheel and a full-width flashing light bar
+// (whose lit top edge is the grindable bit, at barY).
+function drawCar(g, l, r, b, barY, fx, cop = true) {
   const BLACK = [30, 30, 38];
-  const BLACK_LIT = [64, 64, 74];
-  const GLASS = [150, 205, 240];
-  const GLASS_DEEP = [96, 150, 205];
   const RED = [255, 60, 60];
   const BLUE = [70, 110, 255];
-  const GOLD = [255, 205, 70];
-  const SHADE = [196, 200, 214];
-  const top = b - 31; // the roof
-  const bodyTop = b - 17; // the beltline
-  // lower body, white above black door panels and bumpers
-  g.fill(l, bodyTop, r - l + 1, 12, white);
-  g.fill(l, b - 9, r - l + 1, 5, BLACK);
-  g.line(l + 1, b - 10, r - 1, b - 10, SHADE);
-  g.rect(l, bodyTop, r - l + 1, 12, ink);
-  g.line(l + 1, bodyTop + 1, r - 1, bodyTop + 1, shine);
-  g.fill(l - 1, b - 8, 4, 6, BLACK); // rear bumper
-  g.rect(l - 1, b - 8, 4, 6, ink);
-  g.fill(r - 2, b - 8, 4, 6, BLACK); // front bumper
-  g.rect(r - 2, b - 8, 4, 6, ink);
-  g.line(l, b - 7, l, b - 4, BLACK_LIT);
-  // lights: tail red, head warm white
-  g.fill(l + 1, bodyTop + 2, 2, 3, RED);
-  g.fill(r - 3, bodyTop + 2, 3, 3, [255, 245, 190]);
-  // cabin: slanted pillars and a white roof
-  for (let y = top; y < bodyTop; y++) {
-    const t = (y - top) / (bodyTop - top - 1);
-    const cl = l + 11 - Math.round(t * 4);
-    const cr = r - 16 + Math.round(t * 6);
-    g.fill(cl, y, cr - cl + 1, 1, white);
-    g.pset(cl, y, ink);
-    g.pset(cr, y, ink);
-  }
-  g.line(l + 11, top, r - 16, top, ink);
-  // windows: a rear and a front pane split by the B pillar
-  const mid = ((l + r) >> 1) - 2;
-  for (let y = top + 2; y < top + 10; y++) {
-    const t = (y - top) / (bodyTop - top - 1);
-    const cl = l + 11 - Math.round(t * 4) + 2;
-    const cr = r - 16 + Math.round(t * 6) - 2;
-    const c = y < top + 5 ? GLASS : GLASS_DEEP;
-    g.fill(cl, y, mid - cl, 1, c);
-    g.fill(mid + 2, y, cr - mid - 1, 1, c);
-  }
-  g.line(mid, top + 1, mid + 1, top + 9, ink);
-  g.line(l + 14, top + 3, l + 17, top + 3, white); // glints
-  g.line(mid + 5, top + 3, mid + 8, top + 3, white);
-  // doors: seams, a handle and the gold badge
-  g.line(mid + 1, top + 10, mid + 1, b - 10, ink);
-  g.line(l + 12, top + 10, l + 12, b - 10, ink);
-  g.fill(mid + 4, bodyTop + 2, 3, 1, steel);
-  g.fill(mid - 11, b - 15, 4, 4, GOLD);
-  g.rect(mid - 11, b - 15, 4, 4, ink);
-  g.pset(mid - 10, b - 14, white);
-  // wheels
-  for (const wx of [l + 9, r - 9]) {
-    g.circle(wx, b - 4, 6, BLACK, true);
-    g.circle(wx, b - 4, 6, ink);
-    g.circle(wx, b - 4, 4, [58, 58, 66], true);
-    g.circle(wx, b - 4, 2, steel, true);
-    g.pset(wx, b - 4, shine);
-  }
-  // light bar: red and blue halves in a black housing, flashing, on two posts
   const flash = Math.floor((fx.time || 0) * 5) % 2;
+  blit(g, CAR_SPRITE, l, b - 31); // the car itself is a pixel-grid sprite (cop-sprites.js)
+  if (cop) {
+    // the cop at the wheel, on the driver's side (the car's left, which is on the right as you look at it)
+    g.fill(r - 15, b - 28, 3, 3, COP.SKIN);
+    g.fill(r - 16, b - 29, 5, 1, COP.CAP);
+    g.fill(r - 17, b - 25, 6, 2, COP.UNIFORM);
+    g.pset(r - 14, b - 29, COP.BADGE);
+    g.pset(r - 13, b - 27, ink);
+  }
+  // light bar: red and blue lenses in a black housing with posts down to the roof
   const bl = l + 8;
   const br = r - 8;
   const bt = P(barY);
-  g.fill(bl + 3, bt + 3, 2, top - bt - 3, BLACK);
-  g.fill(br - 4, bt + 3, 2, top - bt - 3, BLACK);
+  g.fill(bl + 2, bt + 3, 2, 3, BLACK);
+  g.fill(br - 3, bt + 3, 2, 3, BLACK);
   g.fill(bl, bt, br - bl + 1, 3, BLACK);
   g.rect(bl, bt - 1, br - bl + 1, 5, ink);
   const m = (bl + br) >> 1;
@@ -280,46 +232,41 @@ function drawCar(g, l, r, b, barY, fx) {
   g.pset(bl + 2, bt, white);
   g.pset(m + 2, bt, white);
   g.line(bl + 1, bt - 1, br - 1, bt - 1, shine); // the lit grind edge along the top of the bar
+  // the lit lens throws a little glow above the bar
+  g.line(flash ? bl + 2 : m + 2, bt - 2, flash ? m - 2 : br - 2, bt - 2, flash ? [255, 150, 150] : [140, 170, 255]);
 }
 
-// What's left: a charred, caved-in shell on flat tyres with a sprung hood, blown
-// windows and a mangled light bar. Lit well enough to read against any sky.
+// What's left: a charred, caved-in shell on flat tyres, the hood sprung up, the
+// glass gone and shards of the light bar on the roof.
 function drawWreck(g, l, r, b, age, time) {
   const wd = r - l + 1;
   const cx = (l + r) >> 1;
-  const CHAR = [66, 62, 70];
-  const CHAR_LIT = [122, 118, 128];
-  const SCORCH = [14, 12, 16];
-  const RUST = [150, 80, 40];
-  for (const tx of [l + 4, r - 12]) {
-    g.fill(tx, b - 3, 9, 4, ink); // flat tyres
-    g.fill(tx + 1, b - 2, 7, 2, [58, 58, 66]);
-  }
-  g.fill(l, b - 15, wd, 12, CHAR); // the body, slumped
-  g.rect(l, b - 15, wd, 12, ink);
-  g.line(l + 1, b - 14, r - 1, b - 14, CHAR_LIT);
-  g.fill(l + 2, b - 8, wd - 4, 4, SCORCH); // the burnt-out lower panels
-  g.fill(r - 4, b - 11, 5, 8, SCORCH); // the nose, blown in
-  g.line(l, b - 5, l - 3, b - 2, ink); // a bumper hanging off
-  g.line(l, b - 4, l - 3, b - 1, CHAR_LIT);
-  // cabin: caved in with a jagged roof
-  for (let px = l + 8; px <= r - 13; px++) {
-    const top = b - 27 - ((hash(px, 3) % 4) - (px > cx ? 2 : 0));
-    g.fill(px, top, 1, b - 15 - top, px % 5 === 0 ? CHAR_LIT : CHAR);
+  const CHAR = [58, 56, 64];
+  const CHAR_LIT = [112, 110, 120];
+  const SCORCH = [18, 16, 20];
+  for (const tx of [l + 3, r - 9]) g.fill(tx, b - 3, 7, 4, ink); // flat tyres
+  g.fill(l, b - 13, wd, 9, CHAR); // the lower body
+  g.rect(l, b - 13, wd, 9, ink);
+  g.line(l + 1, b - 12, r - 1, b - 12, CHAR_LIT);
+  g.fill(cx - 9, b - 11, 19, 5, SCORCH); // the grille, blown in
+  g.line(l + 1, b - 5, l + 9, b - 3, ink); // a bumper hanging off
+  // the cabin: caved in, with a jagged roof
+  for (let px = l + 7; px <= r - 7; px++) {
+    const top = b - 26 - ((hash(px, 3) % 4) - (px > cx ? 2 : 0));
+    g.fill(px, top, 1, b - 13 - top, px % 5 === 0 ? CHAR_LIT : CHAR);
     g.pset(px, top, ink);
   }
-  g.line(l + 8, b - 26, l + 8, b - 15, ink);
-  g.line(r - 13, b - 26, r - 13, b - 15, ink);
-  g.fill(l + 12, b - 23, wd - 28, 6, SCORCH); // the windows, blown out
-  g.fill(l + 10, b - 18, 5, 3, [170, 170, 176]); // a scorched bit of white door
-  g.fill(cx - 8, b - 13, 3, 3, RUST);
+  g.line(l + 7, b - 25, l + 7, b - 13, ink);
+  g.line(r - 7, b - 25, r - 7, b - 13, ink);
+  g.fill(l + 12, b - 22, wd - 24, 7, SCORCH); // the windows, blown out
+  g.fill(l + 9, b - 20, 4, 5, [150, 150, 150]); // a scorched bit of white door
   // the hood sprung up
-  g.line(r - 14, b - 16, r - 7, b - 29, ink);
-  g.line(r - 13, b - 16, r - 6, b - 29, CHAR_LIT);
+  g.line(cx - 12, b - 14, cx - 6, b - 28, ink);
+  g.line(cx - 11, b - 14, cx - 5, b - 28, CHAR_LIT);
   // shards of the light bar
-  g.fill(l + 14, b - 29, 3, 2, [255, 60, 60]);
-  g.fill(r - 20, b - 30, 3, 2, [70, 110, 255]);
-  g.pset(cx + 3, b - 31, white);
+  g.fill(l + 14, b - 27, 3, 2, [255, 60, 60]);
+  g.fill(r - 18, b - 28, 3, 2, [70, 110, 255]);
+  g.pset(cx + 3, b - 29, white);
   // flames licking out of the wreck for a few seconds, then it just smokes
   if (age < 4.5) {
     const strength = age < 2.5 ? 1 : 1 - (age - 2.5) / 2;
@@ -332,6 +279,35 @@ function drawWreck(g, l, r, b, age, time) {
         g.fill(fx - (wid >> 1), top - k, wid, 1, k < hgt - 2 ? [255, 120, 30] : [255, 230, 90]);
       }
     }
+  }
+}
+
+// The cop: tumbles out of the driver's door (the car's right side as you look at
+// it) as the car goes up, then runs off to the right with his arms flapping, out
+// of the picture. Cartoon only: he is never hurt and the rider can't touch him.
+export const COP = { UNIFORM: [40, 70, 150], SKIN: [255, 212, 165], CAP: [24, 40, 100], BADGE: [255, 205, 70] };
+function drawCop(g, r, b, age) {
+  const t = age - 0.12;
+  if (t < 0) return;
+  const jump = 0.35;
+  const k = Math.min(1, t / jump);
+  let x;
+  let y; // the soles of his boots
+  let pose;
+  if (t < jump) {
+    x = r - 3 + Math.round(11 * k);
+    y = b - 10 + Math.round(10 * k) - Math.round(9 * Math.sin(Math.PI * k));
+    pose = 'jump';
+  } else {
+    x = r + 8 + Math.round(78 * (t - jump));
+    y = b;
+    pose = Math.floor((t - jump) * 9) % 2 ? 'runA' : 'runB';
+  }
+  blit(g, COP_SPRITES[pose], x - 5, y - 16);
+  // a little "!" over his head while he panics
+  if (t < 0.9 && Math.floor(t * 12) % 2 === 0) {
+    g.line(x + 6, y - 23, x + 6, y - 20, [255, 60, 60]);
+    g.pset(x + 6, y - 18, [255, 60, 60]);
   }
 }
 
