@@ -527,3 +527,8 @@ test('stage 1: the First Gap is gravel and the Euro Gap is concrete (looks only,
   const euro = stage1.obstacles.filter((o) => o.ground.some((s) => s.material === 'concrete'));
   assert.ok(euro.length >= 3, 'the bank, the lip and the stairs are concrete');
 });
+
+test('stage 3: the Big Drop platform and its ramp up are concrete', () => {
+  const concrete = stage3.obstacles.filter((o) => o.ground.some((s) => s.material === 'concrete'));
+  assert.ok(concrete.length >= 3, 'the ramp, its flat and the platform');
+});

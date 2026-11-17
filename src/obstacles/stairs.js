@@ -6,13 +6,14 @@ import { pipe, post } from '../render/shaded.js';
 // between them. Landing on a tread is a bail, so ollie (or flip) all the way
 // down. With `handrail`, a sloped rail runs alongside the stairs: it's beside
 // them, so you pass it unless you tap just before it to grind it down.
-export function stairs({ x, steps = 5, run = 46, rise = 16, handrail = true, railHeight = 50 }) {
+export function stairs({ x, steps = 5, run = 46, rise = 16, handrail = true, railHeight = 50, material }) {
   const top = WORLD.GROUND - steps * rise;
   const end = x + (steps - 1) * run; // bottom of the stairs
   const ground = [{ x1: -Infinity, x2: x, y: top, landable: true }];
   for (let i = 1; i < steps; i++) {
     ground.push({ x1: x + (i - 1) * run, x2: x + i * run, y: top + i * rise, landable: false, bail: 'stairs' });
   }
+  if (material) for (const seg of ground) seg.material = material;
   const rail = { x1: x, x2: end, y1: top - railHeight, y2: WORLD.GROUND - railHeight, grindable: true, passable: true, landable: false };
 
   return {
