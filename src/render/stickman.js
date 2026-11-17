@@ -9,7 +9,7 @@ const J = ['head', 'neck', 'hip', 'kneeB', 'footB', 'kneeF', 'footF', 'elbowB', 
 
 const P = (o) => Object.fromEntries(J.map((k) => [k, { x: o[k][0], y: o[k][1] }]));
 
-const POSES = {
+export const POSES = {
   idle: P({ head: [2, -104], neck: [1, -90], hip: [0, -56], kneeB: [-9, -32], footB: [-12, -9], kneeF: [11, -32], footF: [13, -9], elbowB: [-6, -72], handB: [-8, -57], elbowF: [8, -72], handF: [11, -57] }),
   roll: P({ head: [5, -99], neck: [3, -86], hip: [-1, -51], kneeB: [-8, -30], footB: [-13, -9], kneeF: [14, -31], footF: [14, -9], elbowB: [-14, -70], handB: [-24, -60], elbowF: [16, -72], handF: [27, -64] }),
   crouch: P({ head: [10, -83], neck: [7, -70], hip: [-3, -38], kneeB: [-16, -24], footB: [-13, -9], kneeF: [19, -26], footF: [14, -9], elbowB: [-8, -56], handB: [4, -46], elbowF: [20, -58], handF: [30, -50] }),
@@ -51,6 +51,8 @@ export function makeTransform(x, y, ang = 0, scale = 1 / 3, size = RIDER_SIZE) {
 }
 
 const pt = (x, y) => ({ x, y });
+// One framebuffer pixel in pose units (the rider is drawn at RIDER_SIZE).
+const PX = 3 / RIDER_SIZE;
 
 function poly(g, tf, pts, color) {
   for (let i = 1; i < pts.length; i++) {
@@ -74,7 +76,7 @@ export function drawFigure(g, tf, p) {
   // cap: crown + peak, following the body's rotation
   poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
   poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);
-  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17, p.head.y - 4)], PAL.ink);
+  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17 + PX, p.head.y - 4)], PAL.ink); // the peak, one pixel longer
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle
