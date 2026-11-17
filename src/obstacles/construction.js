@@ -108,7 +108,7 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
   };
 }
 
-// "OSLO CITY LIMITS": a white city-limit sign on two posts, standing behind the
+// "OSLO CITY LIMITS": a green and white highway sign on two posts, standing behind the
 // action (pure decor), with a graffiti tag, Rune, sprayed on its bottom corner.
 const TAG_GLYPHS = {
   R: ['####.', '#...#', '####.', '#..#.', '#...#'],
@@ -154,15 +154,17 @@ export function citySign({ x, base = WORLD.GROUND, height = 240, w = 84 }) {
         g.line(px + 1, top + h, px + 1, b, ink);
         g.line(px, top + h, px, b, shine);
       }
-      // the panel: white with a thick black border and cut corners
-      g.fill(l, top, w, h, white);
+      // the panel: highway green with a black outer edge, a white border and white lettering
+      const GREEN = [0, 112, 64];
+      g.fill(l, top, w, h, GREEN);
       g.rect(l, top, w, h, ink);
-      g.rect(l + 1, top + 1, w - 2, h - 2, ink);
+      g.rect(l + 2, top + 2, w - 4, h - 4, white);
+      g.line(l + 3, top + 3, r - 3, top + 3, [210, 240, 220]);
       for (const [cx, cy] of [[l, top], [r, top], [l, top + h - 1], [r, top + h - 1]]) g.pset(cx, cy, [130, 160, 190]);
-      g.text('OSLO', l + (w >> 1), top + 6, ink, 2, 'center');
-      g.line(l + 8, top + 22, r - 8, top + 22, ink);
-      g.text('CITY LIMITS', l + (w >> 1), top + 26, ink, 1, 'center');
-      sprayTag(g, 'Rune', r - 31, top + h - 11, [255, 60, 170], [70, 0, 60]);
+      g.text('OSLO', l + (w >> 1), top + 7, white, 2, 'center');
+      g.line(l + 9, top + 23, r - 9, top + 23, white);
+      g.text('CITY LIMITS', l + (w >> 1), top + 27, white, 1, 'center');
+      sprayTag(g, 'Rune', r - 31, top + h - 12, [0, 0, 0], [150, 215, 175]); // black paint, with a pale edge so it reads on the green
     },
   };
 }
