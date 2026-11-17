@@ -11,13 +11,13 @@ export const PAL = {
   sky: [0, 0, 128],
   ink: [0, 0, 0],
   red: [255, 85, 85],
-  ground: [64, 64, 64],
+  ground: [64, 64, 64], // asphalt
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
   kerb: [88, 88, 88],
-  dirt: [96, 56, 24],
-  pebble: [136, 84, 40],
-  clod: [64, 36, 16],
+  grass: [56, 148, 48],
+  blade: [120, 200, 72], // light blades and tips
+  shade: [30, 96, 36], // dark blades and the shadow under the asphalt
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
@@ -26,20 +26,21 @@ export const PAL = {
   steel: [128, 128, 128],
   shine: [192, 192, 192],
   orange: [255, 128, 0],
+  far: [0, 0, 128], // Stage 3's faint skyline, far and near layers (same as the sky elsewhere)
+  near: [0, 0, 128],
+  window: [0, 0, 128],
 };
 
-// The secret level has its own palette, from the 16 original named HTML
-// colours: purple sky and yellow text (solids stay black). `red` is the text
-// colour's name everywhere, whatever colour it is.
+// Palettes are the base PAL with a few colours swapped. The secret level has
+// purple sky and yellow text from the 16 original named HTML colours (solids
+// stay black). `red` is the text colour's name everywhere, whatever colour it is.
+// The construction site (Stage 3) has a light grey sky with a faint skyline,
+// and darker red text so it reads on grey.
+const BASE = Object.fromEntries(Object.entries(PAL).map(([k, v]) => [k, [...v]]));
 export const PALETTES = {
-  normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [64, 64, 64],
-  crack: [40, 40, 40],
-  fleck: [96, 96, 96],
-  kerb: [88, 88, 88], dirt: [96, 56, 24], pebble: [136, 84, 40], clod: [64, 36, 16], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85], steel: [128, 128, 128], shine: [192, 192, 192], orange: [255, 128, 0] },
-  secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [64, 64, 64],
-  crack: [40, 40, 40],
-  fleck: [96, 96, 96],
-  kerb: [88, 88, 88], dirt: [96, 56, 24], pebble: [136, 84, 40], clod: [64, 36, 16], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0], steel: [128, 128, 128], shine: [192, 192, 192], orange: [255, 128, 0] },
+  normal: BASE,
+  secret: { ...BASE, sky: [128, 0, 128], red: [255, 255, 0], fire: [255, 255, 0], flame: [255, 0, 0], far: [128, 0, 128], near: [128, 0, 128], window: [128, 0, 128] },
+  site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.

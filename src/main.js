@@ -245,7 +245,7 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
   }
   game.levelNumber = i + 1;
   game.levelLabel = secret ? 'BONUS' : `${i + 1}`; // HUD: "1-3: FIVE STAIR"
-  setPalette(secret ? 'secret' : 'normal');
+  setPalette(secret ? 'secret' : level.palette || 'normal');
   if (TESTING) game.levelLabel = `TEST ${secret ? 'S' : i + 1}`;
   game.best = store.get(`best:${level.id}`, 0);
   renderer.reset(!!entry);
