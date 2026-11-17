@@ -180,7 +180,7 @@ finale: landing its air back into the pipe finishes the stage.
    the rest of the run, and keeps that pace across the screen up the curve) and go straight up out of it and straight back down, at
    riding speed and without turning: over a second of hang time for tricks
    (FS AIR, plus any flip you finish before you drop back in). Landing back into the pipe ends the level (and the stage).
-   The rail sits close to the Euro Gap's lip so an ollie off the top lands on it; a bail here restarts the rider back on top of the Euro Gap (`starts` in `src/stages/stage1.js`) to roll off the lip with room to tap. Stars: finish, 700, 1500.
+   The rail sits close to the Euro Gap's lip so an ollie off the top lands on it; a bail here restarts the rider on the street right after the Euro Gap (`starts` in `src/stages/stage1.js`), 0.67 s from the rail, so there's room to tap (the Euro to Rail bonus is for a normal pass). Stars: finish, 700, 1500.
 
 Stages 1 and 2 have a slow parallax sky of pale pixel clouds (`clouds` flag, `drawClouds` in the renderer).
 

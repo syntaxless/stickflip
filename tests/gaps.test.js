@@ -7,10 +7,23 @@ import { GAPS } from '../src/gaps.js';
 const STEP = 1 / 120;
 const stageOf = (gap) => STAGES[Number(gap.stage.split('-')[1]) - 1];
 
+// A game from a checkpoint; `start` overrides where the rider spawns (offset from
+// the section's left edge). The Euro to Rail gap is earned on a normal pass, so
+// its tests spawn back on top of the Euro Gap (the checkpoint itself restarts past it).
+function newGame(stage, index, start) {
+  const sec = stage.sections[index];
+  const saved = sec.start;
+  if (start !== undefined) sec.start = start;
+  const g = new Game(stage, null, { index, score: 0 });
+  sec.start = saved;
+  return g;
+}
+const EURO_TOP = -120;
+
 // Plays a checkpoint of a stage with timed inputs: tap, hold, up, cs (start a
 // charge), cr (release it). Returns the names of the gaps earned and the game.
-function play(stage, index, acts, tmax = 5) {
-  const g = new Game(stage, null, { index, score: 0 });
+function play(stage, index, acts, tmax = 5, start) {
+  const g = newGame(stage, index, start);
   g.tap();
   const q = acts.map(([t, k]) => ({ t, k }));
   const earned = [];
@@ -66,7 +79,7 @@ test('gap config is well formed: unique ids, real stages and sections, a script 
 
 for (const gap of GAPS) {
   test(`gap: ${gap.name} (${gap.stage} checkpoint ${gap.section + 1}) can be earned, once, and adds to the score`, () => {
-    const { earned, game } = play(stageOf(gap), gap.section, SCRIPTS[gap.id]);
+    const { earned, game } = play(stageOf(gap), gap.section, SCRIPTS[gap.id], 5, gap.id === 'euro-to-rail' ? EURO_TOP : undefined);
     assert.equal(earned.filter((n) => n === gap.name).length, 1, `earned ${JSON.stringify(earned)}`);
     assert.ok(game.gapsDone.has(gap.id));
     assert.ok(game.score >= gap.points || game.combo.some((t) => t.name === gap.name), 'counts in the combo/score');
@@ -78,8 +91,8 @@ test('gap: doing nothing earns nothing', () => {
 });
 
 test('gap: the Euro to Rail bonus needs the jump from the Euro Gap top, not a roll-off and a second ollie', () => {
-  // from the replay spawn on top of the Euro Gap: roll off, land, then ollie onto the rail
-  const viaStreet = play(STAGES[0], 6, [[0.7, 'tap'], [0.7, 'hold']]);
+  // from the Euro Gap top: roll off, land, then ollie onto the rail
+  const viaStreet = play(STAGES[0], 6, [[0.7, 'tap'], [0.7, 'hold']], 5, EURO_TOP);
   assert.notEqual(viaStreet.game.phase, 'bailed');
   assert.deepEqual(viaStreet.earned, []);
 });
@@ -91,7 +104,7 @@ test('gap: the barrel drop is only for the one-jump route, not roll off, land an
 });
 
 test('gap: a gap bonus is a trick: it joins the combo and is banked on landing', () => {
-  const { game } = play(STAGES[0], 6, [[0.22, 'tap'], [0.22, 'hold']], 2.5);
+  const { game } = play(STAGES[0], 6, [[0.22, 'tap'], [0.22, 'hold']], 2.5, EURO_TOP);
   const names = game.combo.map((t) => t.name);
   assert.ok(game.score > 0 || names.includes('EURO TO RAIL'));
 });
@@ -107,7 +120,7 @@ test('specials: a gap bonus and any trick worth 300+ points raise a special even
 
 test('specials: playing a gap raises one gap special with its name and points', () => {
   const gap = GAPS.find((x) => x.id === 'euro-to-rail');
-  const g = new Game(STAGES[0], null, { index: 6, score: 0 });
+  const g = newGame(STAGES[0], 6, EURO_TOP);
   g.tap();
   const q = [[0.22, 'tap'], [0.22, 'hold']];
   let t = 0;
