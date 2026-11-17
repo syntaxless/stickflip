@@ -1,16 +1,21 @@
 import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 
+const SLAPPY_MAX = 36; // the tallest curb you can slap onto without an ollie
+
 // A block standing on the street: a curb, a trash can. Its sides slam you if
 // you hit them, so ollie over it. A `landable` top can be landed on and rolled
 // across (roll off the end and you drop back down); a `grindable` one can be
-// ground with a timed tap, like a rail. Anything else on top is a bail.
+// ground with a timed tap, like a rail, and if it's low enough, slappied:
+// ridden straight into with the finger held, no ollie. Anything else on top is a bail.
 export function box({ x, w, h, landable = false, grindable = false, lid = false, base = WORLD.GROUND }) {
   const top = base - h;
+  const surface = { x1: x, x2: x + w, y: top, landable, grindable };
   return {
     type: 'box',
-    surfaces: [{ x1: x, x2: x + w, y: top, landable, grindable }],
-    solids: [{ x, y: top, w, h }],
+    surfaces: [surface],
+    // A low grindable box (a curb) can be slappied: see Game.update.
+    solids: [{ x, y: top, w, h, slappy: grindable && h <= SLAPPY_MAX ? surface : null }],
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const [l, t, r, b] = [P(x), P(top), P(x + w) - 1, P(base) - 1];

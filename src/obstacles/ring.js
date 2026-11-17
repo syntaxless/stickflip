@@ -7,7 +7,7 @@ import { PAL } from '../render/pixel.js';
 export function ring({ x, top, bottom, points = 250 }) {
   const cy = (top + bottom) / 2;
   const ry = (bottom - top) / 2 + 6; // the flames sit just outside the opening
-  const rx = 14;
+  const rx = 18;
   return {
     type: 'ring',
     surfaces: [],
@@ -16,12 +16,13 @@ export function ring({ x, top, bottom, points = 250 }) {
     draw(g, fx = {}) {
       const P = (v) => Math.round(v / 3);
       const t = fx.time || 0;
-      const n = 48;
+      const n = 96; // close enough together to draw a solid hoop, two pixels thick
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2;
         const px = P(x + Math.cos(a) * rx);
         const py = P(cy + Math.sin(a) * ry);
         g.pset(px, py, PAL.flame);
+        g.pset(px + (Math.cos(a) < 0 ? -1 : 1), py, PAL.flame);
         g.pset(px, py - 1, PAL.flame);
         // flickering tongues of flame, licking upward
         const flick = Math.sin(t * 17 + i * 2.3) + Math.sin(t * 11 + i * 1.7);

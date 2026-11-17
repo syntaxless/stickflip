@@ -136,9 +136,44 @@ test('trash can: no ollie slams, and the lid is no place to land', () => {
   assert.equal(late.phase, 'bailed');
 });
 
-test('ring of fire: through it is a trick and finishes the stage; too high or too low burns', () => {
+test('ring of fire: through it is a trick and finishes the stage; rolling off the kicker burns', () => {
   const { game, events } = ride2(3, [0.9]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.ok(events.some((e) => e.type === 'trick' && e.name === 'RING OF FIRE'));
-  assert.equal(ride2(3, [1.1]).game.bailReason, 'fire', 'a late, high ollie: head in the flames');
+  assert.equal(ride2(3, []).game.bailReason, 'fire', 'no ollie: feet in the flames');
+});
+
+test('curb: riding into it with the finger held is a slappy grind', () => {
+  const game = new Game(STAGES[1], null, { index: 0, score: 0 });
+  game.tap();
+  game.setHold(true);
+  const events = [];
+  for (let t = 0; t < 4 && game.phase === 'playing' && game.section === 0; t += STEP) {
+    game.update(STEP);
+    events.push(...game.drainEvents());
+  }
+  assert.equal(game.phase, 'playing', `bailed: ${game.bailReason}`);
+  assert.ok(events.some((e) => e.type === 'trick' && e.name === 'SLAPPY 50-50 GRIND'));
+});
+
+test('ring of fire: any ollie off the kicker goes through, tapped or charged', () => {
+  for (let t = 0.875; t <= 1.126; t += 0.025) {
+    assert.equal(ride2(3, [t]).game.phase, 'complete', `tap at ${t}`);
+  }
+  for (let t = 0.8; t <= 0.95; t += 0.025) {
+    const game = new Game(STAGES[1], null, { index: 3, score: 0 });
+    game.tap();
+    game.setHold(true);
+    game.startCharge();
+    let up = false;
+    for (let now = 0; now < 10 && game.phase === 'playing'; now += STEP) {
+      if (!up && now >= t) {
+        up = true;
+        game.setHold(false);
+        game.releaseCharge();
+      }
+      game.update(STEP);
+    }
+    assert.equal(game.phase, 'complete', `charged, let go at ${t}: ${game.bailReason}`);
+  }
 });
