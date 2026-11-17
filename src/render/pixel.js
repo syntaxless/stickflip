@@ -15,9 +15,6 @@ export const PAL = {
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
   kerb: [88, 88, 88],
-  grass: [56, 148, 48],
-  blade: [120, 200, 72], // light blades and tips
-  shade: [30, 96, 36], // dark blades and the shadow under the asphalt
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
