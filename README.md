@@ -141,14 +141,16 @@ faster than the first release (ROLL_SPEED 330).
 
 **Stage 4** (playground, rough first pass): Toy Blocks (a pyramid of blocks,
 one ollie), Slide (ride up and down it), Sandbox (a gap), Seesaw (grind the
-plank), Monkey Bars (a higher grind), Block Tower (ollie up three block steps)
+plank), Monkey Bars (a higher grind), Block Tower (ollie up five block steps)
 and Ball Pit (a kicker and a 240-unit gap). Bright blue sky, red rubber-mat
 surface, swing sets behind.
 
 **Stage 5** (skate park, the hardest, rough first pass): Ledges (two concrete
-ledges), Flat Bar, Hubba (a ledge down stairs), Bowl (a ride), Fun Box (a bank,
-a top with a rail, a bank), Big Set (six stairs with a handrail) and Final Gap
-(a 250-unit gap off a tall kicker). Sunset sky with a dusk skyline.
+ledges), Flat Bar, Hubba (a solid concrete wall down stairs, grind its top
+edge), Curb Cut (a driveway entrance between two curbs), Fun Box (a wooden
+trapezoid with a rail on top), Big Set (three big steps with a handrail) and
+Cop Car (a wooden ramp up to a police car: grind its light bar). Sunset sky
+with a dusk skyline.
 
 **Stage 1** is a rock, then the six original levels in order, joined by a bank
 (a good way past the rail, so you can land first) up to Five
