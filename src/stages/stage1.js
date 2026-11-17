@@ -17,6 +17,10 @@ export default stage({
   sections: LEVELS,
   // the ramp starts well after the rail so you can land and roll before going up
   extra: [bank({ x: 3 * W - 90, run: 160, y1: G, y2: STAIR_TOP }), bank({ x: 3 * W + 70, run: 50, y1: STAIR_TOP, y2: STAIR_TOP })],
+  // Quarter Pipe's rail is close to the Euro Gap's lip (so the ollie from the top
+  // lands on it), so a replay starts back on top of the Euro Gap and rolls off the
+  // lip: about a second to the rail instead of under half a second.
+  starts: { 6: -120 },
   finishLeft: 6 * W + 60, // back out of the quarter pipe's screen
   camTop: 100, // only raise the camera when the rider gets this close to the top
 });
