@@ -95,3 +95,44 @@ test('gap: a gap bonus is a trick: it joins the combo and is banked on landing',
   const names = game.combo.map((t) => t.name);
   assert.ok(game.score > 0 || names.includes('EURO TO RAIL'));
 });
+
+test('specials: a gap bonus and any trick worth 300+ points raise a special event; small tricks do not', () => {
+  const g = new Game(STAGES[0], null, { index: 6, score: 0 });
+  g.addTrick('KICKFLIP', 150);
+  g.addTrick('360 FLIP', 300);
+  g.addTrick('EURO TO RAIL', 500, 'gap');
+  const specials = g.drainEvents().filter((e) => e.type === 'special');
+  assert.deepEqual(specials.map((e) => [e.name, e.kind]), [['360 FLIP', 'trick'], ['EURO TO RAIL', 'gap']]);
+});
+
+test('specials: playing a gap raises one gap special with its name and points', () => {
+  const gap = GAPS.find((x) => x.id === 'euro-to-rail');
+  const g = new Game(STAGES[0], null, { index: 6, score: 0 });
+  g.tap();
+  const q = [[0.22, 'tap'], [0.22, 'hold']];
+  let t = 0;
+  const specials = [];
+  while (t < 2 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true);
+    }
+    g.update(STEP);
+    t += STEP;
+    for (const e of g.drainEvents()) if (e.type === 'special') specials.push(e);
+  }
+  const gaps = specials.filter((e) => e.kind === 'gap');
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].points, gap.points);
+});
+
+test('specials: the jingle is a short rising run of square beeps, higher for bigger bonuses', async () => {
+  const { specialNotes } = await import('../src/audio.js');
+  const small = specialNotes(300);
+  const big = specialNotes(800);
+  const end = (ns) => Math.max(...ns.map((n) => n.at + n.dur));
+  assert.ok(end(small) < 0.5 && end(big) < 0.5, 'under half a second');
+  assert.ok(small.slice(0, 6).every((n, i, a) => i === 0 || n.freq > a[i - 1].freq), 'rises');
+  assert.ok(big[0].freq > small[0].freq, 'bigger bonus starts higher');
+});

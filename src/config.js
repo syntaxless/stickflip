@@ -52,6 +52,10 @@ export const SCOREBOARD = Object.freeze({
   key: 'sb_publishable_NHTCq8t75Xnp6NMI9pHLHQ_8A_w50kV',
 });
 
+// A trick (or grind) worth at least this many points is a "special": it gets a
+// banner and a jingle, like a named gap bonus does.
+export const SPECIAL_POINTS = 300;
+
 export const SCORE = Object.freeze({
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
 });

@@ -55,7 +55,20 @@ function setGrind(on) {
   }
 }
 
+// The "special" jingle: a quick rising pentatonic run and a sliding top note,
+// square waves like everything else here (under half a second). Bigger bonuses
+// start higher, up to about a minor third.
+const SPECIAL_RUN = [392, 494, 587, 740, 988, 1319];
+export function specialNotes(points = 300) {
+  const lift = 1 + (Math.min(Math.max(points, 0), 800) / 800) * 0.19;
+  const notes = SPECIAL_RUN.map((f, i) => ({ freq: f * lift, dur: 0.045, at: i * 0.045 }));
+  const top = SPECIAL_RUN[SPECIAL_RUN.length - 1] * lift;
+  notes.push({ freq: top, to: top * 1.33, dur: 0.17, at: SPECIAL_RUN.length * 0.045 });
+  return notes;
+}
+
 const SOUNDS = {
+  special: (e) => specialNotes(e.points).forEach((n) => beep(n.freq, n.dur, { to: n.to ?? n.freq, at: n.at })),
   push: () => beep(220, 0.05),
   pop: () => beep(330, 0.07, { to: 880 }),
   flip: (e) => (e.key === 'left' || e.key === 'right' ? beep(300, 0.12, { to: 900 }) : e.key === 'tap' ? beep(660, 0.04) : beep(760, 0.06, { to: 520 })),
