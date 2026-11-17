@@ -93,6 +93,8 @@ export class Game {
     this.bailReason = null;
     this.stars = 0;
     this.hold = null; // { dir, used } while the finger (or Space) is held down
+    this.tilt = 0; // a seesaw plank under a grind: 0 level .. 1 tipped down to the ground
+    this.setSeesaw(0);
     const startX = this.sections[cp.index].x + PHYS.START_X;
     this.sk = {
       x: startX,
@@ -387,11 +389,32 @@ export class Game {
     return null;
   }
 
+  // Tip every seesaw plank (a surface with `seesaw: { drop }`) about its middle:
+  // the far end goes down `drop` and the near end up by the same, so a plank
+  // standing `drop` high ends with its exit on the ground.
+  setSeesaw(tilt) {
+    for (const surf of this.surfaces) {
+      if (!surf.seesaw) continue;
+      surf.y1 = surf.y - tilt * surf.seesaw.drop;
+      surf.y2 = surf.y + tilt * surf.seesaw.drop;
+    }
+  }
+
+  updateSeesaw(dt) {
+    const grinding = this.sk.mode === 'grind' && this.sk.grind?.surface.seesaw;
+    const to = grinding ? 1 : 0;
+    if (this.tilt === to) return;
+    const step = dt / (grinding ? 0.7 : 0.4);
+    this.tilt = this.tilt < to ? Math.min(to, this.tilt + step) : Math.max(to, this.tilt - step);
+    this.setSeesaw(this.tilt);
+  }
+
   // ------------------------------------------------------------- update
 
   update(dt) {
     this.time += dt;
     this.phaseTime += dt;
+    this.updateSeesaw(dt);
     const s = this.sk;
     const fromX = s.x;
 

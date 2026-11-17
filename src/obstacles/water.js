@@ -15,7 +15,7 @@ export function water({ x, width }) {
   return {
     ...hole,
     type: 'water',
-    water: { x1: x, x2: x + width, y: WORLD.GROUND },
+    splash: { x1: x, x2: x + width, y: WORLD.GROUND, kind: 'water' },
     draw(g, fx = {}) {
       const [l, r] = [P(x), P(x + width) - 1];
       const top = P(WORLD.GROUND) - 1;

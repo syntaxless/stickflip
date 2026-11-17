@@ -18,6 +18,8 @@ const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shad
 // The ground, top to bottom: a thin surface strip the rider rolls on
 // (asphalt, or a sidewalk in Stage 3), a thin grass layer, a chunky dirt
 // layer, then plain black.
+// The ball pit's colours (see obstacles/playground.js), for the balls it throws.
+const BALL_COLORS = [[255, 85, 85], [255, 255, 85], [85, 85, 255], [85, 200, 85], [255, 150, 40], [190, 90, 230], [255, 140, 200], [90, 220, 230]];
 const ASPHALT_H = 4;
 const GRASS_H = 3;
 const DIRT_H = 12;
@@ -87,8 +89,8 @@ export class Renderer {
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
         case 'bail': {
-          const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.water && e.x >= o.water.x1 - 20 && e.x <= o.water.x2 + 20);
-          if (pool) this.splash(e.x, pool.water.y);
+          const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
+          if (pool) this.splash(e.x, pool.splash.y, pool.splash.kind);
           else this.dust(e.x, e.y, 10);
           break;
         }
@@ -96,9 +98,19 @@ export class Renderer {
     }
   }
 
-  splash(x, y) {
-    for (let i = 0; i < 28; i++) {
-      this.particles.push({ kind: 'splash', x: x + (Math.random() - 0.5) * 50, y: y - 2, vx: (Math.random() - 0.5) * 200, vy: -150 - Math.random() * 300, life: 0.7 });
+  // Water, or coloured balls, flung up where the rider fell in.
+  splash(x, y, kind = 'water') {
+    const balls = kind === 'balls';
+    for (let i = 0; i < (balls ? 22 : 28); i++) {
+      this.particles.push({
+        kind: balls ? 'ball' : 'splash',
+        color: balls ? BALL_COLORS[i % BALL_COLORS.length] : null,
+        x: x + (Math.random() - 0.5) * (balls ? 70 : 50),
+        y: y - 2,
+        vx: (Math.random() - 0.5) * (balls ? 260 : 200),
+        vy: (balls ? -220 : -150) - Math.random() * 300,
+        life: balls ? 1.1 : 0.7,
+      });
     }
   }
 
@@ -134,7 +146,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -153,7 +165,7 @@ export class Renderer {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += (p.kind === 'spark' ? 1400 : 300) * dt;
+      p.vy += (p.kind === 'spark' ? 1400 : p.kind === 'ball' ? 900 : 300) * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
     for (const k of Object.keys(this.popups)) {
@@ -189,7 +201,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -365,6 +377,11 @@ export class Renderer {
 
   drawParticles() {
     for (const p of this.particles) {
+      if (p.kind === 'ball') {
+        this.g.fill(P(p.x), P(p.y), 2, 2, p.color); // a flung ball: a 2x2 block
+        this.g.pset(P(p.x), P(p.y), PAL.wheel);
+        continue;
+      }
       const c = p.kind === 'spark' ? red : p.kind === 'splash' ? [190, 225, 255] : ink;
       this.g.pset(P(p.x), P(p.y), c);
     }
