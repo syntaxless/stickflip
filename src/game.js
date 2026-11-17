@@ -426,7 +426,12 @@ export class Game {
     if (this.phase === 'ready') return;
     if (this.phase === 'bailed') return this.updateBail(dt);
     if (this.phase === 'complete') {
-      if (!this.level.sections) s.x += s.vx * dt; // roll on off-screen (a stage just stops: the camera follows)
+      if (!this.level.sections) {
+        // A level that ends on its quarter pipe: the rider coasts to a stop at the foot
+        // of it, so he never rolls off the drawn level while the score comes up.
+        if (this.level.endAfterQuarter) s.vx *= Math.exp(-3.5 * dt);
+        s.x += s.vx * dt; // roll on off-screen (a stage just stops: the camera follows)
+      }
       return;
     }
 

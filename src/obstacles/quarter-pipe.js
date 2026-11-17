@@ -13,8 +13,8 @@ export function quarterPipe({ x, radius }) {
     surfaces: [],
     solids: [],
     ground: [
-      { x1: x, x2: x + radius, qp: { cx: x, cy: top, R: radius }, landable: true },
-      { x1: x + radius, x2: Infinity, y: top, landable: false, bail: 'wall', wall: 'wall' },
+      { x1: x, x2: x + radius, qp: { cx: x, cy: top, R: radius }, landable: true, material: 'concrete' },
+      { x1: x + radius, x2: Infinity, y: top, landable: false, bail: 'wall', wall: 'wall', material: 'concrete' },
     ],
     // The ramp itself is ground; this adds the coping, a little pipe on the lip.
     draw(g) {

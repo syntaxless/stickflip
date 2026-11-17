@@ -280,7 +280,7 @@ test('stage 4 is the playground: seven checkpoints', () => {
 });
 
 test('stage 4: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.95], [0.5], null, [0.35, 0.9], [0.35, 0.9], [0.6], [0.85]]; // the sandbox needs a charged ollie (below)
+  const clears = [[0.95], [0.5], null, [0.35, 0.9], [0.35, 0.9], [0.6], null]; // the sandbox and the ball pit need a charged ollie (below)
   clears.forEach((taps, i) => {
     if (!taps) return;
     const game = ride4(i, taps, i === 1); // the slide is grinded: ollie onto it with the finger held
@@ -576,6 +576,22 @@ test('stage 4: the sandbox is too wide for a normal ollie; a fully charged one c
   assert.ok(sand.ground[0].x2 - sand.ground[0].x1 >= 260, 'wider than a plain ollie flies (about 240)');
 });
 
+test('stage 4: the ball pit (320 wide, after a kicker) takes a fully charged ollie off the lip; a plain one drops you in', () => {
+  for (let at = 0.5; at < 1.1; at += 0.02) {
+    const g = drive(stage4, 6, (gm, t) => { if (!gm.sk.did && t >= at) { gm.tap(); gm.sk.did = 1; } });
+    assert.equal(g.phase, 'bailed', `a plain ollie at ${at}`);
+  }
+  const ok = [];
+  for (let h = 0.4; h < 1.2; h += 0.01) {
+    const g = drive(stage4, 6, (gm, t) => {
+      if (!gm.sk.s) { gm.startCharge(); gm.sk.s = 1; }
+      if (!gm.sk.r && t >= h) { gm.releaseCharge(); gm.sk.r = 1; }
+    });
+    if (g.phase === 'complete' || g.phase === 'playing') ok.push(h);
+  }
+  assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.15, `charged window ${ok[0]}..${ok[ok.length - 1]}`);
+});
+
 test('stage 3: the Barricade takes two jumps (two sawhorses with room to land between)', () => {
   const horses = stage3.sections[3] && stage3.obstacles.filter((o) => o.type === 'sawhorse' && o.solids.length);
   const here = horses.filter((o) => o.solids[0].x >= stage3.sections[3].x && o.solids[0].x < stage3.sections[4].x);
@@ -694,5 +710,42 @@ test('stage 5: the exploded cop car draws a wreck and flames without error, and 
     const g = { fill: (...a) => pix.add(`f${a}`), rect: (...a) => pix.add(`r${a}`), line: (...a) => pix.add(`l${a}`), pset: (...a) => pix.add(`p${a}`), circle: (...a) => pix.add(`c${a}`), text() {} };
     car.draw(g, { time: 1.3, boom });
     assert.ok(pix.size > 20, `frame ${boom} drew`);
+  }
+});
+
+// ------------------------------------------------- backgrounds in wide frames
+
+// A recording framebuffer: rasterises fills into a width x height colour grid.
+function gridFb(w, h) {
+  const cells = new Array(w * h).fill(null);
+  const fb = {
+    w, h, ox: 0, oy: 0,
+    fill(x, y, ww, hh, c) {
+      for (let yy = y + fb.oy; yy < y + fb.oy + hh; yy++) for (let xx = x + fb.ox; xx < x + fb.ox + ww; xx++) if (xx >= 0 && xx < w && yy >= 0 && yy < h) cells[yy * w + xx] = c.join();
+    },
+    pset(x, y, c) { fb.fill(x, y, 1, 1, c); },
+    line() {}, rect() {}, circle() {}, text() {}, clear() {},
+  };
+  fb.cells = cells;
+  return fb;
+}
+
+test('backgrounds: sky layers in the wide frame behind the bars line up with the game picture (no cut at the game edge)', async () => {
+  const { Renderer } = await import('../src/render/renderer.js');
+  const rd = new Renderer(gridFb(320, 180));
+  rd.time = 4.2;
+  for (const lvl of [{ clouds: true }, { skyline: true }, { skyline: true, morning: true }]) {
+    for (const camX of [0, 977, 2400]) {
+      const game = { level: lvl };
+      const main = gridFb(320, 180);
+      rd.drawSkyline(main, game, { x: camX, y: 0 });
+      for (const left of [0, 40, 130]) {
+        const wide = gridFb(320 + 2 * left, 180);
+        rd.drawSkyline(wide, game, { x: camX - left, y: 0, px: camX, py: 0, left, top: 0 });
+        for (let y = 0; y < 180; y++) for (let x = 0; x < 320; x++) {
+          assert.equal(wide.cells[y * wide.w + x + left], main.cells[y * 320 + x], `${Object.keys(lvl)} cam ${camX} left ${left} at ${x},${y}`);
+        }
+      }
+    }
   }
 });
