@@ -15,7 +15,7 @@ const CLEARS = [
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
-  [[0.7, 'tap'], [0.7, 'hold'], [1.74, 'up']], // Quarter Pipe (a replay starts on the Euro Gap top: roll off the lip, land, ollie onto the rail)
+  [[0.3, 'tap'], [0.3, 'hold'], [1.34, 'up']], // Quarter Pipe (a replay starts on the street right after the Euro Gap: ollie onto the rail)
 ];
 
 // Plays from checkpoint `index` with `acts`, until `until(game)` or 12 s.
@@ -428,7 +428,7 @@ test('stage 1: a Quarter Pipe replay has at least 0.6 s of runway to the rail, a
   const rail = sec.x + 220;
   const g = new Game(stage1, null, { index: 6, score: 0 });
   assert.ok((rail - g.sk.x) / 330 >= 0.6, `runway ${(rail - g.sk.x) / 330}s`);
-  assert.ok(g.sk.x < sec.x, 'spawns back on the Euro Gap top, before the lip');
+  assert.ok(g.sk.x >= sec.x, 'spawns on the street, right after the Euro Gap');
   const { game } = ride(6, CLEARS[6], (gm) => gm.sk.x > sec.x + 700 && gm.sk.dir > 0 && gm.sk.mode !== 'grind');
   assert.equal(game.phase, 'playing', `bailed: ${game.bailReason}`);
 });
@@ -456,7 +456,7 @@ test('stage 1: a Quarter Pipe replay can be cleared by a rail tap anywhere in a 
   const ok = [];
   for (let at = 0.02; at < 1.6; at += 0.02) if (clears(at)) ok.push(at);
   assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.5, `window ${ok[0]}..${ok[ok.length - 1]}`);
-  assert.ok(sec.start < 0);
+  assert.equal(sec.start, 0);
 });
 
 test('stage 5: the Big Set is three concrete steps with no rail to grind', () => {
