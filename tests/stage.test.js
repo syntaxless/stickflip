@@ -322,9 +322,9 @@ test('the tester quick-jump menu is gated to /unstable and localhost, like ?leve
   assert.match(src, /const IS_LOCAL = !NATIVE && /);
 });
 
-test('water and grass regions are moved into strip coordinates with their section', () => {
+test('water and dirt regions are moved into strip coordinates with their section', () => {
   const pool = stage1.obstacles.find((o) => o.water);
   assert.equal(pool.water.x1, 4 * 960 + 380);
-  const patch = stage1.obstacles.find((o) => o.grass);
-  assert.equal(patch.grass.x1, 960 + 430);
+  const patch = stage1.obstacles.find((o) => o.dirt);
+  assert.equal(patch.dirt.x1, 960 + 430);
 });
