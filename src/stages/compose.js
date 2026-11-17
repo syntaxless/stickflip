@@ -13,7 +13,9 @@ const SECTION_W = WORLD.W; // a multiple of 3, so sections line up with the pixe
 
 // `extra`: obstacles in strip coordinates that join sections (a bank up to a
 // raised start, say). They go first, so their ground wins where they overlap.
-export function stage({ id, name, sections, extra = [], ...rest }) {
+// `starts`: { sectionIndex: offset } to spawn a replay at x + offset instead of
+// the usual PHYS.START_X; negative reaches back onto the section before.
+export function stage({ id, name, sections, extra = [], starts = {}, ...rest }) {
   const obstacles = [...extra];
   const marks = [];
   sections.forEach((level, i) => {
@@ -21,7 +23,7 @@ export function stage({ id, name, sections, extra = [], ...rest }) {
     const lo = dx;
     const hi = i === sections.length - 1 ? Infinity : dx + SECTION_W;
     for (const o of level.obstacles) obstacles.push(shift(o, dx, lo, hi));
-    marks.push({ name: level.name, x: dx });
+    marks.push({ name: level.name, x: dx, ...(i in starts && { start: starts[i] }) });
   });
   return {
     id,

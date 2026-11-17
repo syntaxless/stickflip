@@ -15,7 +15,7 @@ const CLEARS = [
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
-  [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'], [4.0, 'tap'], [4.0, 'hold'], [6.5, 'up']], // Quarter Pipe
+  [[0.7, 'tap'], [0.7, 'hold'], [1.74, 'up'], [4.66, 'tap'], [4.66, 'hold'], [7.16, 'up']], // Quarter Pipe (a replay starts on the Euro Gap top: roll off the lip, land, ollie onto the rail)
 ];
 
 // Plays from checkpoint `index` with `acts`, until `until(game)` or 12 s.
@@ -414,4 +414,40 @@ test('the Mega Ramp is an all-wood night level', async () => {
   assert.equal(secret.wood, true);
   assert.equal(secret.night, true);
   assert.equal(secret.skyline, true);
+});
+
+test('stage 1: a Quarter Pipe replay has at least 0.6 s of runway to the rail, and the same inputs still clear it', () => {
+  const sec = stage1.sections[6];
+  const rail = sec.x + 220;
+  const g = new Game(stage1, null, { index: 6, score: 0 });
+  assert.ok((rail - g.sk.x) / 330 >= 0.6, `runway ${(rail - g.sk.x) / 330}s`);
+  assert.ok(g.sk.x < sec.x, 'spawns back on the Euro Gap top, before the lip');
+  const { game } = ride(6, CLEARS[6], (gm) => gm.sk.x > sec.x + 700 && gm.sk.dir > 0 && gm.sk.mode !== 'grind');
+  assert.equal(game.phase, 'playing', `bailed: ${game.bailReason}`);
+});
+
+test('stage 1: a Quarter Pipe replay can be cleared by a rail tap anywhere in a window over 0.5 s wide', () => {
+  const sec = stage1.sections[6];
+  const clears = (at) => {
+    const g = new Game(stage1, null, { index: 6, score: 0 });
+    g.tap();
+    let t = 0;
+    let tapped = false;
+    let grinding = false;
+    while (t < 2.6 && g.phase === 'playing') {
+      if (!tapped && t >= at) {
+        g.tap();
+        g.setHold(true);
+        tapped = true;
+      }
+      g.update(STEP);
+      t += STEP;
+      if (g.sk.mode === 'grind') grinding = true;
+    }
+    return grinding && g.phase === 'playing';
+  };
+  const ok = [];
+  for (let at = 0.02; at < 1.6; at += 0.02) if (clears(at)) ok.push(at);
+  assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.5, `window ${ok[0]}..${ok[ok.length - 1]}`);
+  assert.ok(sec.start < 0);
 });

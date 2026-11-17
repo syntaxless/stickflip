@@ -95,7 +95,8 @@ export class Game {
     this.hold = null; // { dir, used } while the finger (or Space) is held down
     this.tilt = 0; // a seesaw plank under a grind: 0 level .. 1 tipped down to the ground
     this.setSeesaw(0);
-    const startX = this.sections[cp.index].x + PHYS.START_X;
+    const sec = this.sections[cp.index];
+    const startX = sec.x + (sec.start ?? PHYS.START_X);
     this.sk = {
       x: startX,
       y: this.groundAt(startX).y,
