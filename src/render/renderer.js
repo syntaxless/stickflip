@@ -124,8 +124,10 @@ export class Renderer {
     const s = game.sk;
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
-    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - WORLD.W / 3));
-    const y = Math.min(0, fy - 330);
+    // Look ahead the way the rider is going (back to the left after a quarter pipe).
+    const lead = s.dir < 0 ? (WORLD.W * 2) / 3 : WORLD.W / 3;
+    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - lead));
+    const y = Math.min(0, fy - (game.level.camTop ?? 330));
     return { x: Math.round(x / S), y: Math.round(y / S) };
   }
 
@@ -266,7 +268,9 @@ export class Renderer {
     const g = this.g;
     const L = 4 + inset;
     const R = RES.W - 4 - inset;
-    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}: ${game.level.name}`, L, 4, red);
+    // A stage's sections are numbered after it: 1-3 is stage 1's third.
+    const sec = game.sections.length > 1 ? `-${game.section + 1}` : '';
+    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}${sec}: ${game.sectionName}`, L, 4, red);
     // Top right: just the running total for the run, with the speed under it.
     // Tricks and combos pop up on screen; high scores wait for the end.
     const total = opts.total ?? game.score;
@@ -331,7 +335,10 @@ export class Renderer {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
+      const ready = game.phaseTime >= PHYS.BAIL_RETRY_DELAY;
+      if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
+      // Past the first checkpoint, the whole stage can be started over.
+      if (ready && game.checkpoint.index > 0) this.button('restart', 'RESTART STAGE', cx - 45, 92, 90, true);
     }
   }
 
