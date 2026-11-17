@@ -136,7 +136,7 @@ Barricade (a sawhorse across the street), Scaffold Rail, Big Set (six stairs wit
 handrail) and Big Gap (a tall kicker and a 240-unit gap). Road signs stand
 behind the action as decor.
 
-The ground is a thin strip of chunky pixel concrete over plain black, and the rider is 10%
+The ground is a thin strip of a stack of chunky pixel layers: asphalt (a concrete sidewalk in Stage 3), thin grass, muted dirt with a few stones, then black, and the rider is 10%
 faster than the first release (ROLL_SPEED 330).
 
 **Stage 1** is the six original levels in order, joined by a bank up to Five
