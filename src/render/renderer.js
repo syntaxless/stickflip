@@ -10,9 +10,9 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, edge } = PAL;
 
-const ASPHALT_H = 4; // pixels of asphalt on top; everything below is grass
+const ASPHALT_H = 5; // pixels of asphalt/concrete on top; everything below is plain black
 
 // Cheap deterministic hash of a world pixel, so the asphalt texture is the same
 // every frame and scrolls with the stage instead of shimmering.
@@ -220,7 +220,7 @@ export class Renderer {
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
-        g.fill(x, top, 1, bottom - top, grass);
+        g.fill(x, top, 1, bottom - top, ink);
         this.drawAsphalt(g, x, top, bottom);
         // a lower neighbour means this column's side shows
         const drop = Math.max(prev, next);
@@ -231,28 +231,22 @@ export class Renderer {
     }
   }
 
-  // One ground column: a thin strip of chunky asphalt (a lighter kerb row, grit
-  // and short dark cracks) over pixel grass. Both textures
-  // hash the world pixel, so they hold still and scroll with the stage.
+  // One ground column: a thin strip of chunky concrete/asphalt, the part the
+  // rider rolls on. The texture is blocks two pixels square in a few greys
+  // with the odd light or dark speckle, hashed on the world pixel so it holds
+  // still and scrolls with the stage. Below the strip the ground is plain black.
   drawAsphalt(g, x, top, bottom) {
     const strip = Math.min(bottom, top + ASPHALT_H);
-    g.fill(x, top, 1, strip - top, groundCol);
-    g.pset(x, top + 1, kerb);
-    for (let y = top + 2; y < strip; y++) {
-      const h = hash(x, y) % 53;
-      if (h < 2) g.pset(x, y, fleck);
-      else if (hash(x - 1, y) % 53 === 2 || hash(x - 2, y) % 53 === 2) g.pset(x, y, crack);
-    }
-    // grass: a shadow under the asphalt, a row of light tips, then chunky
-    // blades (1 px light, 1 px dark, the odd 2 px dash)
-    for (let y = strip; y < bottom; y++) {
-      const dy = y - strip;
-      const h = hash(x, y) % 61;
-      if (dy === 0) g.pset(x, y, shade);
-      else if (dy === 1) g.pset(x, y, hash(x, 7) % 3 === 0 ? grass : blade);
-      else if (h < 3) g.pset(x, y, blade);
-      else if (h < 8) g.pset(x, y, shade);
-      else if (hash(x - 1, y) % 61 === 8) g.pset(x, y, blade); // the second pixel of a 2 px blade
+    for (let y = top; y < strip; y++) {
+      const dy = y - top;
+      const h = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
+      let c = groundCol;
+      if (h < 3) c = kerb;
+      else if (h < 5) c = crack;
+      else if (h === 5 && hash(x, y) % 2 === 0) c = fleck; // speckle inside a block
+      if (dy === 0) c = kerb; // lit top edge
+      else if (dy === ASPHALT_H - 1) c = crack; // dark underside
+      g.pset(x, y, c);
     }
   }
 
