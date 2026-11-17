@@ -158,7 +158,7 @@ test('a long trick started too late is a bail', () => {
 
 test('the biggest flips fit in quarter pipe air', () => {
   for (const [key, name] of [['laser', 'LASER FLIP'], ['hardflip360', '360 HARDFLIP'], ['inward360', '360 INWARD HEEL'], ['fsShove360', 'FS 360 SHOVE-IT']]) {
-    const { seen, game } = playActs(LEVELS[6], [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [2.69, 'swipe', key]], 4.2);
+    const { seen, game } = playActs(LEVELS[6], [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'], [2.69, 'swipe', key]], 4.2);
     assert.ok(seen.has(name), `${key}: ${[...seen]}`);
     assert.equal(game.phase, 'playing', `${key}: ${game.bailReason}`);
   }
@@ -334,7 +334,7 @@ test('euro gap: ollie off the bank up onto the top; early lands on the step, non
 
 test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
   const { game, seen } = playActs(quarter, [
-    [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
+    [0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'],
     [2.54, 'tap'], // kickflip in the air
     [4.0, 'tap'], [4.0, 'hold', 'left'], [6.5, 'up'],
   ]);
@@ -347,13 +347,13 @@ test('quarter pipe: grind in, air out of the quarter, grind back and exit left',
 
 test('quarter pipe: doing nothing slams the rail, a late flip in the air is a bail', () => {
   assert.equal(play(quarter, []).game.bailReason, 'slam');
-  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [3.49, 'tap']]);
+  const { game } = playActs(quarter, [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'], [3.49, 'tap']]);
   assert.equal(game.bailReason, 'flip');
 });
 
 test('quarter pipe: straight up and down at riding speed, over a second of hang time for two tricks', () => {
   const { game, seen } = playActs(quarter, [
-    [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
+    [0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'],
     [2.49, 'swipe', 'treflip'], // 360 flip
     [3.09, 'tap'], // then a kickflip
   ], 4.2);
@@ -364,7 +364,7 @@ test('quarter pipe: straight up and down at riding speed, over a second of hang 
 });
 
 test('quarter pipe: the air goes up and comes down at a steady riding speed', () => {
-  const { game } = playActs(quarter, [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']], 3.2);
+  const { game } = playActs(quarter, [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up']], 3.2);
   assert.ok(game.sk.qpAir, 'in the air off the quarter');
   assert.equal(Math.abs(game.sk.vy), game.baseSpeed * PHYS.QP_AIR_SPEED);
   assert.equal(game.sk.vx, 0);
@@ -463,7 +463,7 @@ test('charged ollie: only from the ground, and the crouch level grows with the h
   assert.ok(game.chargeLevel() > 0.3);
 });
 test('backflip: a circle in the quarter pipe air lands, too late is a bail, a normal ollie is too short', () => {
-  const qpActs = [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up']];
+  const qpActs = [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up']];
   const ok = playActs(quarter, [...qpActs, [2.69, 'swipe', 'circle']], 4.2);
   assert.ok(ok.seen.has('BACKFLIP') && ok.seen.has('FS AIR'), [...ok.seen].join());
   assert.equal(ok.game.phase, 'playing');
