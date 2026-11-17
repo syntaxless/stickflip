@@ -22,4 +22,6 @@ export default stage({
   sections: [rock, coneRow, ledgeToGap, sawhorse, longRail, bigSet, bigGap],
   extra: [bank({ x: 5 * W - 210, run: 160, y1: G, y2: SET_TOP }), bank({ x: 5 * W - 50, run: 50, y1: SET_TOP, y2: SET_TOP })],
   camTop: 100,
+  palette: 'site', // light grey sky
+  skyline: true, // with a faint, parallax city
 });

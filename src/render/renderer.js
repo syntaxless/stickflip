@@ -10,9 +10,9 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, crack, fleck, kerb, dirt, pebble, clod, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, edge } = PAL;
 
-const ASPHALT_H = 4; // pixels of asphalt on top; everything below is dirt
+const ASPHALT_H = 4; // pixels of asphalt on top; everything below is grass
 
 // Cheap deterministic hash of a world pixel, so the asphalt texture is the same
 // every frame and scrolls with the stage instead of shimmering.
@@ -21,6 +21,24 @@ const hash = (x, y) => {
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return (h ^ (h >>> 16)) >>> 0;
 };
+
+// Stage 3's skyline: a repeating row of buildings per layer, drawn faint
+// behind everything and scrolled at a fraction of the camera (parallax).
+// Widths and heights come from the same hash, so every tile is the same.
+function makeSkyline(seed, count, minW, maxW, minH, maxH) {
+  const list = [];
+  let x = 0;
+  for (let i = 0; i < count; i++) {
+    const h = hash(i, seed);
+    const w = minW + (h % (maxW - minW + 1));
+    const hgt = minH + (hash(seed, i * 3 + 1) % (maxH - minH + 1));
+    list.push({ x, w, h: hgt, antenna: hash(i, seed + 9) % 5 === 0, roof: hash(i, seed + 5) % 4 === 0 });
+    x += w + (hash(i, seed + 2) % 4);
+  }
+  return { list, width: x };
+}
+const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
+const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -97,6 +115,7 @@ export class Renderer {
     this.cam = cam; // main.js extends the ground past the game's edges from here
     g.ox = -cam.x;
     g.oy = -cam.y;
+    this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
     this.drawSkater(game);
@@ -149,11 +168,42 @@ export class Renderer {
     g.clear(sky);
     g.ox = -cam.x;
     g.oy = -cam.y;
+    this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time });
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
+  }
+
+  // Stage 3: two faint building layers, slower than the stage. Drawn in screen
+  // space, standing on the horizon (it moves with the camera's height).
+  drawSkyline(g, game, cam) {
+    if (!game.level.skyline) return;
+    const [ox, oy] = [g.ox, g.oy];
+    g.oy = -cam.y;
+    const horizon = P(WORLD.GROUND);
+    for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
+      const shift = Math.round(cam.x * factor);
+      const T = sky2.width;
+      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 40; tile++) {
+        for (const b of sky2.list) {
+          const bx = tile * T + b.x - shift;
+          if (bx > g.w || bx + b.w < 0) continue;
+          g.ox = 0;
+          g.fill(bx, horizon - b.h, b.w, b.h + 60, colour); // down past the horizon: ground covers it
+          if (b.roof) g.fill(bx + 2, horizon - b.h - 2, b.w - 4, 2, colour);
+          if (b.antenna) g.line(bx + (b.w >> 1), horizon - b.h - 7, bx + (b.w >> 1), horizon - b.h, colour);
+          if (windows) {
+            for (let wy = horizon - b.h + 3; wy < horizon - 3; wy += 5) {
+              for (let wx = bx + 2; wx < bx + b.w - 2; wx += 4) if (hash(wx - bx + b.x, wy) % 3 === 0) g.pset(wx, wy, PAL.window);
+            }
+          }
+        }
+      }
+    }
+    g.ox = ox;
+    g.oy = oy;
   }
 
   drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
@@ -170,7 +220,7 @@ export class Renderer {
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
-        g.fill(x, top, 1, bottom - top, dirt);
+        g.fill(x, top, 1, bottom - top, grass);
         this.drawAsphalt(g, x, top, bottom);
         // a lower neighbour means this column's side shows
         const drop = Math.max(prev, next);
@@ -182,7 +232,7 @@ export class Renderer {
   }
 
   // One ground column: a thin strip of chunky asphalt (a lighter kerb row, grit
-  // and short dark cracks) over dirt with pebbles and dark clods. Both textures
+  // and short dark cracks) over pixel grass. Both textures
   // hash the world pixel, so they hold still and scroll with the stage.
   drawAsphalt(g, x, top, bottom) {
     const strip = Math.min(bottom, top + ASPHALT_H);
@@ -193,14 +243,17 @@ export class Renderer {
       if (h < 2) g.pset(x, y, fleck);
       else if (hash(x - 1, y) % 53 === 2 || hash(x - 2, y) % 53 === 2) g.pset(x, y, crack);
     }
+    // grass: a shadow under the asphalt, a row of light tips, then chunky
+    // blades (1 px light, 1 px dark, the odd 2 px dash)
     for (let y = strip; y < bottom; y++) {
-      const h = hash(x, y) % 97;
-      if (h < 3) g.pset(x, y, pebble);
-      else if (h < 8) g.pset(x, y, clod);
-      else if (h < 10 && y > strip + 1) g.pset(x, y, clod);
+      const dy = y - strip;
+      const h = hash(x, y) % 61;
+      if (dy === 0) g.pset(x, y, shade);
+      else if (dy === 1) g.pset(x, y, hash(x, 7) % 3 === 0 ? grass : blade);
+      else if (h < 3) g.pset(x, y, blade);
+      else if (h < 8) g.pset(x, y, shade);
+      else if (hash(x - 1, y) % 61 === 8) g.pset(x, y, blade); // the second pixel of a 2 px blade
     }
-    // a dark band where the asphalt meets the dirt
-    if (strip < bottom) g.pset(x, strip, clod);
   }
 
   // `advance` false redraws this frame's pose without moving the animation on.
