@@ -155,7 +155,7 @@ with a dusk skyline.
 **Stage 1** is a rock, then the six original levels in order, joined by a bank
 (a good way past the rail, so you can land first) up to Five
 Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
-finale: ride back out to the left to finish.
+finale: landing its air back into the pipe finishes the stage.
 
 1. **First Rock**: a small rock in the road. Roll into it and the board stops
    dead; any ollie clears it.
@@ -179,8 +179,10 @@ finale: ride back out to the left to finish.
    ride up the quarter pipe (it speeds you up by 35%, `QP_SPEED`, for
    the rest of the run, and keeps that pace across the screen up the curve) and go straight up out of it and straight back down, at
    riding speed and without turning: over a second of hang time for tricks
-   (FS AIR, plus any flip you finish before you drop back in). Then ride back out fakie to the left, ollieing or grinding the rail
-   again on the way. The rail sits close to the Euro Gap's lip so an ollie off the top lands on it; a bail here restarts the rider back on top of the Euro Gap (`starts` in `src/stages/stage1.js`) to roll off the lip with room to tap. Stars: finish, 700, 1500.
+   (FS AIR, plus any flip you finish before you drop back in). Landing back into the pipe ends the level (and the stage).
+   The rail sits close to the Euro Gap's lip so an ollie off the top lands on it; a bail here restarts the rider back on top of the Euro Gap (`starts` in `src/stages/stage1.js`) to roll off the lip with room to tap. Stars: finish, 700, 1500.
+
+Stages 1 and 2 have a slow parallax sky of pale pixel clouds (`clouds` flag, `drawClouds` in the renderer).
 
 **Gap bonuses.** Named gaps like the classic skate games: take off from one
 place and land (or grind) on another and the jump pops up as, say, EURO TO

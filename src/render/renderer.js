@@ -233,6 +233,7 @@ export class Renderer {
   // Stage 3: two faint building layers, slower than the stage. Drawn in screen
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
+    if (game.level.clouds) this.drawClouds(g, cam);
     if (!game.level.skyline) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
@@ -254,6 +255,40 @@ export class Renderer {
               for (let wx = bx + 2; wx < bx + b.w - 2; wx += 4) if (hash(wx - bx + b.x, wy) % 3 === 0) g.pset(wx, wy, PAL.window);
             }
           }
+        }
+      }
+    }
+    g.ox = ox;
+    g.oy = oy;
+  }
+
+  // Stages 1-2: chunky pale clouds in three layers, each drifting past slower than
+  // the stage (the far ones barely move) and slowly blowing along by themselves.
+  // Low contrast against the sky so the rider, rails and HUD stay readable.
+  drawClouds(g, cam) {
+    const [ox, oy] = [g.ox, g.oy];
+    g.ox = 0;
+    g.oy = -Math.round(cam.y * 0.15);
+    const layers = [
+      // factor, drift px/s, tile width, cloud count, base y, spread, scale, colour
+      [0.04, 1.5, 260, 3, 18, 26, 0.6, [136, 195, 255]],
+      [0.09, 2.5, 300, 3, 30, 40, 0.85, [160, 208, 255]],
+      [0.16, 4, 360, 2, 46, 50, 1.2, [188, 224, 255]],
+    ];
+    for (const [factor, drift, T, count, base, spread, scale, colour] of layers) {
+      const shift = Math.round(cam.x * factor + this.time * drift);
+      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 60; tile++) {
+        for (let i = 0; i < count; i++) {
+          const h = hash(i * 31 + 7, Math.round(factor * 100));
+          const cx = tile * T - shift + Math.round(((i + 0.2 + (h % 60) / 100) * T) / count);
+          const cy = base + ((h >> 3) % spread);
+          const w = Math.round((26 + (h % 24)) * scale);
+          if (cx > g.w || cx + w < 0) continue;
+          const u = Math.max(2, Math.round(3 * scale)); // one chunk
+          g.fill(cx, cy, w, u * 2, colour); // flat base
+          g.fill(cx + u, cy - u, w - 2 * u, u, colour);
+          g.fill(cx + Math.round(w * 0.22), cy - 2 * u, Math.round(w * 0.3), u, colour); // puffs
+          g.fill(cx + Math.round(w * 0.5), cy - Math.round(1.6 * u), Math.round(w * 0.24), Math.round(0.6 * u) + 1, colour);
         }
       }
     }

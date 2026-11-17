@@ -10,4 +10,5 @@ export default stage({
   name: 'Stage 2',
   sections: [curb, stepUp, trashCan, ringOfFire],
   camTop: 100,
+  clouds: true,
 });
