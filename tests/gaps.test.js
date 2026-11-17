@@ -51,10 +51,10 @@ const SCRIPTS = {
   'euro-to-rail': [[0.22, 'tap'], [0.22, 'hold']],
   'trash-hop': [[0, 'cs'], [0.75, 'cr']],
   'big-leap': [[0, 'cs'], [0.75, 'cr']],
-  'barrier-to-gap': [[0.1, 'tap'], [1.05, 'tap']],
-  'barrel-drop': [[0, 'cs'], [0.75, 'cr']],
+  'barrier-to-gap': [[0.1, 'tap'], [1.45, 'tap']],
+  'barrel-drop': [[0, 'cs'], [1.3, 'cr']],
   'broken-walk': [[0, 'cs'], [0.75, 'cr']],
-  'sandbox-leap': [[0, 'cs'], [0.75, 'cr']],
+  'sandbox-leap': [[0, 'cs'], [0.85, 'cr']],
   'seesaw-launch': [[0.3, 'tap'], [0.3, 'hold'], [1.2, 'tap']],
   'monkey-business': [[0.15, 'tap'], [0.15, 'hold'], [1.4, 'tap']],
   'ball-pit-leap': [[0, 'cs'], [0.75, 'cr']],
@@ -98,7 +98,7 @@ test('gap: the Euro to Rail bonus needs the jump from the Euro Gap top, not a ro
 });
 
 test('gap: the barrel drop is only for the one-jump route, not roll off, land and ollie', () => {
-  const rolled = play(STAGES[2], 5, [[1.4, 'tap']]);
+  const rolled = play(STAGES[2], 5, [[2.2, 'tap']]);
   assert.equal(rolled.game.phase, 'playing');
   assert.deepEqual(rolled.earned, []);
 });

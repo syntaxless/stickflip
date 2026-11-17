@@ -21,11 +21,11 @@ export const GAPS = [
   { id: 'trash-hop', stage: 'stage-2', section: 2, name: 'TRASH HOP', points: 250, from: [300, 450], to: [516, 960], on: 'land' },
   { id: 'big-leap', stage: 'stage-2', section: 3, name: 'BIG LEAP', points: 300, from: [200, 600], to: [600, 960], on: 'land' },
   // ---- Stage 3
-  { id: 'barrier-to-gap', stage: 'stage-3', section: 2, name: 'BARRIER TO GAP', points: 500, from: [300, 520], to: [680, 960], on: 'land' },
-  { id: 'barrel-drop', stage: 'stage-3', section: 5, name: 'BARREL DROP', points: 600, from: [0, 400], to: [700, 960], on: 'land' },
+  { id: 'barrier-to-gap', stage: 'stage-3', section: 2, name: 'BARRIER TO GAP', points: 500, from: [300, 620], to: [780, 960], on: 'land' },
+  { id: 'barrel-drop', stage: 'stage-3', section: 5, name: 'BARREL DROP', points: 600, from: [0, 550], to: [850, 960], on: 'land' },
   { id: 'broken-walk', stage: 'stage-3', section: 6, name: 'BROKEN WALK', points: 400, from: [150, 400], to: [640, 960], on: 'land' },
   // ---- Stage 4
-  { id: 'sandbox-leap', stage: 'stage-4', section: 2, name: 'SANDBOX LEAP', points: 250, from: [250, 440], to: [590, 960], on: 'land' },
+  { id: 'sandbox-leap', stage: 'stage-4', section: 2, name: 'SANDBOX LEAP', points: 250, from: [250, 440], to: [710, 960], on: 'land' },
   { id: 'seesaw-launch', stage: 'stage-4', section: 3, name: 'SEESAW LAUNCH', points: 300, from: [400, 680], to: [680, 960], on: 'land' },
   { id: 'monkey-business', stage: 'stage-4', section: 4, name: 'MONKEY BUSINESS', points: 300, from: [340, 740], to: [740, 960], on: 'land' },
   { id: 'ball-pit-leap', stage: 'stage-4', section: 6, name: 'BALL PIT LEAP', points: 400, from: [180, 400], to: [640, 960], on: 'land' },

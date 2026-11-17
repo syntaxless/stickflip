@@ -8,5 +8,5 @@ import { stairs, trafficBarrel } from '../obstacles/index.js';
 export default {
   id: 'big-drop',
   name: 'Big Drop',
-  obstacles: [stairs({ x: 400, steps: 1, rise: 108, handrail: false, material: 'concrete' }), trafficBarrel({ x: 640 })],
+  obstacles: [stairs({ x: 550, steps: 1, rise: 108, handrail: false, material: 'concrete' }), trafficBarrel({ x: 790 })],
 };
