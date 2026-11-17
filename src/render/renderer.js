@@ -13,6 +13,10 @@ const P = (v) => Math.round(v / S);
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
 const snap = (v) => Math.round(v / S) * S;
+const WOOD_A = [176, 108, 50];
+const WOOD_B = [160, 96, 44];
+const WOOD_LIGHT = [214, 146, 76];
+const WOOD_DARK = [96, 54, 22];
 const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark } = PAL;
 
 // The ground, top to bottom: a thin surface strip the rider rolls on
@@ -214,6 +218,7 @@ export class Renderer {
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
+    if (game.level.night) this.drawNightSky(g, cam);
     for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
       const shift = Math.round(cam.x * factor);
       const T = sky2.width;
@@ -237,6 +242,26 @@ export class Renderer {
     g.oy = oy;
   }
 
+  // A night sky: a moon and stars that barely move with the camera.
+  drawNightSky(g, cam) {
+    const ox = g.ox;
+    g.ox = 0;
+    const shift = Math.round(cam.x * 0.04);
+    for (let i = 0; i < 70; i++) {
+      const sx = ((hash(i, 3) % 400) - shift + 4000) % 400;
+      const sy = hash(i, 7) % 100 + cam.y;
+      if (sx < g.w) g.pset(sx, sy, i % 5 === 0 ? [255, 255, 255] : [150, 160, 210]);
+    }
+    if (g !== this.g) { g.ox = ox; return; } // the bars around the game only get stars
+    const mx = 292 - Math.round(cam.x * 0.02);
+    const my = 40 + cam.y;
+    g.fill(mx - 6, my - 8, 12, 16, [255, 244, 200]);
+    g.fill(mx - 8, my - 6, 16, 12, [255, 244, 200]);
+    g.fill(mx - 2, my - 6, 4, 4, [225, 212, 160]);
+    g.fill(mx + 1, my + 1, 3, 3, [225, 212, 160]);
+    g.ox = ox;
+  }
+
   drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
     const G = P(WORLD.GROUND);
 
@@ -253,7 +278,9 @@ export class Renderer {
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
-      if (top < bottom) {
+      if (top < bottom && game.level.wood) {
+        this.drawWood(g, x, top, bottom);
+      } else if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
         this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
       } else if (patches.length) {
@@ -265,6 +292,23 @@ export class Renderer {
         }
       }
       top = next;
+    }
+  }
+
+  // The Mega Ramp's ground: wooden planks all the way down (street, ramps and
+  // quarter pipe alike). Boards are 6 px tall rows with a dark seam, butt joints
+  // staggered per row, a lit top edge, and the odd bit of grain.
+  drawWood(g, x, top, bottom) {
+    for (let y = top; y < bottom; y++) {
+      const row = Math.floor(y / 6);
+      let c = row % 2 ? WOOD_A : WOOD_B;
+      const hb = hash(x >> 1, y);
+      if (hb % 11 === 0) c = WOOD_DARK;
+      else if (hb % 13 === 0) c = WOOD_LIGHT;
+      if ((x + row * 23) % 54 === 0) c = WOOD_DARK; // butt joint
+      if (y % 6 === 5) c = WOOD_DARK; // seam under each board
+      if (y === top) c = WOOD_LIGHT; // lit top edge
+      g.pset(x, y, c);
     }
   }
 
@@ -490,12 +534,24 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const [x, y, w, h] = [20, 48, 280, 70];
-    g.fill(x, y, w, h, ink);
-    g.rect(x, y, w, h, red);
-    g.rect(x + 2, y + 2, w - 4, h - 4, red);
+    // a wooden sign: planks with a dark frame, lettering in warm amber
+    g.fill(x, y, w, h, WOOD_DARK);
+    for (let py = y + 2; py < y + h - 2; py++) {
+      const row = Math.floor((py - y) / 6);
+      for (let px = x + 2; px < x + w - 2; px++) {
+        let c = row % 2 ? WOOD_A : WOOD_B;
+        if ((py - y) % 6 === 5 || (px + row * 31) % 70 === 0) c = WOOD_DARK;
+        g.pset(px, py, c);
+      }
+    }
+    g.rect(x, y, w, h, ink);
+    g.rect(x + 3, y + 3, w - 6, h - 6, WOOD_DARK);
+    g.fill(x + 6, y + 6, w - 12, h - 12, [60, 32, 14]);
     if (this.blink(4)) {
+      g.text('SECRET LEVEL', cx + 1, y + 13, ink, 3, 'center');
       g.text('SECRET LEVEL', cx, y + 12, red, 3, 'center');
-      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, red, 2, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx + 1, y + 39, ink, 2, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, WOOD_LIGHT, 2, 'center');
     }
   }
 
