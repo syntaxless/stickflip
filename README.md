@@ -150,27 +150,30 @@ ledges), Flat Bar, Hubba (a ledge down stairs), Bowl (a ride), Fun Box (a bank,
 a top with a rail, a bank), Big Set (six stairs with a handrail) and Final Gap
 (a 250-unit gap off a tall kicker). Sunset sky with a dusk skyline.
 
-**Stage 1** is the six original levels in order, joined by a bank up to Five
+**Stage 1** is a rock, then the six original levels in order, joined by a bank
+(a good way past the rail, so you can land first) up to Five
 Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
 finale: ride back out to the left to finish.
 
-1. **First Gap**: a 130 px gap. Ollie just before the edge: too early and you
+1. **First Rock**: a small rock in the road. Roll into it and the board stops
+   dead; any ollie clears it.
+2. **First Gap**: a 130 px gap. Ollie just before the edge: too early and you
    come up short, too late and you roll in. Stars: finish, 150 (any flip), 300
    (a 360 flip).
-2. **First Rail**: a low rail, 260 px long and 64 px high, too long to ollie.
+3. **First Rail**: a low rail, 260 px long and 64 px high, too long to ollie.
    Grind it. Stars: finish, 700 (kickflip + grind), 1400 (kickflip in, grind,
    pop and kickflip out).
-3. **Five Stair**: start on a platform with five stairs down and a handrail.
+4. **Five Stair**: start on a platform with five stairs down and a handrail.
    Ollie or flip the whole set (land on a step and you bail), or grind the
    handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
-4. **Bank to Bank**: ride up a bank and ollie off its lip, over a gap, onto the
+5. **Bank to Bank**: ride up a bank and ollie off its lip, over a pool of water, onto the
    bank going down the other side. Rolling up a bank adds to your pop; roll off
-   the lip without an ollie and you drop in. Stars: finish, 200, 450.
-5. **Euro Gap**: a bank that runs right up to the foot of a two-stair going up.
+   the lip without an ollie and you splash in. Stars: finish, 200, 450.
+6. **Euro Gap**: a bank that runs right up to the foot of a two-stair going up.
    Ollie off the bank's lip up onto the top: the lower step and the risers are
    bails.
    Stars: finish, 150, 300.
-6. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
+7. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
    ride up the quarter pipe (it speeds you up by 35%, `QP_SPEED`, for
    the rest of the run, and keeps that pace across the screen up the curve) and go straight up out of it and straight back down, at
    riding speed and without turning: over a second of hang time for tricks
@@ -215,7 +218,7 @@ live site posts to the shared table: the /unstable/ preview and local copies
 ## Testing a level
 
 On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to start
-Stage 1 at its Nth checkpoint (1-6), `?level=S-N` for stage S (`?level=2-4`:
+Stage 1 at its Nth checkpoint (1-7), `?level=S-N` for stage S (`?level=2-4`:
 Ring of Fire), or `?level=secret` for the secret level, e.g.
 `https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
 Test play keeps its own saves and on-device high scores, so it never touches

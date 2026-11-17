@@ -29,7 +29,7 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 // trip through the stages, then the Mega Ramp for a good enough score.
 const LEVELS = STAGES;
 
-// Testing: on /unstable/ or a local copy, ?level=1..6 starts stage 1 at that
+// Testing: on /unstable/ or a local copy, ?level=1..7 starts stage 1 at that
 // checkpoint (or ?level=secret on the Mega Ramp). Test play keeps its own saves and its own
 // on-device high scores, so it never touches real progress or the shared table.
 // The iOS app is served from capacitor://localhost but is a live copy of the
@@ -544,7 +544,7 @@ function frame(now) {
   }
   audio.play(events, game);
   haptics(events);
-  renderer.consume(events);
+  renderer.consume(events, game);
   if (flip) nextScreen();
   if (screen) screen.t += dt;
   if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {

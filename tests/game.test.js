@@ -26,7 +26,7 @@ function play(level, taps, maxTime = 8) {
   return { game, seen };
 }
 
-const level1 = LEVELS[1]; // First Rail (these tests predate the gap level)
+const level1 = LEVELS[2]; // First Rail (these tests predate the gap level)
 
 test('every level has the fields the engine needs', () => {
   for (const lvl of [...LEVELS, SECRET]) {
@@ -158,7 +158,7 @@ test('a long trick started too late is a bail', () => {
 
 test('the biggest flips fit in quarter pipe air', () => {
   for (const [key, name] of [['laser', 'LASER FLIP'], ['hardflip360', '360 HARDFLIP'], ['inward360', '360 INWARD HEEL'], ['fsShove360', 'FS 360 SHOVE-IT']]) {
-    const { seen, game } = playActs(LEVELS[5], [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [2.69, 'swipe', key]], 4.2);
+    const { seen, game } = playActs(LEVELS[6], [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [2.69, 'swipe', key]], 4.2);
     assert.ok(seen.has(name), `${key}: ${[...seen]}`);
     assert.equal(game.phase, 'playing', `${key}: ${game.bailReason}`);
   }
@@ -233,7 +233,7 @@ test('letting go before the rail is a normal air tap, so the rail is clipped', (
 
 // ------------------------------------------------------------ level 1: gap
 
-const gapLevel = LEVELS[0];
+const gapLevel = LEVELS[1];
 
 test('gap: ollie just before the edge clears it', () => {
   const { game } = play(gapLevel, [1.0]);
@@ -252,7 +252,7 @@ test('gap: a kickflip over it is two stars, a 360 flip three', () => {
 
 // ------------------------------------------------------------ level 3: stairs
 
-const stairsLevel = LEVELS[2];
+const stairsLevel = LEVELS[3];
 
 test('stairs: the skater starts up on the platform', () => {
   const game = new Game(stairsLevel);
@@ -306,7 +306,7 @@ function playActs(level, acts, maxTime = 10) {
   return { game, seen };
 }
 
-const [bankToBank, euroGap, quarter] = [LEVELS[3], LEVELS[4], LEVELS[5]];
+const [bankToBank, euroGap, quarter] = [LEVELS[4], LEVELS[5], LEVELS[6]];
 
 test('bank to bank: ollie off the lip clears the gap, rolling off drops in', () => {
   assert.equal(play(bankToBank, [0.9]).game.phase, 'complete');
@@ -443,7 +443,7 @@ test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (ca
     return WORLD.GROUND - top;
   };
   const tap = peak(0.05);
-  const normal = new Game(LEVELS[0]);
+  const normal = new Game(LEVELS[1]);
   assert.ok(Math.abs(tap - 169) < 6, `tap height ${tap}`);
   assert.ok(peak(0.4) > tap * 1.05);
   assert.ok(peak(0.8) > tap * 1.2, 'a full charge is about 1.25x as high');
@@ -453,7 +453,7 @@ test('charged ollie: a quick hold is a normal ollie, a long hold pops higher (ca
 });
 
 test('charged ollie: only from the ground, and the crouch level grows with the hold', () => {
-  const game = new Game(LEVELS[0]);
+  const game = new Game(LEVELS[1]);
   assert.equal(game.startCharge(), false, 'not before the run starts');
   game.tap();
   assert.equal(game.startCharge(), true);
@@ -500,7 +500,7 @@ test('time spent drawing a shape counts toward the trick, so a drawn kickflip st
 });
 
 test('a drawing head start shortens a trick but its animation still starts at 0', () => {
-  const game = new Game(LEVELS[0]);
+  const game = new Game(LEVELS[1]);
   game.start();
   game.sk.mode = 'air';
   game.startTrick('circle', 0.4);
