@@ -2,9 +2,9 @@
   "appId": "com.itschefff.stickflip",
   "appName": "Stickflip",
   "webDir": "www",
-  "backgroundColor": "#000080",
+  "backgroundColor": "#6EB4FF",
   "ios": {
-    "backgroundColor": "#000080",
+    "backgroundColor": "#6EB4FF",
     "contentInset": "never",
     "scrollEnabled": false,
     "allowsLinkPreview": false

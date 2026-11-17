@@ -228,7 +228,7 @@ far off it was (0 is exact; around 0.15 or more is a rough match).
 ## Design choices
 
 * **DOS look.** The game draws into a 320×180 framebuffer with a 3-colour
-  palette: plain navy sky, black for everything solid
+  palette: plain bright blue sky (110, 180, 255), black for everything solid
   (ground, rail, board, rider) and red for all text, Bresenham lines and a
   built-in 5×7 bitmap font, so there's no anti-aliasing anywhere. The frame is then
   scaled up by a whole number of device pixels for chunky, even pixels.
