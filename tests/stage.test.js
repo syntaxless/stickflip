@@ -410,10 +410,10 @@ test('stage 5: an ollie off the wooden ramp can land on the cop car\'s light bar
   assert.equal(ride5(6, []).bailReason, 'slam', 'rolling into the car slams');
 });
 
-test('the Mega Ramp is an all-wood night level', async () => {
+test('the Mega Ramp is an all-wood morning level', async () => {
   const { default: secret } = await import('../src/levels/secret.js');
   assert.equal(secret.wood, true);
-  assert.equal(secret.night, true);
+  assert.equal(secret.morning, true);
   assert.equal(secret.skyline, true);
 });
 
