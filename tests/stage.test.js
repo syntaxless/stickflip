@@ -248,9 +248,10 @@ test('the rider holds one spot on screen while the stage pans (no jitter)', asyn
 
 const stage4 = STAGES[3];
 
-function ride4(index, taps) {
+function ride4(index, taps, hold = false) {
   const game = new Game(stage4, null, { index, score: 0 });
   game.tap();
+  if (hold) game.setHold(true);
   const queue = [...taps];
   const next = stage4.sections[index + 1]?.x ?? Infinity;
   for (let t = 0; t < 10 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll'); t += STEP) {
@@ -274,14 +275,35 @@ test('stage 4 is the playground: seven checkpoints', () => {
 test('stage 4: a timed ollie clears every checkpoint', () => {
   const clears = [[0.95], [], [0.9], [0.35, 0.9], [0.35, 0.9], [0.85], [0.85]];
   clears.forEach((taps, i) => {
-    const game = ride4(i, taps);
+    const game = ride4(i, taps, i === 1); // the slide is grinded: roll off the top with the finger held
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage4.sections[i].name} bailed: ${game.bailReason}`);
   });
 });
 
-test('stage 4: the slide is a free ride, the rest bail without an ollie', () => {
-  assert.notEqual(ride4(1, []).phase, 'bailed');
+test('stage 4: the slide needs the finger held to grind it; the rest bail without an ollie', () => {
+  assert.equal(ride4(1, []).bailReason, 'clipped');
+  assert.equal(ride4(1, [], true).phase, 'playing');
   for (const i of [0, 2, 3, 4, 5, 6]) assert.equal(ride4(i, []).phase, 'bailed', stage4.sections[i].name);
+});
+
+test('stage 4: the seesaw tips down to the ground under a grind, and springs back after', () => {
+  const game = new Game(stage4, null, { index: 3, score: 0 });
+  game.tap();
+  const q = [0.35, 0.9];
+  let maxTilt = 0;
+  let lowest = 0;
+  for (let t = 0; t < 5 && game.phase === 'playing'; t += STEP) {
+    while (q.length && q[0] <= t + 1e-9) {
+      q.shift();
+      game.tap();
+    }
+    game.update(STEP);
+    maxTilt = Math.max(maxTilt, game.tilt);
+    if (game.sk.mode === 'grind') lowest = Math.max(lowest, game.sk.y);
+  }
+  assert.equal(maxTilt, 1);
+  assert.ok(lowest > 440, `rode down to the street (${lowest})`);
+  assert.equal(game.tilt, 0, 'the plank springs back once you are off');
 });
 
 // ------------------------------------------------------------ stage 5
@@ -345,8 +367,8 @@ test('the tester quick-jump menu is gated to /unstable and localhost, like ?leve
 });
 
 test('water and dirt regions are moved into strip coordinates with their section', () => {
-  const pool = stage1.obstacles.find((o) => o.water);
-  assert.equal(pool.water.x1, 4 * 960 + 380);
+  const pool = stage1.obstacles.find((o) => o.splash);
+  assert.equal(pool.splash.x1, 4 * 960 + 380);
   const patch = stage1.obstacles.find((o) => o.dirt);
   assert.equal(patch.dirt.x1, 960 + 430);
 });

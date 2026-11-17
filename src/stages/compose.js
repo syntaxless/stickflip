@@ -60,8 +60,8 @@ export function shift(o, dx, lo = -Infinity, hi = Infinity) {
     solids: o.solids.map((r) => ({ ...r, x: r.x + dx })),
     hazards: (o.hazards || []).map((h) => ({ ...h, x: h.x + dx })),
     ground,
-    // regions the renderer looks up by world x (water splash, dirt-filled gap)
-    ...(o.water && { water: { ...o.water, x1: o.water.x1 + dx, x2: o.water.x2 + dx } }),
+    // regions the renderer looks up by world x (splash on a bail, dirt-filled gap)
+    ...(o.splash && { splash: { ...o.splash, x1: o.splash.x1 + dx, x2: o.splash.x2 + dx } }),
     ...(o.dirt && { dirt: { x1: o.dirt.x1 + dx, x2: o.dirt.x2 + dx } }),
     draw(g, fx) {
       g.ox += px;

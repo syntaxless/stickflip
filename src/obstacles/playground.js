@@ -17,6 +17,11 @@ const GREEN = [85, 200, 85];
 const WOOD = [170, 85, 0];
 const SAND = [238, 214, 130];
 const COLORS = [RED, YELLOW, BLUE, GREEN];
+const ORANGE = [255, 150, 40];
+const PURPLE = [190, 90, 230];
+const PINK = [255, 140, 200];
+const CYAN = [90, 220, 230];
+const BALLS = [RED, YELLOW, BLUE, GREEN, ORANGE, PURPLE, PINK, CYAN];
 
 // A toy block: a bright cube with a lit top-left edge and a white dot on its face.
 function drawBlock(g, l, t, r, b, c, dot = true) {
@@ -40,23 +45,38 @@ export function toyBlocks({ blocks, base = WORLD.GROUND }) {
   };
 }
 
-// A slide's yellow chute, drawn along a straight slope from (x1, y1) to (x2, y2).
-export function slideChute({ x1, y1, x2, y2 }) {
+// A slide: a yellow chute standing on legs, raised off the street, sloping
+// from (x1, y1) down to (x2, y2). Grind it like a rail: roll off the top of the
+// ladder platform with the finger held and you lock onto it. (Let go and you
+// clip it.) You ride it down and drop the last bit to the street.
+export function slideChute({ x1, y1, x2, y2, base = WORLD.GROUND }) {
+  const surface = { x1, x2, y1, y2, grindable: true, landable: false };
   return {
     type: 'slide',
-    surfaces: [],
+    surfaces: [surface],
     solids: [],
     draw(g) {
       const [a, b, c, d] = [P(x1), P(y1), P(x2), P(y2)];
+      const floor = P(base) - 1;
+      const yAt = (px) => b + Math.round(((px - a) * (d - b)) / Math.max(1, c - a));
+      // legs: a post every ~25 px under the chute
+      for (let px = a + 6; px < c; px += 26) {
+        g.line(px, yAt(px) + 1, px, floor, ink);
+        g.line(px + 1, yAt(px) + 1, px + 1, floor, steel);
+        g.line(px + 2, yAt(px) + 1, px + 2, floor, ink);
+      }
+      // the chute: a thick yellow trough with a dark underside and a white lit edge
       g.line(a, b - 3, c, d - 3, ink);
-      g.line(a, b - 2, c, d - 2, YELLOW);
+      g.line(a, b - 2, c, d - 2, white);
       g.line(a, b - 1, c, d - 1, YELLOW);
-      g.line(a, b, c, d, ink);
-      // side rail and a post at the top
-      g.line(a, b - 8, a, b, ink);
-      g.line(a + 1, b - 8, a + 1, b, RED);
-      g.line(a, b - 8, a + 12, b - 8, ink);
-      g.line(a, b - 7, a + 12, b - 7, RED);
+      g.line(a, b, c, d, YELLOW);
+      g.line(a, b + 1, c, d + 1, [210, 170, 40]);
+      g.line(a, b + 2, c, d + 2, ink);
+      // a red side rail along the top and a post at the lip
+      g.line(a, b - 9, a, b, ink);
+      g.line(a + 1, b - 9, a + 1, b, RED);
+      g.line(a, b - 9, a + 14, b - 7, ink);
+      g.line(a, b - 8, a + 14, b - 6, RED);
     },
   };
 }
@@ -73,20 +93,33 @@ export function sandbox({ x, width }) {
   });
 }
 
-// A ball pit: a wider gap full of coloured balls.
+// A ball pit: a wider gap full of coloured balls, heaped a little above the
+// street. Falling in throws balls out (see Renderer.splash).
 export function ballPit({ x, width }) {
-  return pit(gap({ x, width }), x, width, (g, l, r, top, bottom) => {
+  const base = pit(gap({ x, width }), x, width, (g, l, r, top, bottom) => {
     g.fill(l, top, r - l + 1, bottom - top, [60, 60, 120]);
-    for (let by = top + 2; by < bottom; by += 4) {
-      for (let bx = l + 2 + (((by - top) / 4) % 2) * 2; bx < r - 1; bx += 4) {
-        const c = COLORS[(bx * 3 + by) % 4];
-        g.fill(bx, by, 3, 3, c);
-        g.pset(bx, by, white);
+    // rows of overlapping balls in eight colours, the top row bumpy
+    for (let row = 0, by = top - 3; by < bottom; row++, by += 3) {
+      const off = row % 2 ? 2 : 0;
+      for (let bx = l + off - 1; bx < r; bx += 4) {
+        const k = (bx * 7 + row * 5) % 8;
+        const c = BALLS[k];
+        const dy = row === 0 ? (bx * 3) % 3 : 0; // uneven heap
+        const bw = Math.min(4, r - bx);
+        if (bw < 2 || bx < l) continue;
+        // a round ball: corners cut, a white glint top left, a darker rim bottom right
+        const y0 = by + dy;
+        g.fill(bx + 1, y0, Math.max(1, bw - 2), 4, c);
+        g.fill(bx, y0 + 1, bw, 2, c);
+        g.pset(bx + 1, y0 + 1, white);
+        g.pset(bx + bw - 1, y0 + 2, ink);
+        g.line(bx + 1, y0 + 3, bx + bw - 2, y0 + 3, [c[0] >> 1, c[1] >> 1, c[2] >> 1]);
       }
     }
     g.fill(l - 1, top - 3, 3, bottom - top + 3, RED);
     g.fill(r - 1, top - 3, 3, bottom - top + 3, RED);
   });
+  return { ...base, splash: { x1: x, x2: x + width, y: WORLD.GROUND, kind: 'balls' } };
 }
 
 function pit(base, x, width, paint) {
@@ -99,17 +132,24 @@ function pit(base, x, width, paint) {
   };
 }
 
-// A seesaw: a plank on a pivot, level. Ollie on and grind it like a rail.
+// A seesaw: a plank on a pivot. Ollie on and grind it like a rail: under your
+// weight it tips about the pivot, the far end going down to the ground, so you
+// ride it out downhill (see Game.updateSeesaw). Only its entry end is a wall.
 export function seesaw({ x, length = 260, height = 42, base = WORLD.GROUND }) {
   const bar = rail({ x, length, height, base });
+  const surface = { ...bar.surfaces[0], seesaw: { drop: height } };
   return {
     ...bar,
     type: 'seesaw',
-    draw(g) {
+    surfaces: [surface],
+    solids: [{ x, y: base - height, w: 36, h: height }],
+    draw(g, fx = {}) {
+      const tilt = fx.tilt || 0;
       const [l, r] = [P(x), P(x + length)];
       const top = P(base - height);
       const b = P(base) - 1;
       const mid = (l + r) >> 1;
+      const drop = Math.round(tilt * (b - top)); // pixels the far end has gone down
       // pivot: a triangle under the middle of the plank
       for (let i = 0; i < b - top - 2; i++) {
         const hw = Math.round((i * 9) / (b - top - 2)) + 1;
@@ -118,14 +158,20 @@ export function seesaw({ x, length = 260, height = 42, base = WORLD.GROUND }) {
         g.pset(mid + hw, top + 3 + i, ink);
       }
       g.line(mid - 10, b, mid + 10, b, ink);
-      // the plank, yellow with a lit top and a handle at each end
-      g.fill(l, top, r - l + 1, 3, YELLOW);
-      g.line(l, top, r, top, white);
-      g.rect(l, top, r - l + 1, 3, ink);
-      g.line(l, top, l, top - 2, ink);
-      g.line(r, top, r, top - 2, ink);
-      g.line(l + 4, top - 3, l + 4, top, RED);
-      g.line(r - 4, top - 3, r - 4, top, RED);
+      // the plank: a 3-pixel yellow board from (l, top - drop) to (r, top + drop)
+      const plank = (a, c, colour) => {
+        g.line(l, top - drop + a, r, top + drop + a, colour);
+      };
+      plank(0, 0, white);
+      plank(1, 0, YELLOW);
+      plank(2, 0, YELLOW);
+      plank(-1, 0, ink);
+      plank(3, 0, ink);
+      // a handle at each end
+      for (const [px, py, dir] of [[l, top - drop, 1], [r, top + drop, -1]]) {
+        g.line(px, py, px, py - 3, ink);
+        g.line(px + dir * 4, py - 3, px + dir * 4, py, RED);
+      }
     },
   };
 }
