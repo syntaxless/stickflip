@@ -121,7 +121,7 @@ export function concreteSet({ x, steps = 3, run = 100, rise = 48, from = 0 }) {
 
 // A fun box: a wooden trapezoid sitting on the flat street, with a rail along
 // its flat top. Ride up one end, ollie onto the rail and grind it, or ride it.
-export function funBox({ x, topHeight = 50, up = 150, top = 290, down = 150, barHeight = 34 }) {
+export function funBox({ x, topHeight = 50, up = 130, top = 220, down = 130, barHeight = 34 }) {
   const TOP = G - topHeight;
   const segs = [
     { x1: x, x2: x + up, y1: G, y2: TOP },

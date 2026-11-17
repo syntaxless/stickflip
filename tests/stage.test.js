@@ -335,7 +335,7 @@ test('stage 5 is the skate park: seven checkpoints', () => {
 });
 
 test('stage 5: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.3, 1.3], [0.35, 0.9], [0.8], [], [0.55], [0.8], [0.85]];
+  const clears = [[0.3, 1.3], [0.35, 0.9], [0.8], [], [0.8], [0.8], [0.85]];
   clears.forEach((taps, i) => {
     const game = ride5(i, taps, i === 4); // the long fun box rail is a grind: hold to lock it
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage5.sections[i].name} bailed: ${game.bailReason}`);
@@ -460,12 +460,38 @@ test('stage 5: the Big Set is three concrete steps with no rail to grind', () =>
   assert.equal(set.ground.filter((s) => s.bail === 'stairs').length, 2);
 });
 
-test('stage 5: the curb cut is a dip cut into the ground, and the fun box is long', () => {
+test('stage 5: the curb cut is a dip cut into the ground, and the fun box is longer than before', () => {
   const cut = stage5.obstacles.find((o) => o.type === 'curb-cut');
   const lowest = Math.max(...cut.ground.map((s) => Math.max(s.y1 ?? s.y, s.y2 ?? s.y)));
   assert.ok(lowest > 450, 'the driveway sits below street level');
   assert.ok(cut.ground.every((s) => !s.under), 'not a bump laid on top of the ground');
   const box = stage5.obstacles.find((o) => o.type === 'fun-box');
   const [x1, x2] = [Math.min(...box.ground.map((s) => s.x1)), Math.max(...box.ground.map((s) => s.x2))];
-  assert.ok(x2 - x1 >= 580, `fun box ${x2 - x1} wide`);
+  assert.ok(x2 - x1 > 410 && x2 - x1 <= 500, `fun box ${x2 - x1} wide (longer than before, within a full charge)`);
+});
+
+test('stage 5: a fully charged ollie clears the whole fun box (it is no longer than that)', () => {
+  const sec = stage5.sections[4].x;
+  const box = stage5.obstacles.find((o) => o.type === 'fun-box');
+  const end = Math.max(...box.ground.map((s) => s.x2));
+  let clears = 0;
+  for (let h0 = 0; h0 < 0.6; h0 += 0.02) {
+    const g = new Game(stage5, null, { index: 4, score: 0 });
+    g.tap();
+    let t = 0;
+    let started = false;
+    let released = false;
+    let wasAir = false;
+    let landed = null;
+    while (t < 5 && g.phase === 'playing' && landed === null && g.sk.x < end + 100) {
+      if (!started && t >= h0) started = g.startCharge() || true;
+      if (started && !released && t >= h0 + 0.75) released = g.releaseCharge() || true;
+      g.update(STEP);
+      t += STEP;
+      if (g.sk.mode === 'air') wasAir = true;
+      else if (wasAir && released) landed = g.sk.x;
+    }
+    if (g.phase === 'playing' && landed !== null && landed >= end) clears++;
+  }
+  assert.ok(clears >= 6, `${clears} charge timings clear a ${end - Math.min(...box.ground.map((s) => s.x1))}-wide box`);
 });
