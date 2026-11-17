@@ -1,8 +1,8 @@
-// A tiny DOS-style framebuffer: a 320x180 grid of pixels in a 3-colour
-// CGA-like palette. Everything is plotted pixel by pixel (Bresenham lines,
-// midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
-// Palette: bright blue sky, a stacked pixel-art ground, black rider and
-// obstacles, a brown (wood) board with white wheels, and red for all text.
+// A tiny retro framebuffer: a 320x180 grid of pixels. Everything is plotted
+// pixel by pixel (Bresenham lines, midpoint circles, a 5x7 bitmap font), so
+// there's no anti-aliasing at all. Each stage has its own palette (below): a
+// sky, a stacked pixel-art ground, a black rider with a brown (wood) board and
+// white wheels, and red for all text.
 // Street furniture (the trash can, construction cones and barriers) is shaded pixel art in grey, silver and black.
 
 export const RES = { W: 320, H: 180 };

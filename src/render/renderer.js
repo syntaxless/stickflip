@@ -4,9 +4,9 @@ import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
 
-// DOS-style renderer. The game world is 960x540 units; it is drawn into a
-// 320x180 framebuffer (1 pixel = 3 units) using 3 colours, then scaled up
-// with nearest-neighbour so every pixel stays chunky.
+// Pixel-art renderer. The game world is 960x540 units; it is drawn into a
+// 320x180 framebuffer (1 pixel = 3 units), then scaled up with
+// nearest-neighbour so every pixel stays chunky.
 
 const S = 3;
 const P = (v) => Math.round(v / S);

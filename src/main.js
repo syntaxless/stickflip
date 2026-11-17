@@ -13,7 +13,7 @@ import { NATIVE, haptics, submitToGameCenter, gameCenterReady, refreshGameCenter
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
 // The game draws into a 320x180 framebuffer, which is then blown up onto the
-// screen canvas with nearest-neighbour scaling for chunky DOS pixels.
+// screen canvas with nearest-neighbour scaling for chunky pixels.
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const low = document.createElement('canvas');
