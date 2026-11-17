@@ -193,7 +193,7 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 });
 
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
-  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.5, 1.05], [0.9], [0.9]];
+  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.4, 0.95], [0.9], [0.9]];
   clears.forEach((taps, i) => {
     const game = ride3(i, taps);
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);

@@ -20,7 +20,8 @@ export default stage({
   id: 'stage-3',
   name: 'Stage 3',
   sections: [rock, coneRow, ledgeToGap, sawhorse, longRail, bigSet, bigGap],
-  extra: [bank({ x: 5 * W - 210, run: 160, y1: G, y2: SET_TOP }), bank({ x: 5 * W - 50, run: 50, y1: SET_TOP, y2: SET_TOP })],
+  // the ramp starts well after the scaffold rail so you can land and roll first
+  extra: [bank({ x: 5 * W - 90, run: 160, y1: G, y2: SET_TOP }), bank({ x: 5 * W + 70, run: 50, y1: SET_TOP, y2: SET_TOP })],
   camTop: 100,
   palette: 'site', // light grey sky
   sidewalk: true, // rides on a concrete sidewalk
