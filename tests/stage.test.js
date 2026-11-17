@@ -219,3 +219,18 @@ test('rock: riding into it stops the board (a slam), a small ollie clears it', (
   assert.equal(ride3(0, [0.85, 1.8]).section, 1);
   assert.equal(ride3(0, [0.85]).bailReason, 'slam', 'the hydrant too');
 });
+
+// ------------------------------------------------------------ camera
+
+test('the rider holds one spot on screen while the stage pans (no jitter)', async () => {
+  const { Renderer } = await import('../src/render/renderer.js');
+  const renderer = new Renderer({ w: 320, h: 180, ox: 0, oy: 0 });
+  const game = new Game(STAGES[2]);
+  game.tap();
+  const offsets = new Set();
+  for (let i = 0; i < 600; i++) {
+    game.update(STEP);
+    if (game.sk.mode === 'roll' && game.sk.x > 400) offsets.add(Math.round(game.sk.x / 3) - renderer.camera(game).x);
+  }
+  assert.equal(offsets.size, 1, `rider screen x varied: ${[...offsets]}`);
+});
