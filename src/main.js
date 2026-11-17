@@ -593,7 +593,7 @@ function drawLetterbox() {
     outer.pix = new Pix(outer.cv.getContext('2d'), W, H);
   }
   const cam = renderer.cam || { x: 0, y: 0 };
-  renderer.drawScene(outer.pix, game, { x: cam.x - left, y: cam.y - top });
+  renderer.drawScene(outer.pix, game, { x: cam.x - left, y: cam.y - top, px: cam.x, py: cam.y, left, top });
   outer.pix.flush();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(outer.cv, ox - left * k, oy - top * k, W * k, H * k);

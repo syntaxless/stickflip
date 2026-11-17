@@ -396,6 +396,23 @@ test('secret mega ramp: ollie the kicker over the rail, or grind it, then air th
   assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
 });
 
+test('secret mega ramp: after the rider rolls down the quarter pipe he coasts to a stop on the street, well inside the level', () => {
+  const g = new Game(SECRET);
+  g.tap();
+  let t = 0;
+  let doneAt = null;
+  while (t < 14) {
+    if (Math.abs(t - 1.1) < STEP / 2) g.tap();
+    g.update(STEP);
+    t += STEP;
+    if (g.phase === 'complete' && doneAt === null) doneAt = g.sk.x;
+  }
+  assert.ok(doneAt !== null, 'the run ended');
+  assert.ok(Math.abs(g.sk.vx) < 1, 'stopped');
+  assert.ok(g.sk.x > 1900 && g.sk.x < doneAt + 1, `stopped at ${g.sk.x} (ended at ${doneAt}), on the street under the pipe`);
+  assert.ok(g.sk.x > 0 && g.sk.x < g.width - 200);
+});
+
 test('secret mega ramp: the ollie clears the whole rainbow rail into the bank, the grind follows the curve', () => {
   const rail = SECRET.obstacles.find((o) => o.type === 'rail').surfaces[0];
   const bank = SECRET.obstacles.flatMap((o) => o.ground || []).find((g) => g.x1 === rail.x2 && g.y2 > g.y1);
