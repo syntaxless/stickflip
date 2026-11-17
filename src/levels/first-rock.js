@@ -6,5 +6,4 @@ export default {
   id: 'first-rock',
   name: 'First Rock',
   obstacles: [rock({ x: 500 })],
-  stars: [0, 150, 300],
 };

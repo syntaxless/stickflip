@@ -10,12 +10,12 @@
 // to the same number of points, centred and scaled to the same size (keeping
 // their proportions and direction), and the closest template wins.
 
-export const TAP_RADIUS = 18; // px of wobble a tap may have
+const TAP_RADIUS = 18; // px of wobble a tap may have
 const SAMPLE = 32; // points each stroke is resampled to
 
 // A loop has to go at least this far round (radians, about 260 degrees) to
 // count as a circle, so a U-shaped shove-it (about 180) never does.
-export const CIRCLE_TURN = Math.PI * 1.45;
+const CIRCLE_TURN = Math.PI * 1.45;
 
 const mirror = (pts) => pts.map(([x, y]) => [-x, y]);
 
@@ -139,7 +139,7 @@ function isLoop(points) {
 }
 
 // The closest template and how far it is (0 = exact).
-export function matchShape(points) {
+function matchShape(points) {
   const p = prepare(points);
   let best = null;
   let bestD = Infinity;
@@ -171,11 +171,11 @@ export function classifyStroke(points) {
 // counts as a trick shape. Points carry t (seconds). A pause is the finger
 // staying within PAUSE_RADIUS for PAUSE_TIME. A part that took longer than
 // SHAPE_TIME to draw was a speed drag, not a shape: a plain ollie ('tap').
-export const PAUSE_TIME = 0.15;
-export const PAUSE_RADIUS = 8;
-export const SHAPE_TIME = 0.7;
+const PAUSE_TIME = 0.15;
+const PAUSE_RADIUS = 8;
+const SHAPE_TIME = 0.7;
 
-export function trickPart(points) {
+function trickPart(points) {
   if (points.length < 2 || points[0].t == null) return points;
   const last = points.length - 1;
   let start = 0;

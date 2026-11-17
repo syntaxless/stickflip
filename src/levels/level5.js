@@ -15,5 +15,4 @@ export default {
     bank({ x: 410, run: 60, y1: LIP, y2: LIP, material: 'concrete' }), // the short flat lip
     stepsUp({ x: 470, steps: 2, run: 125, rise: 37, base: LIP, material: 'concrete' }),
   ],
-  stars: [0, 150, 300],
 };

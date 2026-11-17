@@ -6,6 +6,4 @@ export default {
   id: 'first-rail',
   name: 'First Rail',
   obstacles: [rail({ x: 430, length: 260, height: 64 })],
-  // Score needed for 1, 2 and 3 stars. Star 1 just means "made it".
-  stars: [0, 700, 1400],
 };
