@@ -335,3 +335,10 @@ test('the tester quick-jump menu is gated to /unstable and localhost, like ?leve
   assert.match(src, /function setupTestMenu\(\) \{\n  if \(!\(IS_LOCAL \|\| IS_UNSTABLE\)\) return;/);
   assert.match(src, /const IS_LOCAL = !NATIVE && /);
 });
+
+test('water and grass regions are moved into strip coordinates with their section', () => {
+  const pool = stage1.obstacles.find((o) => o.water);
+  assert.equal(pool.water.x1, 4 * 960 + 380);
+  const patch = stage1.obstacles.find((o) => o.grass);
+  assert.equal(patch.grass.x1, 960 + 430);
+});
