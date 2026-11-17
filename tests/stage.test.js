@@ -521,3 +521,9 @@ test('stage 3: the Big Drop has two routes: land and ollie the barrel, or one ch
   assert.equal(b.g.phase, 'playing', `charged ollie off the edge: ${b.g.bailReason}`);
   assert.ok(b.s.x < sec + 400, 'took off from the platform');
 });
+
+test('stage 1: the First Gap is gravel and the Euro Gap is concrete (looks only, same physics)', () => {
+  assert.equal(stage1.obstacles.find((o) => o.type === 'dirt-gap').dirt.kind, 'gravel');
+  const euro = stage1.obstacles.filter((o) => o.ground.some((s) => s.material === 'concrete'));
+  assert.ok(euro.length >= 3, 'the bank, the lip and the stairs are concrete');
+});

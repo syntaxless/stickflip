@@ -6,7 +6,7 @@ import { dirtGap } from '../obstacles/index.js';
 export default {
   id: 'first-gap',
   name: 'First Gap',
-  obstacles: [dirtGap({ x: 430, width: 130 })],
+  obstacles: [dirtGap({ x: 430, width: 130, kind: 'gravel' })],
   // Score needed for 1, 2 and 3 stars. Star 1 just means "made it".
   stars: [0, 150, 300],
 };
