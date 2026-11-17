@@ -10,6 +10,9 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
+// A world position snapped to a whole game pixel. The rider's anchor is drawn
+// snapped, so its limbs round the same way every frame instead of shimmering.
+const snap = (v) => Math.round(v / S) * S;
 const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark, edge } = PAL;
 
 // The ground, top to bottom: a thin surface strip the rider rolls on
@@ -159,10 +162,12 @@ export class Renderer {
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
     // Look ahead the way the rider is going (back to the left after a quarter pipe).
-    const lead = s.dir < 0 ? (WORLD.W * 2) / 3 : WORLD.W / 3;
-    const x = Math.max(0, Math.min(game.width - WORLD.W, fx - lead));
+    // The rider is drawn snapped to a whole pixel (see snap), and so is the lead,
+    // so the rider holds the same spot on screen while the stage pans past.
+    const lead = Math.round((s.dir < 0 ? (WORLD.W * 2) / 3 : WORLD.W / 3) / S);
+    const x = Math.max(0, Math.min(Math.round((game.width - WORLD.W) / S), Math.round(fx / S) - lead));
     const y = Math.min(0, fy - (game.level.camTop ?? 330));
-    return { x: Math.round(x / S), y: Math.round(y / S) };
+    return { x, y: Math.round(y / S) };
   }
 
   // The scene without the HUD (ground, obstacles and the rider) into another
@@ -278,12 +283,12 @@ export class Renderer {
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       if (advance) this.pose.update('bail', dt, 10);
-      drawBoard(g, makeTransform(b.bx, b.by, b.bang * 0.15), b.bang);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang * 0.15), b.bang);
       const onGround = b.y >= game.groundAt(b.x).y - 0.5 && b.vy === 0;
       const ang = onGround ? Math.sign(b.ang || 1) * Math.min(Math.abs(b.ang), Math.PI / 2) : b.ang;
       const hip = this.pose.pose.hip;
       // rotate around the hip, which sits at the bail body position
-      const base = makeTransform(b.x, b.y - (onGround ? 12 : 40), ang);
+      const base = makeTransform(snap(b.x), b.y - (onGround ? 12 : 40), ang);
       drawFigure(g, (p) => base({ x: p.x - hip.x, y: p.y - hip.y }), this.pose.pose);
       return;
     }
@@ -311,7 +316,7 @@ export class Renderer {
     } else if (s.qpAir) {
       pitch = -Math.PI / 2; // straight up and down, just as you left the wall
     }
-    let base = makeTransform(s.x, s.y, pitch);
+    let base = makeTransform(snap(s.x), s.y, pitch);
     if (s.flip?.trick.body === 'backflip') {
       // Head over heels, backwards (counter-clockwise when riding right),
       // turning around the middle of the body.

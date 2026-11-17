@@ -512,12 +512,16 @@ let last = performance.now();
 let acc = 0;
 
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  // Frame times wobble by a millisecond or so. Left alone, that makes some frames
+  // run 1 physics step and others 3, and the rider lurches. A frame that's close
+  // to a common refresh interval is treated as exactly that long.
+  for (const hz of [60, 120, 144, 90, 30]) if (Math.abs(dt - 1 / hz) < 0.0012 * (60 / hz)) dt = 1 / hz;
   acc += dt;
-  while (acc >= STEP) {
+  while (acc >= STEP - 1e-6) {
     game.update(STEP);
-    acc -= STEP;
+    acc = Math.max(0, acc - STEP);
   }
   const events = game.drainEvents();
   let flip = false;
