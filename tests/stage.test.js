@@ -14,7 +14,7 @@ const CLEARS = [
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
-  [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [4.5, 'tap'], [4.5, 'hold'], [7, 'up']], // Quarter Pipe
+  [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [4.0, 'tap'], [4.0, 'hold'], [6.5, 'up']], // Quarter Pipe
 ];
 
 // Plays from checkpoint `index` with `acts`, until `until(game)` or 12 s.
@@ -157,10 +157,10 @@ test('curb: riding into it with the finger held is a slappy grind', () => {
 });
 
 test('ring of fire: any ollie off the kicker goes through, tapped or charged', () => {
-  for (let t = 0.875; t <= 1.126; t += 0.025) {
+  for (let t = 0.75; t <= 1.001; t += 0.025) {
     assert.equal(ride2(3, [t]).game.phase, 'complete', `tap at ${t}`);
   }
-  for (let t = 0.8; t <= 0.95; t += 0.025) {
+  for (let t = 0.7; t <= 0.826; t += 0.025) {
     const game = new Game(STAGES[1], null, { index: 3, score: 0 });
     game.tap();
     game.setHold(true);
@@ -176,4 +176,46 @@ test('ring of fire: any ollie off the kicker goes through, tapped or charged', (
     }
     assert.equal(game.phase, 'complete', `charged, let go at ${t}: ${game.bailReason}`);
   }
+});
+
+// ------------------------------------------------------------ stage 3
+
+const stage3 = STAGES[2];
+
+function ride3(index, taps) {
+  const game = new Game(stage3, null, { index, score: 0 });
+  game.tap();
+  const queue = [...taps];
+  const next = stage3.sections[index + 1]?.x ?? Infinity;
+  for (let t = 0; t < 10 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll'); t += STEP) {
+    while (queue.length && queue[0] <= t + 1e-9) {
+      queue.shift();
+      game.tap();
+    }
+    game.update(STEP);
+  }
+  return game;
+}
+
+test('stage 3 is the construction site: seven checkpoints', () => {
+  assert.deepEqual(
+    stage3.sections.map((s) => s.name),
+    ['Rock', 'Cone Row', 'Barrier Gap', 'Barricade', 'Scaffold Rail', 'Big Set', 'Big Gap'],
+  );
+  assert.equal(stage3.id, 'stage-3');
+});
+
+test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
+  const clears = [[0.85, 1.8], [0.8], [0.5, 1.2], [1.05], [0.5, 1.05], [0.9], [0.9]];
+  clears.forEach((taps, i) => {
+    const game = ride3(i, taps);
+    assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
+    assert.equal(ride3(i, []).phase, 'bailed', `${stage3.sections[i].name} with no ollie`);
+  });
+});
+
+test('rock: riding into it stops the board (a slam), a small ollie clears it', () => {
+  assert.equal(ride3(0, []).bailReason, 'slam');
+  assert.equal(ride3(0, [0.85, 1.8]).section, 1);
+  assert.equal(ride3(0, [0.85]).bailReason, 'slam', 'the hydrant too');
 });

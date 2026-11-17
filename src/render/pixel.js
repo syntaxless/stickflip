@@ -3,7 +3,7 @@
 // midpoint circles, a 5x7 bitmap font), so there's no anti-aliasing at all.
 // Palette: navy sky, pixel-art asphalt ground outlined in maroon, black rider and
 // obstacles, a brown (wood) board with white wheels, and red for all text.
-// Street furniture (the trash can) is shaded pixel art in grey, silver and black.
+// Street furniture (the trash can, construction cones and barriers) is shaded pixel art in grey, silver and black.
 
 export const RES = { W: 320, H: 180 };
 
@@ -15,6 +15,9 @@ export const PAL = {
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
   kerb: [88, 88, 88],
+  dirt: [96, 56, 24],
+  pebble: [136, 84, 40],
+  clod: [64, 36, 16],
   edge: [128, 0, 0],
   deck: [170, 85, 0],
   wheel: [255, 255, 255],
@@ -22,6 +25,7 @@ export const PAL = {
   flame: [255, 85, 85],
   steel: [128, 128, 128],
   shine: [192, 192, 192],
+  orange: [255, 128, 0],
 };
 
 // The secret level has its own palette, from the 16 original named HTML
@@ -31,11 +35,11 @@ export const PALETTES = {
   normal: { sky: [0, 0, 128], ink: [0, 0, 0], red: [255, 85, 85], ground: [64, 64, 64],
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
-  kerb: [88, 88, 88], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85], steel: [128, 128, 128], shine: [192, 192, 192] },
+  kerb: [88, 88, 88], dirt: [96, 56, 24], pebble: [136, 84, 40], clod: [64, 36, 16], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 85], flame: [255, 85, 85], steel: [128, 128, 128], shine: [192, 192, 192], orange: [255, 128, 0] },
   secret: { sky: [128, 0, 128], ink: [0, 0, 0], red: [255, 255, 0], ground: [64, 64, 64],
   crack: [40, 40, 40],
   fleck: [96, 96, 96],
-  kerb: [88, 88, 88], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0], steel: [128, 128, 128], shine: [192, 192, 192] },
+  kerb: [88, 88, 88], dirt: [96, 56, 24], pebble: [136, 84, 40], clod: [64, 36, 16], edge: [128, 0, 0], deck: [170, 85, 0], wheel: [255, 255, 255], fire: [255, 255, 0], flame: [255, 0, 0], steel: [128, 128, 128], shine: [192, 192, 192], orange: [255, 128, 0] },
 };
 
 // Switch palettes in place, so code that kept a reference to PAL.sky etc. follows.

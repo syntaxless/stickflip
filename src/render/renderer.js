@@ -10,7 +10,9 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, crack, fleck, kerb, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, dirt, pebble, clod, edge } = PAL;
+
+const ASPHALT_H = 4; // pixels of asphalt on top; everything below is dirt
 
 // Cheap deterministic hash of a world pixel, so the asphalt texture is the same
 // every frame and scrolls with the stage instead of shimmering.
@@ -168,7 +170,7 @@ export class Renderer {
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
       if (top < bottom) {
-        g.fill(x, top, 1, bottom - top, groundCol);
+        g.fill(x, top, 1, bottom - top, dirt);
         this.drawAsphalt(g, x, top, bottom);
         // a lower neighbour means this column's side shows
         const drop = Math.max(prev, next);
@@ -179,25 +181,26 @@ export class Renderer {
     }
   }
 
-  // Chunky asphalt texture for one ground column: a lighter kerb row along the
-  // top, scattered light grit, and short dark cracks (2-4 px dashes).
+  // One ground column: a thin strip of chunky asphalt (a lighter kerb row, grit
+  // and short dark cracks) over dirt with pebbles and dark clods. Both textures
+  // hash the world pixel, so they hold still and scroll with the stage.
   drawAsphalt(g, x, top, bottom) {
+    const strip = Math.min(bottom, top + ASPHALT_H);
+    g.fill(x, top, 1, strip - top, groundCol);
     g.pset(x, top + 1, kerb);
-    for (let y = top + 2; y < bottom; y++) {
-      const h = hash(x, y) % 211;
-      if (h < 2) {
-        g.pset(x, y, fleck);
-        continue;
-      }
-      // a dash starts at x - i and is 2-4 px long
-      for (let i = 0; i < 4; i++) {
-        const sx = x - i;
-        if (hash(sx, y) % 211 === 2 && i < 2 + (hash(y, sx) % 3)) {
-          g.pset(x, y, crack);
-          break;
-        }
-      }
+    for (let y = top + 2; y < strip; y++) {
+      const h = hash(x, y) % 53;
+      if (h < 2) g.pset(x, y, fleck);
+      else if (hash(x - 1, y) % 53 === 2 || hash(x - 2, y) % 53 === 2) g.pset(x, y, crack);
     }
+    for (let y = strip; y < bottom; y++) {
+      const h = hash(x, y) % 97;
+      if (h < 3) g.pset(x, y, pebble);
+      else if (h < 8) g.pset(x, y, clod);
+      else if (h < 10 && y > strip + 1) g.pset(x, y, clod);
+    }
+    // a dark band where the asphalt meets the dirt
+    if (strip < bottom) g.pset(x, strip, clod);
   }
 
   // `advance` false redraws this frame's pose without moving the animation on.
