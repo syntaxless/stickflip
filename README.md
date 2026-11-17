@@ -187,6 +187,10 @@ place and land (or grind) on another and the jump pops up as, say, EURO TO
 RAIL +500. A gap counts as a trick in the combo and can be earned once per
 attempt. Every gap (name, points, where you must take off and land) is one
 line in `src/gaps.js`, so renaming or tuning is a one-line change.
+Gaps and any trick or grind worth `SPECIAL_POINTS` (300, in `src/config.js`) or
+more are "specials": a solid plate (gold for gaps, red for tricks) pops in, drifts
+up and dithers away over 1.3 s, with a short rising square-wave jingle
+(`specialNotes` in `src/audio.js`; it climbs a little for bigger bonuses).
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop
 in from a high deck and fly off the kicker at a raised, gently curved

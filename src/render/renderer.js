@@ -60,6 +60,7 @@ function makeSkyline(seed, count, minW, maxW, minH, maxH) {
 }
 const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
 const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
+const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -76,7 +77,8 @@ export class Renderer {
     // replaces the old one instead of piling on top of it. Trick names show in
     // the HUD's combo line; the slot is for the points, banked on landing,
     // when the rider is down on the ground and out of the way.
-    this.popups = { bank: null, gap: null };
+    this.popups = { bank: null };
+    this.specials = []; // banners for gaps and big tricks: { text, kind, age }
     this.squash = 0;
     this.buttons = [];
     this.time = 0;
@@ -99,8 +101,9 @@ export class Renderer {
         case 'bank':
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
-        case 'gap':
-          this.popup('gap', `${e.name} +${e.points}`);
+        case 'special':
+          this.specials.push({ text: `${e.name} +${e.points}`, kind: e.kind, age: 0 });
+          if (this.specials.length > 3) this.specials.shift();
           break;
         case 'bail': {
           const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
@@ -141,7 +144,7 @@ export class Renderer {
   }
 
   popup(slot, text) {
-    this.popups[slot] = { text, life: slot === 'gap' ? 1.8 : 1.1 };
+    this.popups[slot] = { text, life: 1.1 };
   }
 
   // ----------------------------------------------------------- drawing
@@ -167,6 +170,7 @@ export class Renderer {
     g.oy = 0;
     const inset = Math.ceil(opts.inset || 0);
     this.drawPopups(inset);
+    this.drawSpecials(inset);
     this.drawHud(game, opts, inset);
     this.drawOverlay(game, opts);
     g.flush();
@@ -182,12 +186,17 @@ export class Renderer {
       p.vy += (p.kind === 'spark' ? 1400 : p.kind === 'ball' ? 900 : 300) * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
+    for (const sp of this.specials) sp.age += dt;
+    this.specials = this.specials.filter((sp) => sp.age < SPECIAL_LIFE);
     for (const k of Object.keys(this.popups)) {
       const p = this.popups[k];
       if (p && (p.life -= dt) <= 0) this.popups[k] = null;
     }
     // Bails and the level-end box use the middle of the screen: clear the way.
-    if (game.phase !== 'playing') this.popups = { bank: null, gap: null };
+    if (game.phase !== 'playing') {
+      this.popups = { bank: null };
+      this.specials = [];
+    }
   }
 
   // Camera position in pixels. Fixed-screen levels never move it.
@@ -487,9 +496,40 @@ export class Renderer {
     }
   }
 
+  // Specials: a solid plate with a bold outline behind the text, which pops in,
+  // drifts up and dithers away over SPECIAL_LIFE seconds. Newest at the bottom,
+  // older ones above it. Kept right of centre, clear of the rider.
+  drawSpecials(inset = 0) {
+    const g = this.g;
+    const cx = Math.round(RES.W * 0.74);
+    const n = this.specials.length;
+    this.specials.forEach((sp, i) => {
+      const t = sp.age;
+      const text = fit(g, sp.text, RES.W - 2 * inset - 24);
+      const w = g.textWidth(text) + 10;
+      const h = 15;
+      const rise = Math.round(Math.min(1, t / SPECIAL_LIFE) * 12);
+      const pop = t < 0.12 ? Math.round((1 - t / 0.12) * 6) : 0; // slides up into place
+      const y = 56 + (n - 1 - i) * (h + 3) - rise + pop;
+      const x = Math.min(Math.round(cx - w / 2), RES.W - inset - 4 - w);
+      const [fill, edge, ink2] = sp.kind === 'gap' ? [[255, 200, 40], [150, 70, 0], [90, 30, 0]] : [[210, 30, 50], [100, 0, 20], [255, 255, 255]];
+      // dither out: more of the plate drops away as it fades
+      const level = t < 0.85 ? 0 : t < 1.05 ? 1 : 2;
+      const keep = (px, py) => level === 0 || (level === 1 ? (px + py) % 2 === 0 : (px + py) % 4 === 0 && py % 2 === 0);
+      for (let py = y; py < y + h; py++) {
+        for (let px = x; px < x + w; px++) {
+          const border = px === x || px === x + w - 1 || py === y || py === y + h - 1;
+          const shade = !border && py >= y + h - 3;
+          if (keep(px, py)) g.pset(px, py, border ? ink : shade ? edge : fill);
+        }
+      }
+      if (t < 1.05) g.text(text, x + 5, y + 4, ink2, 1);
+    });
+  }
+
   // Centred under the HUD (which ends about y 33).
   drawPopups(inset = 0) {
-    const rows = [['bank', 42], ['gap', 53]];
+    const rows = [['bank', 42]];
     for (const [slot, y] of rows) {
       const p = this.popups[slot];
       if (!p || (p.life < 0.3 && Math.floor(p.life * 20) % 2)) continue; // blink out

@@ -1,5 +1,5 @@
 import { GAPS } from './gaps.js';
-import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
+import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -640,9 +640,12 @@ export class Game {
 
   // ------------------------------------------------------------ tricks
 
-  addTrick(name, points) {
+  // `kind` 'gap' is a named gap bonus. Gaps and any trick worth SPECIAL_POINTS
+  // or more are "specials": the renderer banners them and the audio plays a jingle.
+  addTrick(name, points, kind = 'trick') {
     this.combo.push({ name, points });
     this.emit('trick', { name, points });
+    if (kind === 'gap' || points >= SPECIAL_POINTS) this.emit('special', { name, points, kind });
   }
 
   // A named gap (src/gaps.js): this take-off and this landing, once per attempt.
@@ -654,7 +657,7 @@ export class Game {
       if (s.x < ox + g.to[0] || s.x > ox + g.to[1]) continue;
       if (g.from && (s.poppedAt === null || s.poppedAt < ox + g.from[0] || s.poppedAt > ox + g.from[1])) continue;
       this.gapsDone.add(g.id);
-      this.addTrick(g.name, g.points);
+      this.addTrick(g.name, g.points, 'gap');
       this.emit('gap', { name: g.name, points: g.points });
     }
   }
