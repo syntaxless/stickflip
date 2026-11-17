@@ -328,3 +328,10 @@ test('stage 1: the rock stops a board that never ollies, and the pool splashes a
   assert.equal(stage1.sections[4].name, 'Bank to Bank');
   assert.ok(stage1.obstacles.some((o) => o.type === 'water'));
 });
+
+test('the tester quick-jump menu is gated to /unstable and localhost, like ?level=', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(src, /function setupTestMenu\(\) \{\n  if \(!\(IS_LOCAL \|\| IS_UNSTABLE\)\) return;/);
+  assert.match(src, /const IS_LOCAL = !NATIVE && /);
+});
