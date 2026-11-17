@@ -45,7 +45,7 @@ export const PAL = {
 // and darker red text so it reads on grey; its surface is a light concrete
 // sidewalk (the other stages ride on dark asphalt).
 const BASE = Object.fromEntries(Object.entries(PAL).map(([k, v]) => [k, [...v]]));
-export const PALETTES = {
+const PALETTES = {
   normal: BASE,
   secret: { ...BASE, sky: [190, 222, 246], red: [96, 48, 16], fire: [255, 255, 0], flame: [255, 0, 0], far: [206, 214, 226], near: [186, 198, 214], window: [255, 240, 190] },
   play: { ...BASE, sky: [110, 180, 255], red: [170, 0, 0], ground: [150, 70, 70], kerb: [190, 100, 100], crack: [110, 40, 40], fleck: [210, 130, 130], far: [110, 180, 255], near: [110, 180, 255], window: [110, 180, 255] },
@@ -58,8 +58,6 @@ export function setPalette(name) {
   const pal = PALETTES[name] || PALETTES.normal;
   for (const k of Object.keys(pal)) PAL[k].splice(0, 3, ...pal[k]);
 }
-
-export const cssColor = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 
 // 5x7 glyphs, one 5-bit row per number (MSB = leftmost pixel).
 const b = (...rows) => rows.map((r) => parseInt(r, 2));

@@ -12,6 +12,9 @@ mkdirSync(out);
 for (const item of ['src', 'icons', 'favicon.ico', 'manifest.webmanifest']) {
   cpSync(new URL(item, root), new URL(item, out), { recursive: true });
 }
+// The app doesn't need the unstable build's orange icons or the share-preview image.
+rmSync(new URL('icons/beta', out), { recursive: true, force: true });
+rmSync(new URL('icons/og-image.png', out), { force: true });
 
 // The app never counts visits, so leave the GoatCounter snippet out entirely.
 const html = readFileSync(new URL('index.html', root), 'utf8');

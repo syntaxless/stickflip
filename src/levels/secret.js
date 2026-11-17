@@ -36,5 +36,4 @@ export default {
     bank({ x: RAIL_END, run: 700, y1: DECK, y2: G }), // long easy bank down, right off the rail's end
     quarterPipe({ x: QP_X, radius: QP_R }),
   ],
-  stars: [0, 600, 1500],
 };

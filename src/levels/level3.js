@@ -7,5 +7,4 @@ export default {
   id: 'handrail-stairs',
   name: 'Five Stair',
   obstacles: [stairs({ x: 400, steps: 5, run: 46, rise: 16, material: 'concrete' })],
-  stars: [0, 600, 1100],
 };

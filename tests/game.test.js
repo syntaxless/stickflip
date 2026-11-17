@@ -56,20 +56,20 @@ test('ollie then a late tap locks a grind and finishes the level', () => {
   assert.ok(seen.has('grind'));
   assert.equal(game.phase, 'complete');
   assert.ok(game.score > 250, `score ${game.score}`);
-  assert.equal(game.stars, 1);
+  assert.ok(game.score < 700, `score ${game.score}`);
 });
 
 test('kickflip into the grind scores a 2x combo', () => {
   const { game, seen } = play(level1, [0.75, 0.77, 1.32]);
   assert.ok(seen.has('KICKFLIP') && seen.has('grind'));
   assert.equal(game.phase, 'complete');
-  assert.equal(game.stars, 2);
+  assert.ok(game.score >= 700 && game.score < 1400, `score ${game.score}`);
 });
 
-test('kickflip in, grind, pop and kickflip out gets three stars', () => {
+test('kickflip in, grind, pop and kickflip out scores big', () => {
   const { game } = play(level1, [0.75, 0.77, 1.32, 1.8, 1.82]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.equal(game.stars, 3, `score ${game.score}`);
+  assert.ok(game.score >= 1400, `score ${game.score}`);
 });
 
 test('a tap during a flip is ignored, so the rail is clipped', () => {
@@ -245,9 +245,11 @@ test('gap: no ollie rolls in, too early comes up short', () => {
   assert.equal(play(gapLevel, [0.6]).game.bailReason, 'gap');
 });
 
-test('gap: a kickflip over it is two stars, a 360 flip three', () => {
-  assert.equal(play(gapLevel, [0.9, 0.92]).game.stars, 2);
-  assert.equal(playInputs(gapLevel, [[0.9, 'tap'], [0.92, 'treflip']]).game.stars, 3);
+test('gap: a 360 flip over it scores more than a kickflip', () => {
+  const kick = play(gapLevel, [0.9, 0.92]).game.score;
+  const spin = playInputs(gapLevel, [[0.9, 'tap'], [0.92, 'treflip']]).game.score;
+  assert.ok(kick >= 150 && kick < 300, `kickflip ${kick}`);
+  assert.ok(spin >= 300, `360 flip ${spin}`);
 });
 
 // ------------------------------------------------------------ level 3: stairs
@@ -277,10 +279,10 @@ test('stairs: a timed tap grinds the handrail down', () => {
   assert.deepEqual(names, ['50-50 GRIND']);
 });
 
-test('stairs: kickflip in, grind, pop and kickflip out gets three stars', () => {
+test('stairs: kickflip in, grind, pop and kickflip out scores big', () => {
   const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.16, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.equal(game.stars, 3, `score ${game.score}`);
+  assert.ok(game.score >= 1100, `score ${game.score}`);
 });
 
 // ---------------------------------------------------------------- levels 4-6 + secret
