@@ -58,6 +58,7 @@ export function shift(o, dx, lo = -Infinity, hi = Infinity) {
     ...o,
     surfaces: o.surfaces.map((s) => moveX(s, dx)),
     solids: o.solids.map((r) => ({ ...r, x: r.x + dx })),
+    hazards: (o.hazards || []).map((h) => ({ ...h, x: h.x + dx })),
     ground,
     draw(g, fx) {
       g.ox += px;

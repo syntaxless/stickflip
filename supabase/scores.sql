@@ -21,7 +21,14 @@ alter table public.scores drop constraint if exists scores_initials_check;
 alter table public.scores add constraint scores_initials_check
   check (initials ~ '^[A-Z ]{1,6}$' and btrim(initials) <> '');
 
+-- One top 5 per stage (2026-11-17). Scores from before stages were Stage 1
+-- runs, so they default to it.
+alter table public.scores add column if not exists stage text not null default 'stage-1';
+alter table public.scores drop constraint if exists scores_stage_check;
+alter table public.scores add constraint scores_stage_check check (stage ~ '^[a-z0-9-]{1,20}$');
+
 create index if not exists scores_top on public.scores (score desc, created_at);
+create index if not exists scores_stage_top on public.scores (stage, score desc, created_at);
 create index if not exists scores_recent on public.scores (created_at desc);
 
 alter table public.scores enable row level security;
@@ -36,8 +43,8 @@ create policy "anyone can add a score" on public.scores
 
 -- Column-level grants: the game can read and write only these columns.
 revoke all on public.scores from anon, authenticated;
-grant select (id, initials, score, created_at) on public.scores to anon, authenticated;
-grant insert (initials, score) on public.scores to anon, authenticated;
+grant select (id, initials, score, created_at, stage) on public.scores to anon, authenticated;
+grant insert (initials, score, stage) on public.scores to anon, authenticated;
 
 -- Rate limit: at most 3 scores a minute from one address, and 30 a minute
 -- overall. The server fills in created_at and a hash of the address; the
