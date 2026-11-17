@@ -108,8 +108,9 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
   };
 }
 
-// A fire hydrant: red body, silver cap and side nozzles. Ollie over it.
-export function hydrant({ x, w = 24, h = 39, base = WORLD.GROUND }) {
+// A fire hydrant: red body with a silver cap, bonnet, collar and side
+// nozzles, about the size of a street trash can. Ollie over it.
+export function hydrant({ x, w = 54, h = 90, base = WORLD.GROUND }) {
   return {
     ...box({ x, w, h, base }),
     type: 'hydrant',
@@ -118,29 +119,79 @@ export function hydrant({ x, w = 24, h = 39, base = WORLD.GROUND }) {
       const rows = P(h);
       const t = b - rows + 1;
       const red = PAL.flame;
+      const redDark = [150, 25, 30];
       const c = (l + r) >> 1;
-      // cap: a small dome, silver
-      g.fill(c - 2, t + 1, 5, 2, steel);
+      // cap: a silver dome on a short stem
+      g.fill(c - 3, t + 2, 7, 3, steel);
+      g.rect(c - 3, t + 2, 7, 3, ink);
+      g.line(c - 2, t + 3, c, t + 3, shine);
       g.line(c - 1, t, c + 1, t, ink);
       g.pset(c - 2, t + 1, ink);
       g.pset(c + 2, t + 1, ink);
-      g.line(c - 1, t + 1, c, t + 1, shine);
-      g.pset(c, t - 1, ink);
-      // bonnet and body, outlined, lit from the left
-      g.fill(c - 3, t + 3, 7, rows - 5, red);
-      g.rect(c - 3, t + 3, 7, rows - 5, ink);
-      g.line(c - 2, t + 4, c - 2, b - 3, orange);
-      g.line(c - 4, t + 6, c + 4, t + 6, ink); // collar
-      g.line(c - 3, t + 6, c + 3, t + 6, steel);
-      // side nozzles
-      for (const nx of [c - 5, c + 4]) {
-        g.fill(nx, t + 8, 2, 3, steel);
-        g.rect(nx, t + 8, 2, 3, ink);
+      g.pset(c, t + 1, steel);
+      // bonnet (wider than the barrel) and barrel, outlined, lit from the left
+      g.fill(c - 5, t + 5, 11, 6, red);
+      g.rect(c - 5, t + 5, 11, 6, ink);
+      g.line(c - 4, t + 6, c - 4, t + 9, orange);
+      g.fill(c - 4, t + 11, 9, b - t - 14, red);
+      g.rect(c - 4, t + 11, 9, b - t - 14, ink);
+      g.line(c - 3, t + 12, c - 3, b - 5, orange); // lit left edge
+      g.line(c + 3, t + 12, c + 3, b - 5, redDark); // shaded right edge
+      // collars
+      for (const y of [t + 11, b - 7]) {
+        g.line(c - 5, y, c + 5, y, ink);
+        g.line(c - 4, y, c + 4, y, steel);
       }
-      g.pset(c - 4, t + 8, shine);
+      // side nozzles, with caps
+      for (const [nx, dir] of [[c - 4, -1], [c + 5, 1]]) {
+        g.fill(dir < 0 ? nx - 3 : nx, t + 16, 3, 5, steel);
+        g.rect(dir < 0 ? nx - 3 : nx, t + 16, 3, 5, ink);
+        g.pset(dir < 0 ? nx - 2 : nx + 1, t + 17, shine);
+      }
+      g.fill(c - 1, t + 14, 3, 3, steel); // front port
+      g.rect(c - 1, t + 14, 3, 3, ink);
       // base plate
-      g.fill(c - 4, b - 1, 9, 2, ink);
-      g.line(c - 3, b - 1, c + 3, b - 1, steel);
+      g.fill(c - 6, b - 2, 13, 3, ink);
+      g.line(c - 5, b - 2, c + 5, b - 2, steel);
+    },
+  };
+}
+
+// A traffic barrel: an orange drum with white reflective bands, a flat top ring
+// and a wider base. Ollie over it (its sides slam you, the top is no place to land).
+export function trafficBarrel({ x, w = 60, h = 96, base = WORLD.GROUND }) {
+  return {
+    ...box({ x, w, h, base }),
+    type: 'traffic-barrel',
+    draw(g) {
+      const [l, r, b] = [P(x), P(x + w) - 1, P(base) - 1];
+      const t = b - P(h) + 1;
+      const orangeDark = [190, 90, 0];
+      const whiteDark = [190, 190, 200];
+      // body, a pixel narrower at the top than the base, outlined
+      const inset = (y) => (y < t + 4 ? 2 : y > b - 4 ? 0 : 1);
+      for (let y = t; y <= b; y++) {
+        const i = inset(y);
+        const band = Math.floor((y - t - 4) / 5);
+        const striped = y > t + 3 && y < b - 3 && band % 2 === 1;
+        const [lit, mid, dark] = striped ? [white, white, whiteDark] : [[255, 170, 60], orange, orangeDark];
+        g.line(l + i, y, r - i, y, mid);
+        g.line(l + i + 1, y, l + i + 3, y, lit); // lit left side
+        g.line(r - i - 2, y, r - i, y, dark); // shaded right side
+        g.pset(l + i, y, ink);
+        g.pset(r - i, y, ink);
+      }
+      // top ring and a dark hole at the very top, base lip
+      g.line(l + 2, t, r - 2, t, ink);
+      g.line(l + 3, t + 1, r - 3, t + 1, ink);
+      g.line(l + 3, t + 2, l + 6, t + 2, shine);
+      g.line(l, b, r, b, ink);
+      g.line(l + 1, b - 1, r - 1, b - 1, orangeDark);
+      // band outlines
+      for (let y = t + 4; y < b - 3; y += 5) {
+        g.pset(l + inset(y), y, ink);
+        g.pset(r - inset(y), y, ink);
+      }
     },
   };
 }

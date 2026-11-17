@@ -4,20 +4,33 @@ import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
 
-// DOS-style renderer. The game world is 960x540 units; it is drawn into a
-// 320x180 framebuffer (1 pixel = 3 units) using 3 colours, then scaled up
-// with nearest-neighbour so every pixel stays chunky.
+// Pixel-art renderer. The game world is 960x540 units; it is drawn into a
+// 320x180 framebuffer (1 pixel = 3 units), then scaled up with
+// nearest-neighbour so every pixel stays chunky.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
 const snap = (v) => Math.round(v / S) * S;
+const CONC = [190, 190, 196];
+const CONC_LIT = [226, 226, 230];
+const CONC_DARK = [128, 128, 138];
+const GRAVEL = [[150, 148, 144], [176, 170, 158], [124, 120, 116], [188, 168, 130], [160, 156, 150], [138, 130, 118]];
+const GRAVEL_LIT = [220, 214, 200];
+const GRAVEL_DARK = [84, 80, 76];
+const BANNER_TEXT = [255, 214, 120]; // the unlock sign's lettering, whatever the palette
+const WOOD_A = [176, 108, 50];
+const WOOD_B = [160, 96, 44];
+const WOOD_LIGHT = [214, 146, 76];
+const WOOD_DARK = [96, 54, 22];
 const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark } = PAL;
 
 // The ground, top to bottom: a thin surface strip the rider rolls on
 // (asphalt, or a sidewalk in Stage 3), a thin grass layer, a chunky dirt
 // layer, then plain black.
+// The ball pit's colours (see obstacles/playground.js), for the balls it throws.
+const BALL_COLORS = [[255, 85, 85], [255, 255, 85], [85, 85, 255], [85, 200, 85], [255, 150, 40], [190, 90, 230], [255, 140, 200], [90, 220, 230]];
 const ASPHALT_H = 4;
 const GRASS_H = 3;
 const DIRT_H = 12;
@@ -47,6 +60,7 @@ function makeSkyline(seed, count, minW, maxW, minH, maxH) {
 }
 const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
 const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
+const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -64,13 +78,14 @@ export class Renderer {
     // the HUD's combo line; the slot is for the points, banked on landing,
     // when the rider is down on the ground and out of the way.
     this.popups = { bank: null };
+    this.specials = []; // banners for gaps and big tricks: { text, kind, age }
     this.squash = 0;
     this.buttons = [];
     this.time = 0;
   }
 
   // Turn game events into visual effects.
-  consume(events) {
+  consume(events, game) {
     for (const e of events) {
       switch (e.type) {
         case 'pop':
@@ -86,10 +101,33 @@ export class Renderer {
         case 'bank':
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
-        case 'bail':
-          this.dust(e.x, e.y, 10);
+        case 'special':
+          this.specials.push({ text: `${e.name} +${e.points}`, kind: e.kind, age: 0 });
+          if (this.specials.length > 3) this.specials.shift();
           break;
+        case 'bail': {
+          const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
+          if (pool) this.splash(e.x, pool.splash.y, pool.splash.kind);
+          else this.dust(e.x, e.y, 10);
+          break;
+        }
       }
+    }
+  }
+
+  // Water, or coloured balls, flung up where the rider fell in.
+  splash(x, y, kind = 'water') {
+    const balls = kind === 'balls';
+    for (let i = 0; i < (balls ? 22 : 28); i++) {
+      this.particles.push({
+        kind: balls ? 'ball' : 'splash',
+        color: balls ? BALL_COLORS[i % BALL_COLORS.length] : null,
+        x: x + (Math.random() - 0.5) * (balls ? 70 : 50),
+        y: y - 2,
+        vx: (Math.random() - 0.5) * (balls ? 260 : 200),
+        vy: (balls ? -220 : -150) - Math.random() * 300,
+        life: balls ? 1.1 : 0.7,
+      });
     }
   }
 
@@ -125,13 +163,14 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
     g.oy = 0;
     const inset = Math.ceil(opts.inset || 0);
     this.drawPopups(inset);
+    this.drawSpecials(inset);
     this.drawHud(game, opts, inset);
     this.drawOverlay(game, opts);
     g.flush();
@@ -144,15 +183,20 @@ export class Renderer {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += (p.kind === 'spark' ? 1400 : 300) * dt;
+      p.vy += (p.kind === 'spark' ? 1400 : p.kind === 'ball' ? 900 : 300) * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
+    for (const sp of this.specials) sp.age += dt;
+    this.specials = this.specials.filter((sp) => sp.age < SPECIAL_LIFE);
     for (const k of Object.keys(this.popups)) {
       const p = this.popups[k];
       if (p && (p.life -= dt) <= 0) this.popups[k] = null;
     }
     // Bails and the level-end box use the middle of the screen: clear the way.
-    if (game.phase !== 'playing') this.popups = { bank: null };
+    if (game.phase !== 'playing') {
+      this.popups = { bank: null };
+      this.specials = [];
+    }
   }
 
   // Camera position in pixels. Fixed-screen levels never move it.
@@ -180,7 +224,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -189,10 +233,12 @@ export class Renderer {
   // Stage 3: two faint building layers, slower than the stage. Drawn in screen
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
+    if (game.level.clouds) this.drawClouds(g, cam);
     if (!game.level.skyline) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
+    if (game.level.morning) this.drawMorningSky(g, cam);
     for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
       const shift = Math.round(cam.x * factor);
       const T = sky2.width;
@@ -216,21 +262,167 @@ export class Renderer {
     g.oy = oy;
   }
 
+  // Stages 1-2: chunky pale clouds in three layers, each drifting past slower than
+  // the stage (the far ones barely move) and slowly blowing along by themselves.
+  // Low contrast against the sky so the rider, rails and HUD stay readable.
+  drawClouds(g, cam) {
+    const [ox, oy] = [g.ox, g.oy];
+    g.ox = 0;
+    g.oy = -Math.round(cam.y * 0.15);
+    const layers = [
+      // factor, drift px/s, tile width, cloud count, base y, spread, scale, colour
+      [0.04, 1.5, 260, 3, 18, 26, 0.6, [136, 195, 255]],
+      [0.09, 2.5, 300, 3, 30, 40, 0.85, [160, 208, 255]],
+      [0.16, 4, 360, 2, 46, 50, 1.2, [188, 224, 255]],
+    ];
+    for (const [factor, drift, T, count, base, spread, scale, colour] of layers) {
+      const shift = Math.round(cam.x * factor + this.time * drift);
+      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 60; tile++) {
+        for (let i = 0; i < count; i++) {
+          const h = hash(i * 31 + 7, Math.round(factor * 100));
+          const cx = tile * T - shift + Math.round(((i + 0.2 + (h % 60) / 100) * T) / count);
+          const cy = base + ((h >> 3) % spread);
+          const w = Math.round((26 + (h % 24)) * scale);
+          if (cx > g.w || cx + w < 0) continue;
+          const u = Math.max(2, Math.round(3 * scale)); // one chunk
+          g.fill(cx, cy, w, u * 2, colour); // flat base
+          g.fill(cx + u, cy - u, w - 2 * u, u, colour);
+          g.fill(cx + Math.round(w * 0.22), cy - 2 * u, Math.round(w * 0.3), u, colour); // puffs
+          g.fill(cx + Math.round(w * 0.5), cy - Math.round(1.6 * u), Math.round(w * 0.24), Math.round(0.6 * u) + 1, colour);
+        }
+      }
+    }
+    g.ox = ox;
+    g.oy = oy;
+  }
+
+  // A morning sky: gold haze lying on the horizon and a low, pale sun that barely
+  // moves with the camera. Kept light so the black rider reads against it.
+  drawMorningSky(g, cam) {
+    const ox = g.ox;
+    g.ox = 0;
+    const horizon = P(WORLD.GROUND);
+    // haze: ten bands of 12 px fading from the sky colour down to pale gold at the horizon
+    const [top, low] = [[190, 222, 246], [255, 226, 160]];
+    for (let i = 0; i < 10; i++) {
+      const k = (i + 1) / 10;
+      const c = top.map((v, n) => Math.round(v + (low[n] - v) * k * k));
+      g.fill(0, horizon - 120 + i * 12, g.w, 132 - i * 12 + 60, c);
+    }
+    if (g === this.g) {
+      const sx = 250 - Math.round(cam.x * 0.02);
+      const sy = horizon - 34;
+      const [c1, c2] = [[255, 246, 190], [255, 226, 140]];
+      g.fill(sx - 10, sy - 6, 20, 12, c2);
+      g.fill(sx - 7, sy - 10, 14, 20, c2);
+      g.fill(sx - 8, sy - 8, 16, 16, c2);
+      g.fill(sx - 6, sy - 7, 12, 14, c1);
+      g.fill(sx - 4, sy - 9, 8, 18, c1);
+    }
+    g.ox = ox;
+  }
+
   drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
     const G = P(WORLD.GROUND);
 
     // ground: solid black, column by column so gaps, banks, ramps and stairs
     // all come from the level's ground segments
     const bottom = g.h + cam.y;
-    const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
+    // (a piece flagged `under`, like the fun box, sits on the flat street: its own
+    // draw paints the shape, so the street column under it is the flat one)
+    const topAt = (x) => {
+      const gs = game.groundAt(x * S + S / 2);
+      return Math.min(bottom, P(gs.under ? WORLD.GROUND : gs.y));
+    };
+    const patches = game.level.obstacles.filter((o) => o.dirt).map((o) => o.dirt);
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
-      if (top < bottom) {
+      if (top < bottom && game.level.wood) {
+        this.drawWood(g, x, top, bottom);
+      } else if (top < bottom && game.groundAt(x * S + S / 2).material === 'concrete') {
+        // a poured concrete slab (a bank, the Euro Gap) down to the street, then the street's own layers
+        const base = Math.max(top, G);
+        this.drawConcrete(g, x, top, base);
+        g.fill(x, base, 1, bottom - base, ink);
+        this.drawGround(g, x, base, bottom, !!game.level.sidewalk);
+      } else if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
-        this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
+        // raised ground (ramps, banks, stair platforms) is solid earth down to where the street's own dirt ends
+        this.drawGround(g, x, top, bottom, !!game.level.sidewalk, ASPHALT_H, GRASS_H, G + ASPHALT_H + GRASS_H + DIRT_H);
+      } else if (patches.length) {
+        // a dirt-filled gap: a strip sunk a little below the street, no asphalt or grass
+        const wx = x * S + S / 2;
+        if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
+          g.fill(x, G + 2, 1, bottom - G - 2, ink);
+          const kind = patches.find((p) => wx >= p.x1 && wx < p.x2)?.kind;
+          if (kind === 'gravel') this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
+          else if (kind === 'rubble') this.drawRubble(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
+          else this.drawGround(g, x, G + 2, bottom, false, 0, 0);
+        }
       }
       top = next;
+    }
+  }
+
+  // A poured concrete column from `top` down to `base`: a lit top edge, the odd
+  // crack and speckle, a slab joint every 28 px (like the Big Set).
+  drawConcrete(g, x, top, base) {
+    for (let y = top; y < base; y++) {
+      const d = y - top;
+      let c = CONC;
+      if (d < 2) c = CONC_LIT;
+      else if (d > 3 && (x * 7 + y * 13) % 61 === 0) c = CONC_DARK;
+      else if ((x * 3 + y * 5) % 19 === 0) c = CONC_LIT;
+      else if (x % 28 === 0) c = CONC_DARK;
+      g.pset(x, y, c);
+    }
+    g.pset(x, top - 1, ink); // outline along the top edge
+  }
+
+  // Loose gravel: chunky 2x2 stones in greys and tans, speckled, dark in the gaps.
+  drawGravel(g, x, top, end) {
+    for (let y = top; y < end; y++) {
+      const hb = hash(x >> 1, y >> 1) % 12;
+      let c = GRAVEL[hb % GRAVEL.length];
+      if (hash(x, y) % 9 === 0) c = hb % 2 ? GRAVEL_DARK : GRAVEL_LIT; // speckle
+      if (y === top) c = GRAVEL_DARK;
+      g.pset(x, y, c);
+    }
+  }
+
+  // Broken concrete and dirt: chunky 3x3 pieces of slab in greys, with brown dirt
+  // and the odd rust-coloured bit of rebar showing between them.
+  drawRubble(g, x, top, end) {
+    for (let y = top; y < end; y++) {
+      const hb = hash(Math.floor(x / 3), Math.floor((y + (Math.floor(x / 3) % 2)) / 3)) % 13;
+      let c;
+      if (hb < 6) c = CONC;
+      else if (hb < 8) c = CONC_LIT;
+      else if (hb < 10) c = CONC_DARK;
+      else if (hb < 12) c = dirtDark;
+      else c = [150, 80, 40]; // rust
+      if (hash(x, y) % 7 === 0) c = hb % 2 ? CONC_DARK : dirt; // speckle
+      if (x % 3 === 2 || y % 3 === 2) c = hb < 10 ? CONC_DARK : dirtDark; // the cracks between pieces
+      if (y === top) c = [84, 80, 76];
+      g.pset(x, y, c);
+    }
+  }
+
+  // The Mega Ramp's ground: wooden planks all the way down (street, ramps and
+  // quarter pipe alike). Boards are 6 px tall rows with a dark seam, butt joints
+  // staggered per row, a lit top edge, and the odd bit of grain.
+  drawWood(g, x, top, bottom) {
+    for (let y = top; y < bottom; y++) {
+      const row = Math.floor(y / 6);
+      let c = row % 2 ? WOOD_A : WOOD_B;
+      const hb = hash(x >> 1, y);
+      if (hb % 11 === 0) c = WOOD_DARK;
+      else if (hb % 13 === 0) c = WOOD_LIGHT;
+      if ((x + row * 23) % 54 === 0) c = WOOD_DARK; // butt joint
+      if (y % 6 === 5) c = WOOD_DARK; // seam under each board
+      if (y === top) c = WOOD_LIGHT; // lit top edge
+      g.pset(x, y, c);
     }
   }
 
@@ -239,10 +431,10 @@ export class Renderer {
   // stage: the surface in greys with the odd speckle (a sidewalk also has
   // a dark joint every 28 px), the grass in greens, the dirt in muted browns
   // with the odd grey stone. Below that the ground is plain black.
-  drawGround(g, x, top, bottom, sidewalk) {
-    const surfaceEnd = top + ASPHALT_H;
-    const grassEnd = surfaceEnd + GRASS_H;
-    const dirtEnd = grassEnd + DIRT_H;
+  drawGround(g, x, top, bottom, sidewalk, asphalt = ASPHALT_H, grassH = GRASS_H, floor = 0) {
+    const surfaceEnd = top + asphalt;
+    const grassEnd = surfaceEnd + grassH;
+    const dirtEnd = Math.max(grassEnd + DIRT_H, floor);
     const end = Math.min(bottom, dirtEnd);
     for (let y = top; y < end; y++) {
       const hb = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
@@ -348,9 +540,45 @@ export class Renderer {
 
   drawParticles() {
     for (const p of this.particles) {
-      const c = p.kind === 'spark' ? red : ink;
+      if (p.kind === 'ball') {
+        this.g.fill(P(p.x), P(p.y), 2, 2, p.color); // a flung ball: a 2x2 block
+        this.g.pset(P(p.x), P(p.y), PAL.wheel);
+        continue;
+      }
+      const c = p.kind === 'spark' ? red : p.kind === 'splash' ? [190, 225, 255] : ink;
       this.g.pset(P(p.x), P(p.y), c);
     }
+  }
+
+  // Specials: a solid plate with a bold outline behind the text, which pops in,
+  // drifts up and dithers away over SPECIAL_LIFE seconds. Newest at the bottom,
+  // older ones above it. Kept right of centre, clear of the rider.
+  drawSpecials(inset = 0) {
+    const g = this.g;
+    const cx = Math.round(RES.W * 0.74);
+    const n = this.specials.length;
+    this.specials.forEach((sp, i) => {
+      const t = sp.age;
+      const text = fit(g, sp.text, RES.W - 2 * inset - 24);
+      const w = g.textWidth(text) + 10;
+      const h = 15;
+      const rise = Math.round(Math.min(1, t / SPECIAL_LIFE) * 12);
+      const pop = t < 0.12 ? Math.round((1 - t / 0.12) * 6) : 0; // slides up into place
+      const y = 56 + (n - 1 - i) * (h + 3) - rise + pop;
+      const x = Math.min(Math.round(cx - w / 2), RES.W - inset - 4 - w);
+      const [fill, edge, ink2] = sp.kind === 'gap' ? [[255, 200, 40], [150, 70, 0], [90, 30, 0]] : [[210, 30, 50], [100, 0, 20], [255, 255, 255]];
+      // dither out: more of the plate drops away as it fades
+      const level = t < 0.85 ? 0 : t < 1.05 ? 1 : 2;
+      const keep = (px, py) => level === 0 || (level === 1 ? (px + py) % 2 === 0 : (px + py) % 4 === 0 && py % 2 === 0);
+      for (let py = y; py < y + h; py++) {
+        for (let px = x; px < x + w; px++) {
+          const border = px === x || px === x + w - 1 || py === y || py === y + h - 1;
+          const shade = !border && py >= y + h - 3;
+          if (keep(px, py)) g.pset(px, py, border ? ink : shade ? edge : fill);
+        }
+      }
+      if (t < 1.05) g.text(text, x + 5, y + 4, ink2, 1);
+    });
   }
 
   // Centred under the HUD (which ends about y 33).
@@ -451,12 +679,24 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const [x, y, w, h] = [20, 48, 280, 70];
-    g.fill(x, y, w, h, ink);
-    g.rect(x, y, w, h, red);
-    g.rect(x + 2, y + 2, w - 4, h - 4, red);
+    // a wooden sign: planks with a dark frame, lettering in warm amber
+    g.fill(x, y, w, h, WOOD_DARK);
+    for (let py = y + 2; py < y + h - 2; py++) {
+      const row = Math.floor((py - y) / 6);
+      for (let px = x + 2; px < x + w - 2; px++) {
+        let c = row % 2 ? WOOD_A : WOOD_B;
+        if ((py - y) % 6 === 5 || (px + row * 31) % 70 === 0) c = WOOD_DARK;
+        g.pset(px, py, c);
+      }
+    }
+    g.rect(x, y, w, h, ink);
+    g.rect(x + 3, y + 3, w - 6, h - 6, WOOD_DARK);
+    g.fill(x + 6, y + 6, w - 12, h - 12, [60, 32, 14]);
     if (this.blink(4)) {
-      g.text('SECRET LEVEL', cx, y + 12, red, 3, 'center');
-      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, red, 2, 'center');
+      g.text('SECRET LEVEL', cx + 1, y + 13, ink, 3, 'center');
+      g.text('SECRET LEVEL', cx, y + 12, BANNER_TEXT, 3, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx + 1, y + 39, ink, 2, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, WOOD_LIGHT, 2, 'center');
     }
   }
 

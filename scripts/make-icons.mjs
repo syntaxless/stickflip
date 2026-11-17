@@ -78,9 +78,9 @@ function rider(g, fx, fy, s, ang = 0, pose = POSES.flip) {
 // "FLIP" in the red title font with a black drop shadow, centred on plain navy.
 // `k` is the letter scale. The lettering spans about two thirds of the width,
 // so rounded corners and Android's circle crop never clip it.
-function icon(N, k) {
+function icon(N, k, beta = false) {
   const g = new Pix(fakeCtx, N, N);
-  g.clear(PAL.sky);
+  g.clear(beta ? PAL.orange : PAL.sky);
   const gap = Math.max(2, k * 2);
   const top = Math.round((N - (14 * k + gap)) / 2);
   // Faux bold: each word is stamped `bold` extra times one pixel to the right,
@@ -89,7 +89,13 @@ function icon(N, k) {
   const cx = N / 2 - bold / 2;
   for (const [word, y] of [['STICK', top], ['FLIP', top + 7 * k + gap]]) {
     for (let d = 0; d <= bold; d++) g.text(word, cx + 1 + d, y + 1, PAL.ink, k, 'center');
-    for (let d = 0; d <= bold; d++) g.text(word, cx + d, y, PAL.red, k, 'center');
+    for (let d = 0; d <= bold; d++) g.text(word, cx + d, y, beta ? PAL.ink : PAL.red, k, 'center');
+  }
+  if (beta && k >= 2) {
+    // An orange icon with a black BETA ribbon along the bottom, so the unstable
+    // build can't be mistaken for the real one on the Home Screen.
+    g.fill(0, N - 9 * k, N, 9 * k, PAL.ink);
+    g.text('BETA', N / 2, N - 8 * k, PAL.wheel, k, 'center');
   }
   return g;
 }
@@ -104,6 +110,15 @@ save('apple-touch-icon.png', png(icon(90, 2), 2)); // 180 x 180
 save('icon-192.png', png(icon(96, 2), 2));
 save('icon-512.png', png(icon(128, 3), 4));
 save('icon-maskable-512.png', png(icon(128, 3), 4));
+
+// The unstable build's own Home Screen icons (icons/beta/), swapped in by a
+// small script in index.html when the page is served from /unstable/.
+mkdirSync(new URL('beta/', OUT), { recursive: true });
+save('beta/favicon-32.png', png(icon(32, 1, true)));
+save('beta/apple-touch-icon.png', png(icon(90, 2, true), 2));
+save('beta/icon-192.png', png(icon(96, 2, true), 2));
+save('beta/icon-512.png', png(icon(128, 3, true), 4));
+save('beta/icon-maskable-512.png', png(icon(128, 3, true), 4));
 
 // iOS app (ios/): the App Store icon, 1024 x 1024 with no transparency, and
 // the launch screen, the title small in the middle of plain navy (iOS crops

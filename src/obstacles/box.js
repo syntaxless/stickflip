@@ -3,6 +3,9 @@ import { PAL } from '../render/pixel.js';
 
 const { ink, steel, shine, wheel: white } = PAL;
 
+// A red painted curb: lit top, red face, darker foot, chipped to the concrete.
+const CURB = { lit: [255, 120, 100], red: [205, 40, 40], dark: [140, 20, 30], chip: [225, 215, 205] };
+
 const SLAPPY_MAX = 36; // the tallest curb you can slap onto without an ollie
 
 // A block standing on the street: a curb, a trash can. Its sides slam you if
@@ -10,7 +13,7 @@ const SLAPPY_MAX = 36; // the tallest curb you can slap onto without an ollie
 // across (roll off the end and you drop back down); a `grindable` one can be
 // ground with a timed tap, like a rail, and if it's low enough, slappied:
 // ridden straight into with the finger held, no ollie. Anything else on top is a bail.
-export function box({ x, w, h, landable = false, grindable = false, lid = false, base = WORLD.GROUND }) {
+export function box({ x, w, h, landable = false, grindable = false, lid = false, paint = null, base = WORLD.GROUND }) {
   const top = base - h;
   const surface = { x1: x, x2: x + w, y: top, landable, grindable };
   return {
@@ -21,6 +24,20 @@ export function box({ x, w, h, landable = false, grindable = false, lid = false,
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const [l, t, r, b] = [P(x), P(top), P(x + w) - 1, P(base) - 1];
+      if (paint === 'red') {
+        g.fill(l, t, r - l + 1, b - t + 1, CURB.red);
+        g.rect(l, t, r - l + 1, b - t + 1, ink);
+        g.line(l + 1, t + 1, r - 1, t + 1, CURB.lit); // lit top face
+        g.line(l + 1, t + 2, r - 1, t + 2, CURB.lit);
+        g.line(l + 1, b - 1, r - 1, b - 1, CURB.dark); // shaded foot
+        g.line(l + 1, b - 2, r - 1, b - 2, CURB.dark);
+        for (let px = l + 3; px < r - 2; px += 7) { // chips down to the concrete, in fixed spots
+          const h = (px * 37 + 11) % 5;
+          g.pset(px + (h % 3), t + 3 + (h % 2), CURB.chip);
+          if (h === 0) g.pset(px + 1, t + 4, CURB.chip);
+        }
+        return;
+      }
       // concrete block: black outline, grey body, silver lit top and a glint
       g.fill(l, t, r - l + 1, b - t + 1, steel);
       g.rect(l, t, r - l + 1, b - t + 1, ink);

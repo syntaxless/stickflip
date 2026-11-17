@@ -1,11 +1,12 @@
 # Stickflip
 
-A tap-to-play stick figure skateboarding game. Each stage is one long strip
-of obstacles the camera pans along; its levels are named sections of the
-strip, and each one is a checkpoint. You get past everything using nothing
-but taps, holds and drawn trick shapes.
+A tap-to-play stick figure skateboarding game in chunky pixel art. Each stage
+is one long strip of obstacles the camera pans along; its levels are named
+sections of the strip, and each one is a checkpoint. You get past everything
+using nothing but taps, holds and drawn trick shapes. Five stages and a
+secret Mega Ramp.
 
-## Play
+## Play and develop
 
 ```sh
 npm start        # serves the game at http://localhost:8080 (and on your LAN for phones)
@@ -13,15 +14,20 @@ npm test         # runs the game-logic tests (Node 18+)
 ```
 
 Live at **https://stickflip.itschefff.com** (`main`) with a preview of the
-`unstable` branch at **https://stickflip.itschefff.com/unstable/**.
+`unstable` branch at **https://stickflip.itschefff.com/unstable/**. The preview
+has its own orange BETA Home Screen icon and the name "Stickflip Beta", so it can
+sit next to the real app.
 
-Branches: work lands on `unstable` first (via PRs) and is tested there.
-When it's good, `unstable` is merged into `main`. Every push to either branch
-runs the tests (`ci.yml`), then rebuilds the site from both (`deploy.yml`).
+**Release workflow.** Work lands on `unstable` first, as pull requests that must
+pass the tests, and is tried on the preview. When it's good, `unstable` is
+released to `main` with a pull request (nothing is released without the
+owner's go-ahead). Every push to either branch runs the tests (`ci.yml`); when
+they pass, `deploy.yml` rebuilds the one GitHub Pages site from both branches.
 
-No build step and no dependencies. It's plain HTML, a `<canvas>` and ES
-modules, so any static host (GitHub Pages, Netlify...) can serve the repo as is.
-Space, Enter and the up arrow work as a tap on desktop.
+No build step and no dependencies for the web game: plain HTML, a `<canvas>`
+and ES modules, so any static host can serve the repo as is. The only
+dependencies (Capacitor) are for the iOS app. Space, Enter and the up arrow work
+as a tap on desktop.
 
 ## Controls
 
@@ -37,9 +43,12 @@ One input, **tap**, means whatever makes sense at that moment:
 
 **Hold for a higher ollie.** On the ground the ollie pops when you lift your
 finger (or let go of Space). Hold it and the skater crouches lower and lower,
-then pops up to about 1.25x as high after a 0.7 s hold (still not enough
+then pops up to about 1.25x as high after a 0.7 s hold (`CHARGE_MIN` + `CHARGE_TIME`) (still not enough
 air for a backflip on flat ground). A quick tap is a normal
-ollie. Tuning: `CHARGE_*` in `src/config.js`.
+ollie. Tuning: `CHARGE_*` in `src/config.js`. A charged ollie also flies farther (about 240 units
+for a plain ollie, about 350 for a full charge), and some obstacles need it:
+Stage 4's Sandbox is too wide for a plain ollie, and the Big Drop's one-jump route
+needs one.
 
 **Draw a shape in the air** for other tricks. Every shape starts by pulling
 down (like popping the tail), then flicks or hooks back up. "Right" means
@@ -108,191 +117,261 @@ Grinds also score 1 per px ground. On desktop, hold Space through the rail, with
 the left or right arrow held for a 5-0 or nose grind. Grinds live in `GRINDS`
 in `src/config.js`.
 
+
+**Speed.** The rider rolls at a steady cruising speed (`ROLL_SPEED`). Holding
+down crouches and pushes (faster), holding and dragging forward pushes harder,
+holding and dragging back brakes, and the speed drifts back to cruising when you
+let go (`SPEED_*`, `HOLD_ACCEL`, `PUSH_ACCEL`, `BRAKE` in `src/config.js`). A
+quarter pipe speeds you up 35% for the rest of the run.
+
+
 ## Stages
 
-A stage lays single-screen sections (`src/levels/levelN.js`) end to end into
-one strip (`src/stages/`). Each section's name shows top-left as you reach it
-(1-3: FIVE STAIR) and is a checkpoint: a bail replays from the start of the
+A stage lays single-screen sections (`src/levels/*.js`) end to end into one
+strip (`src/stages/`). Each section's name shows top-left as you reach it
+(e.g. 1-3: FIRST RAIL) and is a checkpoint: a bail replays from the start of the
 section you bailed in, with the score you'd banked before it, and the bail
-screen's RESTART STAGE goes back to the top. A reload carries on from the
-last checkpoint.
+screen's RESTART STAGE goes back to the top. A reload carries on from the last
+checkpoint. Checkpoints are written stage-section, so 3-6 is the sixth section of
+Stage 3.
 
 **Stage select.** Finishing a stage opens the next one (on this device).
 Once there's more than one, the end-of-run REPLAY button reads STAGES and
-opens the stage list, and the title screen has a STAGES button. Each stage
-has its own top 5 (a `stage` column in the shared table; Stage 1 keeps the
-scores from before stages).
+opens the stage list, and the title screen has a STAGES button. Each stage has
+its own top 5.
 
-**Stage 2** (street): Curb (ollie over a long, low curb, or land on it and
-roll or grind along the top), Step Up (ollie up three steps onto a ledge,
-then drop off its end), Trash Can (a tall can: a well-timed ollie clears it)
-and Ring of Fire (a kicker, a gap, and a burning ring to fly through: feet
-below it or head above it is a bail; clean through is a RING OF FIRE trick).
+Each stage has its own look: Stages 1 and 2 have a lighter blue sky (#6EB4FF) with
+slow parallax clouds and asphalt; Stage 3 a light grey sky with a faint parallax
+city and a concrete sidewalk; Stage 4 a bright blue sky and a red rubber-mat
+surface; Stage 5 a sunset sky with a dusk skyline. Under the surface every stage
+has a thin grass layer, chunky muted-brown dirt and then plain black.
 
-**Stage 3** (construction site): Rock (a tiny rock stops the board dead, so
-ollie it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap
-(a jersey barrier you can ollie onto or grind, then a gap right behind it),
-Barricade (a sawhorse across the street), Scaffold Rail, Big Set (six stairs with a
-handrail) and Big Gap (a tall kicker and a 240-unit gap). Road signs stand
-behind the action as decor.
+**Stage 1** is a rock, then the six original levels in order, joined by a bank
+(a good way past the rail, so you can land first) up to Five Stair's platform
+and a drop off the Euro Gap stairs.
 
-The ground is a thin strip of a stack of chunky pixel layers: asphalt (a concrete sidewalk in Stage 3), thin grass, muted dirt with a few stones, then black, and the rider is 10%
-faster than the first release (ROLL_SPEED 330).
-
-**Stage 1** is the six original levels in order, joined by a bank up to Five
-Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
-finale: ride back out to the left to finish.
-
-1. **First Gap**: a 130 px gap. Ollie just before the edge: too early and you
-   come up short, too late and you roll in. Stars: finish, 150 (any flip), 300
-   (a 360 flip).
-2. **First Rail**: a low rail, 260 px long and 64 px high, too long to ollie.
-   Grind it. Stars: finish, 700 (kickflip + grind), 1400 (kickflip in, grind,
-   pop and kickflip out).
-3. **Five Stair**: start on a platform with five stairs down and a handrail.
+1. **First Rock**: a small rock in the road. Roll into it and the board stops
+   dead; any ollie clears it.
+2. **First Gap**: a 130 px gap of gravel. Ollie just before the edge: too early and
+   you come up short, too late and you roll in.
+3. **First Rail**: a low rail, 260 px long and 64 px high, too long to ollie.
+   Grind it.
+4. **Five Stair**: start on a platform with five stairs down and a handrail.
    Ollie or flip the whole set (land on a step and you bail), or grind the
-   handrail down. Stars: finish, 600, 1100 (kickflip in, grind, pop and flip out).
-4. **Bank to Bank**: ride up a bank and ollie off its lip, over a gap, onto the
-   bank going down the other side. Rolling up a bank adds to your pop; roll off
-   the lip without an ollie and you drop in. Stars: finish, 200, 450.
-5. **Euro Gap**: a bank that runs right up to the foot of a two-stair going up.
-   Ollie off the bank's lip up onto the top: the lower step and the risers are
+   handrail down.
+5. **Bank to Bank**: ride up a bank and ollie off its lip, over a pool of water,
+   onto the bank going down the other side. Roll off the lip without an ollie and
+   you splash in.
+6. **Euro Gap**: a concrete bank that runs right up to the foot of a two-stair going
+   up. Ollie off the bank's lip up onto the top: the lower step and the risers are
    bails.
-   Stars: finish, 150, 300.
-6. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail,
-   ride up the quarter pipe (it speeds you up by 35%, `QP_SPEED`, for
-   the rest of the run, and keeps that pace across the screen up the curve) and go straight up out of it and straight back down, at
-   riding speed and without turning: over a second of hang time for tricks
-   (FS AIR, plus any flip you finish before you drop back in). Then ride back out fakie to the left, ollieing or grinding the rail
-   again on the way. Stars: finish, 700, 1500.
+7. **Quarter Pipe**: a long rail in front of a quarter pipe. Grind the rail, ride up
+   the quarter pipe and go straight up out of it and straight back down: over a
+   second of hang time for tricks (FS AIR, plus any flip you finish before you drop
+   back in). Riding down to the bottom of the curve finishes the stage. The rail
+   sits close to the Euro Gap's lip so an ollie off the top lands on it (the EURO TO
+   RAIL gap bonus); a bail here restarts the rider on the street right after the
+   Euro Gap (`starts` in `src/stages/stage1.js`), 0.67 s from the rail.
 
-**Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop
-in from a high deck and fly off the kicker at a raised, gently curved
-"rainbow" rail. Ollie off the kicker to clear the whole rail and land in the
-long bank that starts right at its end, or grind over the curve and pop (or
-roll) off the end into the bank. Finish with a big air out of a tall quarter
-pipe. Rails take an `arc` option for the curve. Finish Stage 1 with at least
-5,000 points in that run (`SECRET_SCORE` in `src/main.js`, before the no-bail
-bonus) and you're taken there; its score counts toward the run total. A
-blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
-leads into it, its HUD says BONUS: MEGA RAMP, and it has
-its own palette from the 16 named HTML colours (purple sky, yellow text).
+**Stage 2** (street): Curb (ollie over a long, low curb, or land on it and roll or
+grind along the top), Step Up (ollie up three steps onto a ledge, then drop off
+its end), Trash Can (a tall can: a well-timed ollie clears it) and Ring of Fire (a
+kicker, a gap, and a burning ring high up: only a charged ollie flies through it
+for the 600 bonus; a small jump passes under it with no modifier, and feet below
+or head above the ring is a bail).
 
-* Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
-  came up short, landed on the stairs or a step, rolled off an edge, or hit
-  the quarter pipe's wall.
+**Stage 3** (construction site): Rock (a tiny rock stops the board dead, so ollie
+it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long
+jersey barrier you can ollie onto or grind, then a gap right behind it),
+Barricade (two sawhorses: two jumps), Scaffold Rail (grind the top pipe), Big Drop
+(a concrete platform to roll or jump off, with a traffic barrel at the bottom:
+land and ollie the barrel, or take one charged ollie over both) and Big Gap (a
+broken slab of sidewalk as the kicker and a 240-unit gap full of rubble). Road signs
+stand behind the action as decor.
 
-Tricks chain into a combo until you land on the ground, and the combo is
-multiplied by the number of tricks.
+**Stage 4** (playground, a first pass): Toy Blocks (a pyramid of blocks, one
+ollie), Slide (ride up the ladder and roll off the deck with your finger held to
+grind the chute down), Sandbox (a wide sand pit: it takes a charged ollie), Seesaw
+(grind the plank), Monkey Bars (a higher grind), Block Tower (ollie up five block
+steps) and Ball Pit (a kicker and a 240-unit gap).
 
-**Runs and high scores.** A run takes you through the stages in order. TOTAL
-in the corner is the run's score so far; a bail loses what you scored since
-the last checkpoint. A run with no bails gets a 2,000 bonus. At the end the
-total goes on the top 5 table; a new entry asks for a name of up to 6 letters
-(tap + and -, or type them). REPLAY then starts over with a fresh total. The table shows on the title screen too.
+**Stage 5** (skate park, the hardest, a first pass): Ledges (two concrete ledges),
+Flat Bar, Hubba (a solid concrete wall down stairs, grind its top edge), Curb Cut
+(a driveway cut down into the street between two curbs), Fun Box (a long wooden
+trapezoid with a rail on top), Big Set (three big concrete steps, no rail) and Cop
+Car (a wooden ramp up to a police car: grind its light bar).
 
-**Shared high scores.** With `SCOREBOARD` in `src/config.js` filled in (a
-Supabase project URL and its public anon key), the top 5 is shared by everyone.
-The table is set up by `supabase/scores.sql`: row level security lets the anon
-key only read scores and add new ones, the database checks the initials (1-4
-letters) and score (1-100000), and posting is rate limited (3 a minute per
-address, 30 overall). If the shared table can't be reached, the game falls back
-to the on-device table, and scores are always kept on the device too. Only the
-live site posts to the shared table: the /unstable/ preview and local copies
-(localhost) keep their own device table, apart from the live one.
+**Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
+a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
+off the kicker to clear the whole rail and land in the long bank that starts right
+at its end, or grind over the curve and pop (or roll) off the end into the bank.
+Finish with a big air out of a tall quarter pipe; riding back down ends it. Finish
+any stage with at least 8,000 points in that run (`SECRET_SCORE` in `src/main.js`,
+before the no-bail bonus) and you're taken there; its score counts toward the run
+total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
+leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a morning
+sky with a low sun and gold haze, a faint skyline, an all-wood plank ground and a
+wooden-sign banner.
+
+Bails explain what went wrong: slammed or clipped the rail, landed mid-flip, came
+up short, landed on the stairs or a step, rolled off an edge, or hit the quarter
+pipe's wall.
+
+## Scoring
+
+Tricks and grinds chain into a combo until you land on the ground, and the combo
+is multiplied by the number of tricks.
+
+**Gap bonuses.** Named gaps like the classic skate games: take off from one
+place and land (or grind) on another and the jump pops up as, say, EURO TO RAIL
++500, BARREL DROP, SANDBOX LEAP or BROKEN WALK. A gap counts as a trick in the
+combo and can be earned once per attempt. Every gap (name, points, where you must
+take off and land) is one line in `src/gaps.js`, so renaming or tuning is a
+one-line change, and `tests/gaps.test.js` has a script that earns each one.
+
+**Specials.** A gap bonus, or any trick or grind worth `SPECIAL_POINTS` (300, in
+`src/config.js`) or more, is a "special": a solid plate (gold for gaps, red for
+tricks) pops in, drifts up and dithers away over 1.3 s, with a short rising
+square-wave jingle (`specialNotes` in `src/audio.js`; it climbs for bigger bonuses).
+
+**Runs and high scores.** A run takes you through the stages in order. TOTAL in the
+corner is the run's score so far; a bail loses what you scored since the last
+checkpoint. A run with no bails gets a 2,000 bonus. At the end the total goes on
+that stage's top 5 table; a new entry asks for a name of up to 6 letters (tap + and
+-, or type them). REPLAY then starts over with a fresh total. The table shows on
+the title screen too.
+
+**Shared high scores (Supabase).** With `SCOREBOARD` in `src/config.js` filled in (a
+Supabase project URL and its public anon key), each stage's top 5 is shared by
+everyone, in one `scores` table with a `stage` column (`stage-1` ... `stage-5`;
+scores from before stages count as Stage 1). To set it up: create a Supabase
+project, open SQL Editor, paste all of `supabase/scores.sql` and run it (it is safe
+to run more than once), then put the project URL and anon key in `SCOREBOARD`. Row
+level security lets the anon key only read scores and add new ones; the database
+checks the name (1-6 letters or spaces), the stage and the score (1-100000), and
+posting is rate limited (3 a minute per address, 30 overall). If the shared table
+can't be reached the game falls back to the on-device table, and scores are always
+kept on the device too. Only the live site and the iOS app post to the shared table:
+the /unstable/ preview, test play and local copies keep their own device tables.
 
 ## Testing a level
 
-On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to start
-Stage 1 at its Nth checkpoint (1-6), `?level=S-N` for stage S (`?level=2-4`:
-Ring of Fire), or `?level=secret` for the secret level, e.g.
-`https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
-Test play keeps its own saves and on-device high scores, so it never touches
-your real progress or the shared table. It does nothing on the live site.
+On the /unstable/ preview or a local copy (`npm start`) there is a **TEST** button
+at the top of the screen: it opens a grid that jumps to any checkpoint of any
+stage, or the Mega Ramp. You can also use the URL: `?level=N` starts Stage 1 at its
+Nth checkpoint (1-7), `?level=S-N` starts stage S at checkpoint N (`?level=3-6`: Big
+Drop), and `?level=secret` is the Mega Ramp, e.g.
+`https://stickflip.itschefff.com/unstable/?level=3-6`. The HUD then says TEST, every
+stage is open, and test play keeps its own saves and on-device high scores, so it
+never touches your real progress or the shared table. None of this exists on the
+live site or in the iOS app.
 
-In test mode each stroke is drawn on screen (cyan while the finger is down,
-yellow after) with what it was read as, the template shape it matched and how
-far off it was (0 is exact; around 0.15 or more is a rough match).
+In test mode each stroke is drawn on screen (cyan while the finger is down, yellow
+after) with what it was read as, the template shape it matched and how far off it
+was (0 is exact; around 0.15 or more is a rough match).
+
+`npm test` plays every checkpoint with scripted taps, holds and charges
+(`tests/stage.test.js`, `tests/game.test.js`), checks the gap bonuses
+(`tests/gaps.test.js`), the trick shapes (`tests/gesture.test.js`) and the
+leaderboard (`tests/leaderboard.test.js`).
 
 ## Design choices
 
-* **DOS look.** The game draws into a 320×180 framebuffer with a 3-colour
-  palette: plain navy sky, black for everything solid
-  (ground, rail, board, rider) and red for all text, Bresenham lines and a
-  built-in 5×7 bitmap font, so there's no anti-aliasing anywhere. The frame is then
-  scaled up by a whole number of device pixels for chunky, even pixels.
-  Sound is PC-speaker style square-wave beeps (press M to mute on desktop).
-
-* **Fixed stage, no scrolling.** Physics runs in 960×540 world units (3 units
-  per pixel). Landscape is the intended orientation, and portrait shows a hint to rotate.
-* **Fixed 120 Hz physics step** so jump heights and timing windows are identical
-  on 60 Hz and 120 Hz phones.
+* **Chunky pixel-art look.** The game draws into a 320x180 framebuffer: black
+  outlines, grey shaded bodies with a silver lit panel and white glints, our own
+  drawings, no anti-aliasing (Bresenham lines and a built-in 5x7 bitmap font). Text
+  and HUD are red (a darker red on light skies). The frame is scaled up by a whole
+  number of device pixels for even pixels. Palettes per stage are in
+  `src/render/pixel.js`.
+* **Sound** is PC-speaker style square-wave beeps (press M to mute on desktop); no
+  sound synthesis beyond that.
+* **Fixed world.** Physics runs in 960x540 world units (3 units per pixel). Landscape
+  is the intended orientation, and portrait shows a hint to rotate.
+* **Fixed 120 Hz physics step** so jump heights and timing windows are identical on
+  60 Hz and 120 Hz phones.
 * **Tap meaning is decided by prediction.** In the air the game works out where
-  you'll touch down. If that's a grindable rail and there isn't time left for a
-  flip, the tap primes a grind. Otherwise it's a kickflip. This keeps one-button
-  play readable without extra gestures.
-* **Input on `pointerdown`**, not `click`, for low latency on touch screens.
-  Zoom and scroll gestures are blocked on the canvas.
-* **Logic and rendering are separate.** `src/game.js` has no DOM code, so all
-  the mechanics are covered by `node --test`.
+  you'll touch down. If that's a grindable rail and there isn't time left for a flip,
+  the tap primes a grind. Otherwise it's a kickflip.
+* **Input on `pointerdown`**, not `click`, for low latency on touch screens. Zoom and
+  scroll gestures are blocked on the canvas.
+* **Logic and rendering are separate.** `src/game.js` has no DOM code, so all the
+  mechanics are covered by `node --test`.
 
 ## Code layout
 
 ```
 index.html              page shell, loads src/main.js
-src/main.js             canvas sizing, input, game loop, saved progress
-src/config.js           physics + scoring constants
+privacy.html            privacy page (linked from the App Store listing)
+src/main.js             canvas sizing, input, game loop, saved progress, unlock flow, TEST menu
+src/config.js           physics + scoring constants, SCOREBOARD, SPECIAL_POINTS
 src/game.js             game logic: skater state machine, collisions, scoring
-src/obstacles/          obstacle builders (rail, gap, stairs), each with surfaces, solids, ground and draw()
+src/gaps.js             the named gap bonuses
+src/gesture.js          trick shape matching
+src/obstacles/          obstacle builders (rail, gap, stairs, box...), each with surfaces, solids, ground and draw()
 src/levels/             one file per section (a screen of obstacles) + the Mega Ramp
 src/stages/             stages: sections laid end to end (compose.js), the ordered STAGES list
-src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
-src/audio.js            PC-speaker style beeps
-src/leaderboard.js      top 5 high scores (on-device, swappable for a shared one)
+src/render/             pixel framebuffer + font, stick figure, backgrounds, HUD, effects, palettes
+src/audio.js            PC-speaker style beeps and the special jingle
+src/leaderboard.js      top 5 high scores (on-device plus the shared Supabase table)
 src/run.js              the run total across stages
+src/native.js           iOS app only: haptics and Game Center
 src/update.js           reloads an installed Home Screen app when a newer version is deployed
-icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
+supabase/scores.sql     the shared high-score table, security and rate limits
+icons/, favicon.ico     app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
 manifest.webmanifest    Home Screen app settings (full screen, landscape)
-tests/game.test.js      plays the levels with scripted taps, swipes and holds
+ios/, www/              the Capacitor iOS project and its bundled copy of the game
+tests/                  node:test suites
 ```
 
 ### Adding a stage
 
 1. Write each section as a one-screen level in `src/levels/` exporting
    `{ id, name, obstacles }` (laid out on a 960-wide screen).
-2. Create `src/stages/stageN.js` with `stage({ id, name, sections: [...] })`
-   from `compose.js`. Use `extra` for obstacles that join sections (in strip
-   coordinates: section i starts at i * 960), and `finishLeft` if it ends with
-   a ride back to the left.
-3. Append it to `STAGES` in `src/stages/index.js`.
+2. Create `src/stages/stageN.js` with `stage({ id, name, sections: [...] })` from
+   `compose.js`. Options: `extra` for obstacles that join sections (strip
+   coordinates: section i starts at i * 960); `starts: { i: offset }` to spawn a
+   replay of section i at its left edge plus `offset` instead of 80; `camTop` (how
+   close to the top the rider gets before the camera rises); `palette` (`'site'`,
+   `'play'`, `'park'`...), `sidewalk`, `skyline`, `clouds` for the look;
+   `endAfterQuarter` to end the stage when the rider has ridden back down a
+   quarter pipe; `finishLeft` to end on a ride back to the left.
+3. Append it to `STAGES` in `src/stages/index.js` (stage id `stage-N`, which is also
+   the shared leaderboard key and the Game Center leaderboard `stickflip.stageN`).
+4. Add timed-ollie clears for each checkpoint to `tests/stage.test.js` and a line per
+   gap bonus to `src/gaps.js` (+ a script in `tests/gaps.test.js`).
 
 ### Adding an obstacle type
 
-Write a builder in `src/obstacles/` that returns:
+Write a builder in `src/obstacles/` (export it from `index.js`) that returns:
 
-* `surfaces`: top edges `{ x1, x2, y, grindable, landable, passable }`, or a
-  sloped edge with `y1`/`y2` instead of `y` (a handrail). `grindable` tops can be
-  grinded, `landable` tops (a box or ledge) can be landed on and rolled across,
-  `passable` ones (beside the line, like a handrail) are ignored unless you're
-  locked into a grind, and anything else is a bail if you come down on it.
+* `surfaces`: top edges `{ x1, x2, y, grindable, landable, passable }`, or a sloped
+  edge with `y1`/`y2` instead of `y` (a handrail). `grindable` tops can be ground,
+  `landable` tops (a box or ledge) can be landed on and rolled across, `passable`
+  ones (beside the line, like a handrail) are ignored unless you're locked into a
+  grind, and anything else is a bail if you come down on it.
 * `solids`: rectangles `{ x, y, w, h }` that you slam into from the side.
-* `ground` (optional): segments `{ x1, x2, y, landable, bail, wall }` that
-  replace the flat ground there: a gap is a segment far below the screen,
-  stairs are a raised platform plus non-landable steps. A segment can slope
-  (`y1`/`y2` instead of `y`: a bank) or be a quarter pipe curve
-  (`qp: { cx, cy, R }`). `bail` names the bail for landing on a non-landable
-  segment, `wall` the one for flying into its side.
-* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 =
-  pixels). The ground is drawn for you. `fx.time` is the clock. Levels can also set `takeoffHint: { x1, x2 }` to draw a POP marker.
+* `ground` (optional): segments `{ x1, x2, y, landable, bail, wall }` that replace
+  the flat ground there: a gap is a segment far below the screen, stairs are a
+  raised platform plus non-landable steps. A segment can slope (`y1`/`y2` instead of
+  `y`: a bank) or be a quarter pipe curve (`qp: { cx, cy, R }`). `bail` names the
+  bail for landing on a non-landable segment, `wall` the one for flying into its
+  side. `material: 'concrete'` draws it as poured concrete, and `under: true` means
+  the piece paints itself over the flat street (a wooden box, a ladder) instead of
+  being solid earth.
+* `dirt` (optional): `{ x1, x2, kind }` fills a gap with dirt (`kind: 'gravel'` or
+  `'rubble'` for other fills).
+* `draw(g, fx)`: render it into the pixel framebuffer `g` (world units / 3 = pixels).
+  The ground is drawn for you. `fx.time` is the clock.
 
-The engine handles everything else. A level can also set `width` (wider than
-960 scrolls, with the camera following the skater) and `speed` (rolling speed).
+The engine handles everything else. A level can also set `width` (wider than 960
+scrolls, with the camera following the skater) and `speed` (rolling speed).
 
 ## iOS app
 
 The `ios/` folder wraps the same game as a native iPhone app with
-[Capacitor](https://capacitorjs.com). The game files are bundled inside the
-app, so it plays offline. The website doesn't use any of this.
+[Capacitor](https://capacitorjs.com) (bundle id `com.itschefff.stickflip`, free,
+age 4+, iOS 17+). The game files are bundled inside the app, so it plays offline.
+The website doesn't use any of this.
 
 On a Mac with Xcode:
 
@@ -302,15 +381,18 @@ npm run ios        # copies the game into www/ and syncs it into ios/
 npm run ios:open   # opens the project in Xcode
 ```
 
-Run `npm run ios` again after any change to the game before building in Xcode.
+Run `npm run ios` again after any change to the game (from `main`, for a release)
+before building in Xcode. Then choose your paid Apple Developer team in Xcode's
+Signing settings, archive and upload to App Store Connect.
 
 What's different in the app:
 
 - Always landscape, full screen, iPhone only.
-- Posts to the same Supabase leaderboard as the live site, plus one Game
-  Center leaderboard per stage (`stickflip.stage1`, `stickflip.stage2`, ...),
-  opened from a GAME CENTER button on the high-score table.
-- Haptics on pops, landings, grinds, bails and level clears
-  (`src/native.js` + `ios/App/App/StickflipPlugin.swift`).
+- Posts to the same Supabase leaderboard as the live site, plus one Game Center
+  leaderboard per stage: `stickflip.stage1` through `stickflip.stage5`, opened from a
+  GAME CENTER button on the high-score table. Create all five (score type: integer,
+  high to low) in App Store Connect with exactly those IDs.
+- Haptics on pops, landings, grinds, bails and level clears (`src/native.js` +
+  `ios/App/App/StickflipPlugin.swift`).
 - No GoatCounter. `scripts/build-app.mjs` strips it from the app's copy.
-- The App Store icon and launch screen come from `npm run icons`.
+- The App Store icon and launch screen come from `npm run icons`. No test menu.

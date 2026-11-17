@@ -13,7 +13,7 @@ import { NATIVE, haptics, submitToGameCenter, gameCenterReady, refreshGameCenter
 const STEP = 1 / 120; // fixed physics step so jumps feel the same on every device
 
 // The game draws into a 320x180 framebuffer, which is then blown up onto the
-// screen canvas with nearest-neighbour scaling for chunky DOS pixels.
+// screen canvas with nearest-neighbour scaling for chunky pixels.
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const low = document.createElement('canvas');
@@ -29,7 +29,7 @@ const view = { scale: 1, ox: 0, oy: 0, dpr: 1, portrait: false, inset: 0 };
 // trip through the stages, then the Mega Ramp for a good enough score.
 const LEVELS = STAGES;
 
-// Testing: on /unstable/ or a local copy, ?level=1..6 starts stage 1 at that
+// Testing: on /unstable/ or a local copy, ?level=1..7 starts stage 1 at that
 // checkpoint (or ?level=secret on the Mega Ramp). Test play keeps its own saves and its own
 // on-device high scores, so it never touches real progress or the shared table.
 // The iOS app is served from capacitor://localhost but is a live copy of the
@@ -89,11 +89,11 @@ const refreshScores = (stageIndex = runStage) =>
     .top()
     .then((list) => (highScores = list));
 
-// The Mega Ramp: finish the last stage with at least SECRET_SCORE points in
+// The Mega Ramp: finish any stage with at least SECRET_SCORE points in
 // that one run (before the no-bail bonus) and you're taken there. It counts
 // toward the run total like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_SCORE = 5000;
+const SECRET_SCORE = 8000;
 
 // A run is one stage, plus the Mega Ramp when it's earned: two slots.
 const RUN_SLOTS = 2;
@@ -252,10 +252,10 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
   if (autoStart) game.tap();
 }
 
-// A stage is done: on to the Mega Ramp after a big enough Stage 1, or end the run.
+// A stage is done: on to the Mega Ramp after a big enough run, or end the run.
 function nextScreen() {
   if (levelIndex !== SECRET_INDEX) openNextStage(levelIndex);
-  if (levelIndex === 0 && run.total() >= SECRET_SCORE) unlockSecret();
+  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE) unlockSecret();
   else finishRun();
 }
 
@@ -544,7 +544,7 @@ function frame(now) {
   }
   audio.play(events, game);
   haptics(events);
-  renderer.consume(events);
+  renderer.consume(events, game);
   if (flip) nextScreen();
   if (screen) screen.t += dt;
   if (screen?.type === 'unlock' && screen.t >= UNLOCK_TIME) {
@@ -598,6 +598,61 @@ function drawLetterbox() {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(outer.cv, ox - left * k, oy - top * k, W * k, H * k);
 }
+
+// Tester-only quick jump (/unstable/ and local copies; never on the live site
+// or in the iOS app, which are neither). A TEST button opens a grid of every
+// stage and checkpoint plus the Mega Ramp; tapping one reloads into the same
+// ?level= jump, so it plays on the separate test saves and never touches
+// progress or the shared board.
+function setupTestMenu() {
+  if (!(IS_LOCAL || IS_UNSTABLE)) return;
+  const css = document.createElement('style');
+  css.textContent = `
+    #tm-btn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);z-index:50;
+      font:700 12px/1 monospace;color:#fff;background:#e8730c;border:2px solid #000;padding:6px 10px;border-radius:4px;opacity:.85}
+    #tm{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.88);color:#fff;font:600 13px monospace;overflow:auto;
+      padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 12px) 16px calc(env(safe-area-inset-left,0px) + 12px);-webkit-overflow-scrolling:touch}
+    #tm h2{margin:0 0 8px;font:700 14px monospace;color:#e8730c;display:flex;justify-content:space-between;align-items:center}
+    #tm .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+    #tm .st{width:100%;color:#9cf;font-size:12px}
+    #tm button{font:700 12px monospace;color:#fff;background:#2a2a2a;border:2px solid #666;border-radius:4px;padding:9px 11px;min-height:40px;min-width:40px}
+    #tm button.go{background:#e8730c;border-color:#fff}
+    #tm .x{background:#600;border-color:#fff}`;
+  document.head.appendChild(css);
+  const btn = document.createElement('button');
+  btn.id = 'tm-btn';
+  btn.textContent = 'TEST';
+  const panel = document.createElement('div');
+  panel.id = 'tm';
+  panel.hidden = true;
+  const jump = (q) => {
+    const u = new URL(location.href);
+    u.searchParams.set('level', q);
+    location.href = u.toString();
+  };
+  const add = (parent, tag, text, cls) => {
+    const el = document.createElement(tag);
+    el.textContent = text;
+    if (cls) el.className = cls;
+    parent.appendChild(el);
+    return el;
+  };
+  const head = add(panel, 'h2', 'JUMP TO (TEST SAVES ONLY)');
+  add(head, 'button', 'CLOSE', 'x').onclick = () => (panel.hidden = true);
+  LEVELS.forEach((st, si) => {
+    const row = add(panel, 'div', '', 'row');
+    add(row, 'div', `STAGE ${si + 1}`, 'st');
+    (st.sections || []).forEach((sec, ci) => {
+      add(row, 'button', `${ci + 1} ${sec.name}`.toUpperCase()).onclick = () => jump(si === 0 ? String(ci + 1) : `${si + 1}-${ci + 1}`);
+    });
+  });
+  const row = add(panel, 'div', '', 'row');
+  add(row, 'button', 'MEGA RAMP (SECRET)', 'go').onclick = () => jump('secret');
+  btn.onclick = () => (panel.hidden = !panel.hidden);
+  for (const el of [btn, panel]) el.addEventListener('pointerdown', (e) => e.stopPropagation());
+  document.body.append(btn, panel);
+}
+setupTestMenu();
 
 resize();
 let startCheckpoint = levelIndex < SECRET_INDEX ? savedCheckpoint : null;

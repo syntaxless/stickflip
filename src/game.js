@@ -1,4 +1,5 @@
-import { WORLD, PHYS, SCORE, TRICKS, GRINDS } from './config.js';
+import { GAPS } from './gaps.js';
+import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -66,6 +67,7 @@ export class Game {
     this.sections = level.sections || [{ name: level.name, x: 0 }];
     this.checkpoint = checkpoint || { index: 0, score: 0 };
     this.finishLeft = level.finishLeft ?? -40;
+    this.gaps = GAPS.filter((g) => g.stage === level.id);
     this.surfaces = level.obstacles.flatMap((o) => o.surfaces);
     this.solids = level.obstacles.flatMap((o) => o.solids);
     // The ground is flat at WORLD.GROUND unless an obstacle (a gap, stairs...)
@@ -89,11 +91,15 @@ export class Game {
     this.section = cp.index;
     this.score = cp.score;
     this.combo = []; // tricks done since leaving the ground: { name, points }
+    this.gapsDone = new Set(); // named gaps earned this attempt
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.stars = 0;
     this.hold = null; // { dir, used } while the finger (or Space) is held down
-    const startX = this.sections[cp.index].x + PHYS.START_X;
+    this.tilt = 0; // a seesaw plank under a grind: 0 level .. 1 tipped down to the ground
+    this.setSeesaw(0);
+    const sec = this.sections[cp.index];
+    const startX = sec.x + (sec.start ?? PHYS.START_X);
     this.sk = {
       x: startX,
       y: this.groundAt(startX).y,
@@ -387,11 +393,32 @@ export class Game {
     return null;
   }
 
+  // Tip every seesaw plank (a surface with `seesaw: { drop }`) about its middle:
+  // the far end goes down `drop` and the near end up by the same, so a plank
+  // standing `drop` high ends with its exit on the ground.
+  setSeesaw(tilt) {
+    for (const surf of this.surfaces) {
+      if (!surf.seesaw) continue;
+      surf.y1 = surf.y - tilt * surf.seesaw.drop;
+      surf.y2 = surf.y + tilt * surf.seesaw.drop;
+    }
+  }
+
+  updateSeesaw(dt) {
+    const grinding = this.sk.mode === 'grind' && this.sk.grind?.surface.seesaw;
+    const to = grinding ? 1 : 0;
+    if (this.tilt === to) return;
+    const step = dt / (grinding ? 0.7 : 0.4);
+    this.tilt = this.tilt < to ? Math.min(to, this.tilt + step) : Math.max(to, this.tilt - step);
+    this.setSeesaw(this.tilt);
+  }
+
   // ------------------------------------------------------------- update
 
   update(dt) {
     this.time += dt;
     this.phaseTime += dt;
+    this.updateSeesaw(dt);
     const s = this.sk;
     const fromX = s.x;
 
@@ -464,15 +491,18 @@ export class Game {
     if (this.phase === 'playing') this.checkSection();
   }
 
-  // Going through a ring: the whole rider has to fit, feet above its bottom
-  // and head below its top. Clean through counts as a trick.
+  // A ring of fire. Head above its top: you hit the flames. Head inside its
+  // opening (a charged ollie): clean through, a trick with a bonus. Head still
+  // below the opening (any smaller ollie, even none): you pass under it and
+  // nothing happens.
   passHazards(fromX) {
     const s = this.sk;
     if (s.dir < 0) return;
     for (const h of this.hazards) {
       if (fromX >= h.x || s.x < h.x) continue;
-      if (s.y > h.bottom || s.y - PHYS.RIDER_HEIGHT < h.top) return this.bail(h.reason);
-      this.addTrick(h.trick, h.points);
+      const head = s.y - PHYS.RIDER_HEIGHT;
+      if (head < h.top) return this.bail(h.reason);
+      if (head < h.bottom) this.addTrick(h.trick, h.points);
     }
   }
 
@@ -610,9 +640,26 @@ export class Game {
 
   // ------------------------------------------------------------ tricks
 
-  addTrick(name, points) {
+  // `kind` 'gap' is a named gap bonus. Gaps and any trick worth SPECIAL_POINTS
+  // or more are "specials": the renderer banners them and the audio plays a jingle.
+  addTrick(name, points, kind = 'trick') {
     this.combo.push({ name, points });
     this.emit('trick', { name, points });
+    if (kind === 'gap' || points >= SPECIAL_POINTS) this.emit('special', { name, points, kind });
+  }
+
+  // A named gap (src/gaps.js): this take-off and this landing, once per attempt.
+  checkGaps(kind) {
+    const s = this.sk;
+    for (const g of this.gaps) {
+      if (this.gapsDone.has(g.id) || (g.on !== 'any' && g.on !== kind)) continue;
+      const ox = this.sections[g.section]?.x ?? 0;
+      if (s.x < ox + g.to[0] || s.x > ox + g.to[1]) continue;
+      if (g.from && (s.poppedAt === null || s.poppedAt < ox + g.from[0] || s.poppedAt > ox + g.from[1])) continue;
+      this.gapsDone.add(g.id);
+      this.addTrick(g.name, g.points, 'gap');
+      this.emit('gap', { name: g.name, points: g.points });
+    }
   }
 
   startGrind(surface, key = '50-50') {
@@ -623,6 +670,7 @@ export class Game {
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
     this.emit('grind', { key });
+    this.checkGaps('grind');
   }
 
   endGrind() {
@@ -642,6 +690,7 @@ export class Game {
     s.slope = surface ? 0 : ground.slope || 0;
     s.primed = false;
     this.emit('land');
+    this.checkGaps('land');
     this.bankCombo();
   }
 

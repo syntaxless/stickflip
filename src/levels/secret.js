@@ -5,7 +5,7 @@ import { WORLD } from '../config.js';
 // Drop in from a high deck and go fast up the kicker at a raised rainbow
 // rail. Ollie off the kicker to clear the whole rail and land in the long,
 // easy bank just past its end, or grind it and pop off the end into the
-// bank. Then finish with a big air out of a tall quarter pipe. Unlocked by the third full clear of the six main levels.
+// bank. Then finish with a big air out of a tall quarter pipe. Unlocked by an 8,000-point run on any stage (see SECRET_SCORE in main.js). All wood, on a bright morning.
 const G = WORLD.GROUND; // the street at the bottom
 const DECK = G - 300; // the rail deck
 const START = G - 500; // the drop-in deck
@@ -20,6 +20,9 @@ export default {
   id: 'mega-ramp',
   name: 'Mega Ramp',
   secret: true,
+  wood: true, // planks all the way down, in place of asphalt and grass
+  morning: true, // a pale sky, a low sun and gold haze over the skyline
+  skyline: true,
   width: QP_X + QP_R + 90,
   speed: 600, // twice normal
   endAfterQuarter: true,
