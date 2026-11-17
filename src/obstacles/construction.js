@@ -108,6 +108,67 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
   };
 }
 
+// "OSLO CITY LIMITS": a green and white highway sign on two posts, standing behind the
+// action (pure decor), with a graffiti tag, Rune, sprayed on its bottom corner.
+const TAG_GLYPHS = {
+  R: ['####.', '#...#', '####.', '#..#.', '#...#'],
+  u: ['#...#', '#...#', '#...#', '#..##', '.##.#'],
+  n: ['.###.', '#...#', '#...#', '#...#', '#...#'],
+  e: ['.###.', '#...#', '#####', '#....', '.###.'],
+};
+function sprayTag(g, word, x, y, fill, outline) {
+  // slanted handwriting: every row leans right, with an outline round each stroke
+  const cells = [];
+  let cx = x;
+  for (const ch of word) {
+    TAG_GLYPHS[ch].forEach((row, ry) => {
+      for (let rx = 0; rx < 5; rx++) if (row[rx] === '#') cells.push([cx + rx + ((4 - ry) >> 1), y + ry]);
+    });
+    cx += 6;
+  }
+  for (const [px, py] of cells) for (const [dx, dy] of [[1, 0], [0, 1], [1, 1]]) g.pset(px + dx, py + dy, outline); // a dark edge down and to the right
+  for (const [px, py] of cells) g.pset(px, py, fill);
+  // a couple of drips off the bottom of the letters
+  const [dx1, dx2] = [x + 9, x + 20];
+  g.line(dx1, y + 6, dx1, y + 8, fill);
+  g.pset(dx2, y + 6, fill);
+  g.pset(dx2, y + 7, fill);
+  g.pset(dx1, y + 9, outline);
+}
+
+export function citySign({ x, base = WORLD.GROUND, height = 240, w = 84 }) {
+  return {
+    type: 'city-sign',
+    surfaces: [],
+    solids: [],
+    draw(g) {
+      const b = P(base) - 1;
+      const l = P(x);
+      const top = P(base - height);
+      const h = 48;
+      const r = l + w - 1;
+      // two steel posts down to the street
+      for (const px of [l + 14, r - 14]) {
+        g.fill(px - 1, top + h, 3, b - top - h + 1, steel);
+        g.line(px - 1, top + h, px - 1, b, ink);
+        g.line(px + 1, top + h, px + 1, b, ink);
+        g.line(px, top + h, px, b, shine);
+      }
+      // the panel: highway green with a black outer edge, a white border and white lettering
+      const GREEN = [0, 112, 64];
+      g.fill(l, top, w, h, GREEN);
+      g.rect(l, top, w, h, ink);
+      g.rect(l + 2, top + 2, w - 4, h - 4, white);
+      g.line(l + 3, top + 3, r - 3, top + 3, [210, 240, 220]);
+      for (const [cx, cy] of [[l, top], [r, top], [l, top + h - 1], [r, top + h - 1]]) g.pset(cx, cy, [130, 160, 190]);
+      g.text('OSLO', l + (w >> 1), top + 7, white, 2, 'center');
+      g.line(l + 9, top + 23, r - 9, top + 23, white);
+      g.text('CITY LIMITS', l + (w >> 1), top + 27, white, 1, 'center');
+      sprayTag(g, 'Rune', r - 31, top + h - 12, [0, 0, 0], [150, 215, 175]); // black paint, with a pale edge so it reads on the green
+    },
+  };
+}
+
 // A fire hydrant: red body with a silver cap, bonnet, collar and side
 // nozzles, about the size of a street trash can. Ollie over it.
 export function hydrant({ x, w = 54, h = 90, base = WORLD.GROUND }) {
