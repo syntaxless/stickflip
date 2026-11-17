@@ -10,9 +10,14 @@ import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from '.
 
 const S = 3;
 const P = (v) => Math.round(v / S);
-const { sky, ink, red, ground: groundCol, crack, fleck, kerb, edge } = PAL;
+const { sky, ink, red, ground: groundCol, crack, fleck, kerb, grass, blade, shade, dirt, dirtLight, dirtDark, stone, stoneDark, edge } = PAL;
 
-const ASPHALT_H = 5; // pixels of asphalt/concrete on top; everything below is plain black
+// The ground, top to bottom: a thin surface strip the rider rolls on
+// (asphalt, or a sidewalk in Stage 3), a thin grass layer, a chunky dirt
+// layer, then plain black.
+const ASPHALT_H = 4;
+const GRASS_H = 3;
+const DIRT_H = 12;
 
 // Cheap deterministic hash of a world pixel, so the asphalt texture is the same
 // every frame and scrolls with the stage instead of shimmering.
@@ -221,7 +226,7 @@ export class Renderer {
       const next = topAt(x + 1);
       if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
-        this.drawAsphalt(g, x, top, bottom);
+        this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
         // a lower neighbour means this column's side shows
         const drop = Math.max(prev, next);
         g.line(x, top, x, Math.max(top, Math.min(drop, bottom) - 1), edge);
@@ -231,21 +236,36 @@ export class Renderer {
     }
   }
 
-  // One ground column: a thin strip of chunky concrete/asphalt, the part the
-  // rider rolls on. The texture is blocks two pixels square in a few greys
-  // with the odd light or dark speckle, hashed on the world pixel so it holds
-  // still and scrolls with the stage. Below the strip the ground is plain black.
-  drawAsphalt(g, x, top, bottom) {
-    const strip = Math.min(bottom, top + ASPHALT_H);
-    for (let y = top; y < strip; y++) {
-      const dy = y - top;
-      const h = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
-      let c = groundCol;
-      if (h < 3) c = kerb;
-      else if (h < 5) c = crack;
-      else if (h === 5 && hash(x, y) % 2 === 0) c = fleck; // speckle inside a block
-      if (dy === 0) c = kerb; // lit top edge
-      else if (dy === ASPHALT_H - 1) c = crack; // dark underside
+  // One ground column. All textures are blocks two pixels square in a few
+  // tones, hashed on the world pixel so they hold still and scroll with the
+  // stage: the surface in greys with the odd speckle (a sidewalk also has
+  // a dark joint every 28 px), the grass in greens, the dirt in muted browns
+  // with the odd grey stone. Below that the ground is plain black.
+  drawGround(g, x, top, bottom, sidewalk) {
+    const surfaceEnd = top + ASPHALT_H;
+    const grassEnd = surfaceEnd + GRASS_H;
+    const dirtEnd = grassEnd + DIRT_H;
+    const end = Math.min(bottom, dirtEnd);
+    for (let y = top; y < end; y++) {
+      const hb = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
+      let c;
+      if (y < surfaceEnd) {
+        c = groundCol;
+        if (hb < 3) c = kerb;
+        else if (hb < 5) c = crack;
+        else if (hb === 5 && hash(x, y) % 2 === 0) c = fleck;
+        if (y === top) c = kerb; // lit top edge
+        else if (y === surfaceEnd - 1) c = crack; // dark underside
+        if (sidewalk && x % 28 === 0 && y > top) c = crack; // slab joint
+      } else if (y < grassEnd) {
+        c = y === surfaceEnd ? shade : hb < 6 ? blade : hb < 11 ? grass : shade;
+      } else {
+        const dy = y - grassEnd;
+        c = hb < 4 ? dirtLight : hb < 6 ? dirtDark : dirt;
+        if (dy === 0) c = dirtDark; // the shadow under the grass
+        // a stone: a 2x2 block now and then, lit on its top-left pixel
+        if (hash((x >> 1) + 5, (y >> 1) + 9) % 53 === 0) c = (x & 1) === 0 && (y & 1) === 0 ? stone : stoneDark;
+      }
       g.pset(x, y, c);
     }
   }
