@@ -19,6 +19,7 @@ const CONC_DARK = [128, 128, 138];
 const GRAVEL = [[150, 148, 144], [176, 170, 158], [124, 120, 116], [188, 168, 130], [160, 156, 150], [138, 130, 118]];
 const GRAVEL_LIT = [220, 214, 200];
 const GRAVEL_DARK = [84, 80, 76];
+const BANNER_TEXT = [255, 214, 120]; // the unlock sign's lettering, whatever the palette
 const WOOD_A = [176, 108, 50];
 const WOOD_B = [160, 96, 44];
 const WOOD_LIGHT = [214, 146, 76];
@@ -227,7 +228,7 @@ export class Renderer {
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
-    if (game.level.night) this.drawNightSky(g, cam);
+    if (game.level.morning) this.drawMorningSky(g, cam);
     for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
       const shift = Math.round(cam.x * factor);
       const T = sky2.width;
@@ -251,23 +252,29 @@ export class Renderer {
     g.oy = oy;
   }
 
-  // A night sky: a moon and stars that barely move with the camera.
-  drawNightSky(g, cam) {
+  // A morning sky: gold haze lying on the horizon and a low, pale sun that barely
+  // moves with the camera. Kept light so the black rider reads against it.
+  drawMorningSky(g, cam) {
     const ox = g.ox;
     g.ox = 0;
-    const shift = Math.round(cam.x * 0.04);
-    for (let i = 0; i < 70; i++) {
-      const sx = ((hash(i, 3) % 400) - shift + 4000) % 400;
-      const sy = hash(i, 7) % 100 + cam.y;
-      if (sx < g.w) g.pset(sx, sy, i % 5 === 0 ? [255, 255, 255] : [150, 160, 210]);
+    const horizon = P(WORLD.GROUND);
+    // haze: ten bands of 12 px fading from the sky colour down to pale gold at the horizon
+    const [top, low] = [[190, 222, 246], [255, 226, 160]];
+    for (let i = 0; i < 10; i++) {
+      const k = (i + 1) / 10;
+      const c = top.map((v, n) => Math.round(v + (low[n] - v) * k * k));
+      g.fill(0, horizon - 120 + i * 12, g.w, 132 - i * 12 + 60, c);
     }
-    if (g !== this.g) { g.ox = ox; return; } // the bars around the game only get stars
-    const mx = 292 - Math.round(cam.x * 0.02);
-    const my = 40 + cam.y;
-    g.fill(mx - 6, my - 8, 12, 16, [255, 244, 200]);
-    g.fill(mx - 8, my - 6, 16, 12, [255, 244, 200]);
-    g.fill(mx - 2, my - 6, 4, 4, [225, 212, 160]);
-    g.fill(mx + 1, my + 1, 3, 3, [225, 212, 160]);
+    if (g === this.g) {
+      const sx = 250 - Math.round(cam.x * 0.02);
+      const sy = horizon - 34;
+      const [c1, c2] = [[255, 246, 190], [255, 226, 140]];
+      g.fill(sx - 10, sy - 6, 20, 12, c2);
+      g.fill(sx - 7, sy - 10, 14, 20, c2);
+      g.fill(sx - 8, sy - 8, 16, 16, c2);
+      g.fill(sx - 6, sy - 7, 12, 14, c1);
+      g.fill(sx - 4, sy - 9, 8, 18, c1);
+    }
     g.ox = ox;
   }
 
@@ -593,7 +600,7 @@ export class Renderer {
     g.fill(x + 6, y + 6, w - 12, h - 12, [60, 32, 14]);
     if (this.blink(4)) {
       g.text('SECRET LEVEL', cx + 1, y + 13, ink, 3, 'center');
-      g.text('SECRET LEVEL', cx, y + 12, red, 3, 'center');
+      g.text('SECRET LEVEL', cx, y + 12, BANNER_TEXT, 3, 'center');
       g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx + 1, y + 39, ink, 2, 'center');
       g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, WOOD_LIGHT, 2, 'center');
     }
