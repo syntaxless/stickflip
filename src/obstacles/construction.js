@@ -108,8 +108,9 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
   };
 }
 
-// A fire hydrant: red body, silver cap and side nozzles. Ollie over it.
-export function hydrant({ x, w = 24, h = 39, base = WORLD.GROUND }) {
+// A fire hydrant: red body with a silver cap, bonnet, collar and side
+// nozzles, about the size of a street trash can. Ollie over it.
+export function hydrant({ x, w = 54, h = 90, base = WORLD.GROUND }) {
   return {
     ...box({ x, w, h, base }),
     type: 'hydrant',
@@ -118,29 +119,40 @@ export function hydrant({ x, w = 24, h = 39, base = WORLD.GROUND }) {
       const rows = P(h);
       const t = b - rows + 1;
       const red = PAL.flame;
+      const redDark = [150, 25, 30];
       const c = (l + r) >> 1;
-      // cap: a small dome, silver
-      g.fill(c - 2, t + 1, 5, 2, steel);
+      // cap: a silver dome on a short stem
+      g.fill(c - 3, t + 2, 7, 3, steel);
+      g.rect(c - 3, t + 2, 7, 3, ink);
+      g.line(c - 2, t + 3, c, t + 3, shine);
       g.line(c - 1, t, c + 1, t, ink);
       g.pset(c - 2, t + 1, ink);
       g.pset(c + 2, t + 1, ink);
-      g.line(c - 1, t + 1, c, t + 1, shine);
-      g.pset(c, t - 1, ink);
-      // bonnet and body, outlined, lit from the left
-      g.fill(c - 3, t + 3, 7, rows - 5, red);
-      g.rect(c - 3, t + 3, 7, rows - 5, ink);
-      g.line(c - 2, t + 4, c - 2, b - 3, orange);
-      g.line(c - 4, t + 6, c + 4, t + 6, ink); // collar
-      g.line(c - 3, t + 6, c + 3, t + 6, steel);
-      // side nozzles
-      for (const nx of [c - 5, c + 4]) {
-        g.fill(nx, t + 8, 2, 3, steel);
-        g.rect(nx, t + 8, 2, 3, ink);
+      g.pset(c, t + 1, steel);
+      // bonnet (wider than the barrel) and barrel, outlined, lit from the left
+      g.fill(c - 5, t + 5, 11, 6, red);
+      g.rect(c - 5, t + 5, 11, 6, ink);
+      g.line(c - 4, t + 6, c - 4, t + 9, orange);
+      g.fill(c - 4, t + 11, 9, b - t - 14, red);
+      g.rect(c - 4, t + 11, 9, b - t - 14, ink);
+      g.line(c - 3, t + 12, c - 3, b - 5, orange); // lit left edge
+      g.line(c + 3, t + 12, c + 3, b - 5, redDark); // shaded right edge
+      // collars
+      for (const y of [t + 11, b - 7]) {
+        g.line(c - 5, y, c + 5, y, ink);
+        g.line(c - 4, y, c + 4, y, steel);
       }
-      g.pset(c - 4, t + 8, shine);
+      // side nozzles, with caps
+      for (const [nx, dir] of [[c - 4, -1], [c + 5, 1]]) {
+        g.fill(dir < 0 ? nx - 3 : nx, t + 16, 3, 5, steel);
+        g.rect(dir < 0 ? nx - 3 : nx, t + 16, 3, 5, ink);
+        g.pset(dir < 0 ? nx - 2 : nx + 1, t + 17, shine);
+      }
+      g.fill(c - 1, t + 14, 3, 3, steel); // front port
+      g.rect(c - 1, t + 14, 3, 3, ink);
       // base plate
-      g.fill(c - 4, b - 1, 9, 2, ink);
-      g.line(c - 3, b - 1, c + 3, b - 1, steel);
+      g.fill(c - 6, b - 2, 13, 3, ink);
+      g.line(c - 5, b - 2, c + 5, b - 2, steel);
     },
   };
 }

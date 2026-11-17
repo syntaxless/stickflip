@@ -137,11 +137,41 @@ test('trash can: no ollie slams, and the lid is no place to land', () => {
   assert.equal(late.phase, 'bailed');
 });
 
-test('ring of fire: through it is a trick and finishes the stage; rolling off the kicker burns', () => {
-  const { game, events } = ride2(3, [0.9]);
-  assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.ok(events.some((e) => e.type === 'trick' && e.name === 'RING OF FIRE'));
-  assert.equal(ride2(3, []).game.bailReason, 'fire', 'no ollie: feet in the flames');
+function chargedRing(t) {
+  const game = new Game(STAGES[1], null, { index: 3, score: 0 });
+  game.tap();
+  game.setHold(true);
+  game.startCharge();
+  const tricks = new Set();
+  let up = false;
+  for (let now = 0; now < 10 && game.phase === 'playing'; now += STEP) {
+    if (!up && now >= t) {
+      up = true;
+      game.setHold(false);
+      game.releaseCharge();
+    }
+    game.update(STEP);
+    for (const e of game.drainEvents()) if (e.type === 'trick') tricks.add(e.name);
+  }
+  return { game, tricks };
+}
+
+test('ring of fire: a normal ollie passes under it with no bonus, none drops in the gap', () => {
+  for (let t = 0.76; t <= 0.98; t += 0.02) {
+    const { game, events } = ride2(3, [t]);
+    assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
+    assert.ok(!events.some((e) => e.type === 'trick' && e.name === 'RING OF FIRE'), `no bonus at ${t}`);
+  }
+  assert.equal(ride2(3, [0.5]).game.bailReason, 'gap', 'too early comes up short');
+  assert.equal(ride2(3, []).game.phase, 'bailed', 'no ollie drops in the gap');
+});
+
+test('ring of fire: only a charged ollie gets through it, for the bonus', () => {
+  for (const t of [0.66, 0.7, 0.72]) {
+    const { game, tricks } = chargedRing(t);
+    assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
+    assert.ok(tricks.has('RING OF FIRE'), `charged at ${t}: ${[...tricks]}`);
+  }
 });
 
 test('curb: riding into it with the finger held is a slappy grind', () => {
@@ -155,14 +185,6 @@ test('curb: riding into it with the finger held is a slappy grind', () => {
   }
   assert.equal(game.phase, 'playing', `bailed: ${game.bailReason}`);
   assert.ok(events.some((e) => e.type === 'trick' && e.name === 'SLAPPY 50-50 GRIND'));
-});
-
-test('ring of fire: a normal ollie through the middle of the window clears, early and late burn', () => {
-  for (let t = 0.76; t <= 0.9; t += 0.02) {
-    assert.equal(ride2(3, [t]).game.phase, 'complete', `tap at ${t}`);
-  }
-  assert.equal(ride2(3, [0.6]).game.bailReason, 'fire', 'too early');
-  assert.equal(ride2(3, [1.1]).game.phase, 'bailed', 'too late');
 });
 
 // ------------------------------------------------------------ stage 3

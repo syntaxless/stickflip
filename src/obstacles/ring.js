@@ -1,10 +1,10 @@
 import { PAL } from '../render/pixel.js';
 
-// A ring of fire hanging in the air at x: go through it. Passing it with your
-// feet below its bottom or your head above its top is a bail ('fire'); going
-// cleanly through counts as a trick (RING OF FIRE). `top` and `bottom` are the
-// inside of the ring.
-export function ring({ x, top, bottom, points = 250 }) {
+// A ring of fire hanging high in the air at x. A small ollie passes under it
+// with no modifier; a charged one puts your head through the opening for a
+// trick (RING OF FIRE, with a bonus); too high and your head hits the top of
+// the ring ('fire'). `top` and `bottom` are the inside of the ring.
+export function ring({ x, top, bottom, points = 600 }) {
   const cy = (top + bottom) / 2;
   const ry = (bottom - top) / 2 + 6; // the flames sit just outside the opening
   const rx = 18;
