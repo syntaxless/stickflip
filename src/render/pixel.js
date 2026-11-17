@@ -39,6 +39,7 @@ export const PAL = {
 // Palettes are the base PAL with a few colours swapped. The secret level has
 // purple sky and yellow text from the 16 original named HTML colours (solids
 // stay black). `red` is the text colour's name everywhere, whatever colour it is.
+// The playground (Stage 4) has a bright blue sky and a red rubber-mat surface.
 // The construction site (Stage 3) has a light grey sky with a faint skyline,
 // and darker red text so it reads on grey; its surface is a light concrete
 // sidewalk (the other stages ride on dark asphalt).
@@ -46,6 +47,7 @@ const BASE = Object.fromEntries(Object.entries(PAL).map(([k, v]) => [k, [...v]])
 export const PALETTES = {
   normal: BASE,
   secret: { ...BASE, sky: [128, 0, 128], red: [255, 255, 0], fire: [255, 255, 0], flame: [255, 0, 0], far: [128, 0, 128], near: [128, 0, 128], window: [128, 0, 128] },
+  play: { ...BASE, sky: [110, 180, 255], red: [170, 0, 0], ground: [150, 70, 70], kerb: [190, 100, 100], crack: [110, 40, 40], fleck: [210, 130, 130], far: [110, 180, 255], near: [110, 180, 255], window: [110, 180, 255] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 

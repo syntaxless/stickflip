@@ -234,3 +234,43 @@ test('the rider holds one spot on screen while the stage pans (no jitter)', asyn
   }
   assert.equal(offsets.size, 1, `rider screen x varied: ${[...offsets]}`);
 });
+
+// ------------------------------------------------------------ stage 4
+
+const stage4 = STAGES[3];
+
+function ride4(index, taps) {
+  const game = new Game(stage4, null, { index, score: 0 });
+  game.tap();
+  const queue = [...taps];
+  const next = stage4.sections[index + 1]?.x ?? Infinity;
+  for (let t = 0; t < 10 && game.phase === 'playing' && !(game.sk.x > next + 150 && game.sk.mode === 'roll'); t += STEP) {
+    while (queue.length && queue[0] <= t + 1e-9) {
+      queue.shift();
+      game.tap();
+    }
+    game.update(STEP);
+  }
+  return game;
+}
+
+test('stage 4 is the playground: seven checkpoints', () => {
+  assert.deepEqual(
+    stage4.sections.map((s) => s.name),
+    ['Toy Blocks', 'Slide', 'Sandbox', 'Seesaw', 'Monkey Bars', 'Block Tower', 'Ball Pit'],
+  );
+  assert.equal(stage4.id, 'stage-4');
+});
+
+test('stage 4: a timed ollie clears every checkpoint', () => {
+  const clears = [[0.95], [], [0.9], [0.35, 0.9], [0.35, 0.9], [0.85], [0.85]];
+  clears.forEach((taps, i) => {
+    const game = ride4(i, taps);
+    assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage4.sections[i].name} bailed: ${game.bailReason}`);
+  });
+});
+
+test('stage 4: the slide is a free ride, the rest bail without an ollie', () => {
+  assert.notEqual(ride4(1, []).phase, 'bailed');
+  for (const i of [0, 2, 3, 4, 5, 6]) assert.equal(ride4(i, []).phase, 'bailed', stage4.sections[i].name);
+});
