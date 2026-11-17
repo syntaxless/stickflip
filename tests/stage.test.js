@@ -15,7 +15,7 @@ const CLEARS = [
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
-  [[0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'], [4.0, 'tap'], [4.0, 'hold'], [6.5, 'up']], // Quarter Pipe
+  [[0.04, 'tap'], [0.04, 'hold'], [1.08, 'up'], [4.0, 'tap'], [4.0, 'hold'], [6.5, 'up']], // Quarter Pipe
 ];
 
 // Plays from checkpoint `index` with `acts`, until `until(game)` or 12 s.
@@ -327,4 +327,22 @@ test('water and dirt regions are moved into strip coordinates with their section
   assert.equal(pool.water.x1, 4 * 960 + 380);
   const patch = stage1.obstacles.find((o) => o.dirt);
   assert.equal(patch.dirt.x1, 960 + 430);
+});
+
+test('stage 1: an ollie off the top of the Euro Gap lands on the Quarter Pipe rail', () => {
+  const game = new Game(stage1, null, { index: 5, score: 0 });
+  game.tap();
+  const q = [1.1, 1.75, 2.6, 3.3];
+  const seen = new Set();
+  const x6 = stage1.sections[6].x;
+  for (let t = 0; t < 5 && game.phase === 'playing'; t += STEP) {
+    while (q.length && q[0] <= t + 1e-9) {
+      q.shift();
+      game.tap();
+    }
+    game.update(STEP);
+    for (const e of game.drainEvents()) if (e.type === 'grind' && e.x > x6) seen.add('grind');
+  }
+  assert.ok(seen.has('grind'), `no grind on the rail (${game.phase} ${game.bailReason})`);
+  assert.equal(game.phase, 'playing');
 });
