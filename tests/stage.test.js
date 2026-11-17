@@ -9,6 +9,7 @@ const stage1 = STAGES[0];
 // The inputs that clear each original level on its own (see game.test.js),
 // replayed on its section of the stage: the sections ride the same.
 const CLEARS = [
+  [[0.95, 'tap']], // First Rock
   [[1.0, 'tap']], // First Gap
   [[0.75, 'tap'], [1.32, 'tap']], // First Rail: ollie, lock a 50-50
   [[0.95, 'tap']], // Five Stair: ollie the set
@@ -38,12 +39,12 @@ function ride(index, acts, until) {
   return { game, events };
 }
 
-test('stage 1 is the six levels, one after another, as named checkpoints', () => {
+test('stage 1 is the rock and the six levels, one after another, as named checkpoints', () => {
   assert.deepEqual(
     stage1.sections.map((s) => s.name),
-    ['First Gap', 'First Rail', 'Five Stair', 'Bank to Bank', 'Euro Gap', 'Quarter Pipe'],
+    ['First Rock', 'First Gap', 'First Rail', 'Five Stair', 'Bank to Bank', 'Euro Gap', 'Quarter Pipe'],
   );
-  assert.equal(stage1.width, 6 * 960);
+  assert.equal(stage1.width, 7 * 960);
 });
 
 for (let i = 0; i < CLEARS.length - 1; i++) {
@@ -58,28 +59,28 @@ for (let i = 0; i < CLEARS.length - 1; i++) {
 }
 
 test('stage 1: the quarter pipe is the finale, ridden back out to the left', () => {
-  const { game } = ride(5, CLEARS[5], () => false);
+  const { game } = ride(6, CLEARS[6], () => false);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.equal(game.sk.dir, -1);
 });
 
 test('a bail replays from the last checkpoint, with the score banked before it', () => {
-  const game = new Game(stage1, null, { index: 2, score: 1234 });
+  const game = new Game(stage1, null, { index: 3, score: 1234 });
   assert.equal(game.score, 1234);
-  assert.equal(game.sk.x, stage1.sections[2].x + 80);
+  assert.equal(game.sk.x, stage1.sections[3].x + 80);
   game.tap();
   for (let i = 0; i < 1200 && game.phase === 'playing'; i++) game.update(STEP); // no ollie: bails on the stairs
   assert.equal(game.phase, 'bailed');
   game.phaseTime = 10;
   game.tap();
   assert.equal(game.phase, 'playing');
-  assert.equal(game.section, 2);
+  assert.equal(game.section, 3);
   assert.equal(game.score, 1234);
-  assert.equal(game.sk.x, stage1.sections[2].x + 80);
+  assert.equal(game.sk.x, stage1.sections[3].x + 80);
 });
 
 test('restarting the stage goes back to the first section with no score', () => {
-  const game = new Game(stage1, null, { index: 3, score: 900 });
+  const game = new Game(stage1, null, { index: 4, score: 900 });
   game.restartStage();
   assert.equal(game.section, 0);
   assert.equal(game.score, 0);
@@ -316,4 +317,14 @@ test('stage 5: the bowl is a free ride, the rest bail without an ollie', () => {
     if (i === 4) continue; // the fun box can be ridden over with no ollie
     assert.equal(ride5(i, []).phase, 'bailed', stage5.sections[i].name);
   }
+});
+
+test('stage 1: the rock stops a board that never ollies, and the pool splashes a short jump', () => {
+  const rockless = ride(0, [], () => false);
+  assert.equal(rockless.game.phase, 'bailed');
+  assert.equal(rockless.game.bailReason, 'slam');
+  const swim = ride(4, [[0.9, 'tap']].map(([t, a]) => [t - 0.3, a]), () => false);
+  assert.equal(swim.game.phase, 'bailed');
+  assert.equal(stage1.sections[4].name, 'Bank to Bank');
+  assert.ok(stage1.obstacles.some((o) => o.type === 'water'));
 });

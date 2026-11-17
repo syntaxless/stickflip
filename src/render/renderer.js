@@ -70,7 +70,7 @@ export class Renderer {
   }
 
   // Turn game events into visual effects.
-  consume(events) {
+  consume(events, game) {
     for (const e of events) {
       switch (e.type) {
         case 'pop':
@@ -86,10 +86,19 @@ export class Renderer {
         case 'bank':
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
-        case 'bail':
-          this.dust(e.x, e.y, 10);
+        case 'bail': {
+          const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.water && e.x >= o.water.x1 - 20 && e.x <= o.water.x2 + 20);
+          if (pool) this.splash(e.x, pool.water.y);
+          else this.dust(e.x, e.y, 10);
           break;
+        }
       }
+    }
+  }
+
+  splash(x, y) {
+    for (let i = 0; i < 28; i++) {
+      this.particles.push({ kind: 'splash', x: x + (Math.random() - 0.5) * 50, y: y - 2, vx: (Math.random() - 0.5) * 200, vy: -150 - Math.random() * 300, life: 0.7 });
     }
   }
 
@@ -348,7 +357,7 @@ export class Renderer {
 
   drawParticles() {
     for (const p of this.particles) {
-      const c = p.kind === 'spark' ? red : ink;
+      const c = p.kind === 'spark' ? red : p.kind === 'splash' ? [190, 225, 255] : ink;
       this.g.pset(P(p.x), P(p.y), c);
     }
   }
