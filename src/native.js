@@ -34,9 +34,15 @@ export function haptics(events) {
   for (const e of events) if (HAPTICS[e.type]) call('haptic', { kind: HAPTICS[e.type] });
 }
 
-// A finished run's total goes to Game Center too (if the player is signed in).
-export function submitToGameCenter(score) {
-  if (NATIVE) call('submitScore', { score: Math.round(score) });
+// Each stage has its own Game Center leaderboard, like the in-game tables:
+// stage id 'stage-1' -> leaderboard 'stickflip.stage1'. The same IDs must be
+// created in App Store Connect.
+const leaderboardFor = (stageId) => `stickflip.${String(stageId).replace(/[^a-z0-9]/gi, '')}`;
+
+// A finished run's total goes to its stage's Game Center board too (if the
+// player is signed in).
+export function submitToGameCenter(score, stageId) {
+  if (NATIVE) call('submitScore', { score: Math.round(score), leaderboard: leaderboardFor(stageId) });
 }
 
 // Whether to offer the GAME CENTER button on the high-score table: only in the
@@ -53,7 +59,7 @@ export function refreshGameCenter() {
 }
 refreshGameCenter();
 
-// Opens the Game Center leaderboard over the game.
-export function openGameCenter() {
-  if (NATIVE) call('showLeaderboard');
+// Opens that stage's Game Center leaderboard over the game.
+export function openGameCenter(stageId) {
+  if (NATIVE) call('showLeaderboard', { leaderboard: leaderboardFor(stageId) });
 }

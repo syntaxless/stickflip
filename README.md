@@ -1,8 +1,9 @@
 # Stickflip
 
-A tap-to-play stick figure skateboarding game. Every level is one obstacle on
-one fixed screen with no scrolling. You roll in from the left and get past the
-obstacle using nothing but taps.
+A tap-to-play stick figure skateboarding game. Each stage is one long strip
+of obstacles the camera pans along; its levels are named sections of the
+strip, and each one is a checkpoint. You get past everything using nothing
+but taps, holds and drawn trick shapes.
 
 ## Play
 
@@ -107,7 +108,30 @@ Grinds also score 1 per px ground. On desktop, hold Space through the rail, with
 the left or right arrow held for a 5-0 or nose grind. Grinds live in `GRINDS`
 in `src/config.js`.
 
-## Levels
+## Stages
+
+A stage lays single-screen sections (`src/levels/levelN.js`) end to end into
+one strip (`src/stages/`). Each section's name shows top-left as you reach it
+(1-3: FIVE STAIR) and is a checkpoint: a bail replays from the start of the
+section you bailed in, with the score you'd banked before it, and the bail
+screen's RESTART STAGE goes back to the top. A reload carries on from the
+last checkpoint.
+
+**Stage select.** Finishing a stage opens the next one (on this device).
+Once there's more than one, the end-of-run REPLAY button reads STAGES and
+opens the stage list, and the title screen has a STAGES button. Each stage
+has its own top 5 (a `stage` column in the shared table; Stage 1 keeps the
+scores from before stages).
+
+**Stage 2** (street): Curb (ollie over a long, low curb, or land on it and
+roll or grind along the top), Step Up (ollie up three steps onto a ledge,
+then drop off its end), Trash Can (a tall can: a well-timed ollie clears it)
+and Ring of Fire (a kicker, a gap, and a burning ring to fly through: feet
+below it or head above it is a bail; clean through is a RING OF FIRE trick).
+
+**Stage 1** is the six original levels in order, joined by a bank up to Five
+Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
+finale: ride back out to the left to finish.
 
 1. **First Gap**: a 130 px gap. Ollie just before the edge: too early and you
    come up short, too late and you roll in. Stars: finish, 150 (any flip), 300
@@ -137,11 +161,11 @@ in from a high deck and fly off the kicker at a raised, gently curved
 "rainbow" rail. Ollie off the kicker to clear the whole rail and land in the
 long bank that starts right at its end, or grind over the curve and pop (or
 roll) off the end into the bank. Finish with a big air out of a tall quarter
-pipe. Rails take an `arc` option for the curve. It's played after level 6
-from your third full run onwards (finished runs are counted on the device), and
-its score counts toward the run total. It looks the part: level 6's button
-reads BONUS LEVEL, a blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL
-AHEAD! on later runs) leads into it, its HUD says BONUS: MEGA RAMP, and it has
+pipe. Rails take an `arc` option for the curve. Finish Stage 1 with at least
+5,000 points in that run (`SECRET_SCORE` in `src/main.js`, before the no-bail
+bonus) and you're taken there; its score counts toward the run total. A
+blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
+leads into it, its HUD says BONUS: MEGA RAMP, and it has
 its own palette from the 16 named HTML colours (purple sky, yellow text).
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
@@ -151,11 +175,11 @@ its own palette from the 16 named HTML colours (purple sky, yellow text).
 Tricks chain into a combo until you land on the ground, and the combo is
 multiplied by the number of tricks.
 
-**Runs and high scores.** A run takes you through the levels in order. TOTAL
-in the corner adds up the score of each level you've cleared (ride a level
-again and your latest clear counts). After the last level, FINISH RUN puts the
-total on the top 5 table; a new entry asks for up to 4 initials (tap + and -, or
-type them). REPLAY then starts over from level 1 with a fresh total. The table shows on the title screen too.
+**Runs and high scores.** A run takes you through the stages in order. TOTAL
+in the corner is the run's score so far; a bail loses what you scored since
+the last checkpoint. A run with no bails gets a 2,000 bonus. At the end the
+total goes on the top 5 table; a new entry asks for a name of up to 6 letters
+(tap + and -, or type them). REPLAY then starts over with a fresh total. The table shows on the title screen too.
 
 **Shared high scores.** With `SCOREBOARD` in `src/config.js` filled in (a
 Supabase project URL and its public anon key), the top 5 is shared by everyone.
@@ -169,8 +193,9 @@ live site posts to the shared table: the /unstable/ preview and local copies
 
 ## Testing a level
 
-On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to jump
-straight to level N (1-6), or `?level=secret` for the secret level, e.g.
+On the /unstable/ preview or a local copy (`npm start`), add `?level=N` to start
+Stage 1 at its Nth checkpoint (1-6), `?level=S-N` for stage S (`?level=2-4`:
+Ring of Fire), or `?level=secret` for the secret level, e.g.
 `https://stickflip.itschefff.com/unstable/?level=6`. The HUD then says TEST.
 Test play keeps its own saves and on-device high scores, so it never touches
 your real progress or the shared table. It does nothing on the live site.
@@ -209,22 +234,27 @@ src/main.js             canvas sizing, input, game loop, saved progress
 src/config.js           physics + scoring constants
 src/game.js             game logic: skater state machine, collisions, scoring
 src/obstacles/          obstacle builders (rail, gap, stairs), each with surfaces, solids, ground and draw()
-src/levels/             one file per level + the ordered LEVELS list
+src/levels/             one file per section (a screen of obstacles) + the Mega Ramp
+src/stages/             stages: sections laid end to end (compose.js), the ordered STAGES list
 src/render/             pixel framebuffer + font, stick figure, background, HUD, effects
 src/audio.js            PC-speaker style beeps
 src/leaderboard.js      top 5 high scores (on-device, swappable for a shared one)
-src/run.js              the run total across levels
+src/run.js              the run total across stages
 src/update.js           reloads an installed Home Screen app when a newer version is deployed
 icons/, favicon.ico      app icons + share image, drawn by scripts/make-icons.mjs (npm run icons)
 manifest.webmanifest    Home Screen app settings (full screen, landscape)
 tests/game.test.js      plays the levels with scripted taps, swipes and holds
 ```
 
-### Adding a level
+### Adding a stage
 
-1. Create `src/levels/level2.js` exporting `{ id, name, hint, obstacles, stars }`.
-2. Append it to `LEVELS` in `src/levels/index.js`. The "Next level" button
-   appears automatically.
+1. Write each section as a one-screen level in `src/levels/` exporting
+   `{ id, name, obstacles }` (laid out on a 960-wide screen).
+2. Create `src/stages/stageN.js` with `stage({ id, name, sections: [...] })`
+   from `compose.js`. Use `extra` for obstacles that join sections (in strip
+   coordinates: section i starts at i * 960), and `finishLeft` if it ends with
+   a ride back to the left.
+3. Append it to `STAGES` in `src/stages/index.js`.
 
 ### Adding an obstacle type
 
@@ -267,9 +297,9 @@ Run `npm run ios` again after any change to the game before building in Xcode.
 What's different in the app:
 
 - Always landscape, full screen, iPhone only.
-- Posts to the same Supabase leaderboard as the live site, plus a Game Center
-  leaderboard (ID `stickflip.runs`), with the Game Center button shown on the
-  high-score table.
+- Posts to the same Supabase leaderboard as the live site, plus one Game
+  Center leaderboard per stage (`stickflip.stage1`, `stickflip.stage2`, ...),
+  opened from a GAME CENTER button on the high-score table.
 - Haptics on pops, landings, grinds, bails and level clears
   (`src/native.js` + `ios/App/App/StickflipPlugin.swift`).
 - No GoatCounter. `scripts/build-app.mjs` strips it from the app's copy.

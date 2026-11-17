@@ -111,3 +111,16 @@ test('a run with no bails earns the clean-run bonus; one bail loses it, and it s
   assert.equal(new Run(3, JSON.parse(JSON.stringify(run))).bonus(), 0);
   assert.equal(new Run(3, [100, null, null]).bonus(), 0, 'an old save (scores only) is not proof of a clean run');
 });
+
+test('a stage board reads and writes only its own stage', async () => {
+  const calls = [];
+  const fetchFn = async (url, opts = {}) => {
+    calls.push({ url, body: opts.body });
+    return { ok: true, json: async () => [] };
+  };
+  const lb = supabaseLeaderboard({ url: 'https://x', key: 'k' }, { stage: 'stage-2', fetchFn });
+  await lb.top();
+  await lb.submit('ABC', 500);
+  assert.ok(calls[0].url.includes('stage=eq.stage-2'));
+  assert.deepEqual(JSON.parse(calls[1].body), { initials: 'ABC', score: 500, stage: 'stage-2' });
+});

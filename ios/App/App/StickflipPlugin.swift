@@ -4,9 +4,9 @@ import Capacitor
 
 // The app's own native features, called from src/native.js:
 //   haptic({ kind })            a tap on the phone's Taptic Engine
-//   submitScore({ score })      posts a run total to the Game Center leaderboard
+//   submitScore({ score, leaderboard })  posts a run total to that stage's leaderboard
 //   isSignedIn()                whether the player is signed in to Game Center
-//   showLeaderboard()           opens the Game Center leaderboard over the game
+//   showLeaderboard({ leaderboard })     opens that leaderboard over the game
 @objc(StickflipPlugin)
 public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControllerDelegate {
     public let identifier = "StickflipPlugin"
@@ -18,8 +18,9 @@ public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControlle
         CAPPluginMethod(name: "showLeaderboard", returnType: CAPPluginReturnPromise),
     ]
 
-    // Must match the leaderboard ID created in App Store Connect.
-    static let leaderboardID = "stickflip.runs"
+    // One leaderboard per stage ("stickflip.stage1", "stickflip.stage2", ...),
+    // named by src/native.js. Each must exist in App Store Connect.
+    static let defaultLeaderboardID = "stickflip.stage1"
 
     private let light = UIImpactFeedbackGenerator(style: .light)
     private let medium = UIImpactFeedbackGenerator(style: .medium)
@@ -63,8 +64,9 @@ public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControlle
             return
         }
         let score = call.getInt("score") ?? 0
+        let board = call.getString("leaderboard") ?? StickflipPlugin.defaultLeaderboardID
         GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local,
-                                  leaderboardIDs: [StickflipPlugin.leaderboardID]) { error in
+                                  leaderboardIDs: [board]) { error in
             call.resolve(["submitted": error == nil])
         }
     }
@@ -74,12 +76,13 @@ public class StickflipPlugin: CAPPlugin, CAPBridgedPlugin, GKGameCenterControlle
     }
 
     @objc func showLeaderboard(_ call: CAPPluginCall) {
+        let id = call.getString("leaderboard") ?? StickflipPlugin.defaultLeaderboardID
         DispatchQueue.main.async {
             guard GKLocalPlayer.local.isAuthenticated, let host = self.bridge?.viewController else {
                 call.resolve(["shown": false])
                 return
             }
-            let board = GKGameCenterViewController(leaderboardID: StickflipPlugin.leaderboardID,
+            let board = GKGameCenterViewController(leaderboardID: id,
                                                    playerScope: .global, timeScope: .allTime)
             board.gameCenterDelegate = self
             host.present(board, animated: true)
