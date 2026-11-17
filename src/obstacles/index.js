@@ -1,7 +1,7 @@
 // Obstacle builders. Add new obstacle kinds (ledge, box, kicker...) here.
 export { rail } from './rail.js';
 export { gap } from './gap.js';
-export { grassGap } from './grass-gap.js';
+export { dirtGap } from './dirt-gap.js';
 export { stairs } from './stairs.js';
 export { bank } from './bank.js';
 export { stepsUp } from './steps-up.js';

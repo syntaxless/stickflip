@@ -232,7 +232,7 @@ export class Renderer {
     // all come from the level's ground segments
     const bottom = g.h + cam.y;
     const topAt = (x) => Math.min(bottom, P(game.groundAt(x * S + S / 2).y));
-    const patches = game.level.obstacles.filter((o) => o.grass).map((o) => o.grass);
+    const patches = game.level.obstacles.filter((o) => o.dirt).map((o) => o.dirt);
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
@@ -240,11 +240,11 @@ export class Renderer {
         g.fill(x, top, 1, bottom - top, ink);
         this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
       } else if (patches.length) {
-        // a grass-filled gap: a strip sunk a little below the street, no asphalt
+        // a dirt-filled gap: a strip sunk a little below the street, no asphalt or grass
         const wx = x * S + S / 2;
         if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
           g.fill(x, G + 2, 1, bottom - G - 2, ink);
-          this.drawGround(g, x, G + 2, bottom, false, 0);
+          this.drawGround(g, x, G + 2, bottom, false, 0, 0);
         }
       }
       top = next;
@@ -256,9 +256,9 @@ export class Renderer {
   // stage: the surface in greys with the odd speckle (a sidewalk also has
   // a dark joint every 28 px), the grass in greens, the dirt in muted browns
   // with the odd grey stone. Below that the ground is plain black.
-  drawGround(g, x, top, bottom, sidewalk, asphalt = ASPHALT_H) {
+  drawGround(g, x, top, bottom, sidewalk, asphalt = ASPHALT_H, grassH = GRASS_H) {
     const surfaceEnd = top + asphalt;
-    const grassEnd = surfaceEnd + GRASS_H;
+    const grassEnd = surfaceEnd + grassH;
     const dirtEnd = grassEnd + DIRT_H;
     const end = Math.min(bottom, dirtEnd);
     for (let y = top; y < end; y++) {
