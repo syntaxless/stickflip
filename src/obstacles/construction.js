@@ -111,29 +111,27 @@ export function sign({ x, base = WORLD.GROUND, height = 150 }) {
 // "OSLO CITY LIMITS": a green and white highway sign on two posts, standing behind the
 // action (pure decor), with a graffiti tag, Rune, sprayed on its bottom corner.
 const TAG_GLYPHS = {
-  R: ['####.', '#...#', '####.', '#..#.', '#...#'],
-  u: ['#...#', '#...#', '#...#', '#..##', '.##.#'],
-  n: ['.###.', '#...#', '#...#', '#...#', '#...#'],
-  e: ['.###.', '#...#', '#####', '#....', '.###.'],
+  R: ['####.', '#...#', '#...#', '####.', '#.#..', '#..#.', '#...#'],
+  u: ['.....', '.....', '#...#', '#...#', '#...#', '#..##', '.##.#'],
+  n: ['.....', '.....', '####.', '#...#', '#...#', '#...#', '#...#'],
+  e: ['.....', '.....', '.###.', '#...#', '#####', '#....', '.###.'],
 };
-function sprayTag(g, word, x, y, fill, outline) {
-  // slanted handwriting: every row leans right, with an outline round each stroke
+function sprayTag(g, word, x, y, fill) {
+  // a hand-written tag in single-pixel strokes, turned a few degrees counter-clockwise
+  // by sliding each column up a little more towards the right (so every stroke stays in
+  // one piece), with a couple of drips hanging straight down
   const cells = [];
   let cx = x;
   for (const ch of word) {
     TAG_GLYPHS[ch].forEach((row, ry) => {
-      for (let rx = 0; rx < 5; rx++) if (row[rx] === '#') cells.push([cx + rx + ((4 - ry) >> 1), y + ry]);
+      for (let rx = 0; rx < 5; rx++) if (row[rx] === '#') cells.push([cx + rx, y + ry]);
     });
     cx += 6;
   }
-  for (const [px, py] of cells) for (const [dx, dy] of [[1, 0], [0, 1], [1, 1]]) g.pset(px + dx, py + dy, outline); // a dark edge down and to the right
-  for (const [px, py] of cells) g.pset(px, py, fill);
-  // a couple of drips off the bottom of the letters
-  const [dx1, dx2] = [x + 9, x + 20];
-  g.line(dx1, y + 6, dx1, y + 8, fill);
-  g.pset(dx2, y + 6, fill);
-  g.pset(dx2, y + 7, fill);
-  g.pset(dx1, y + 9, outline);
+  const midX = x + (cx - x) / 2;
+  const lift = (px) => Math.round(((px - midX) * 6) / 57); // about 6 degrees
+  for (const [px, py] of cells) g.pset(px, py - lift(px), fill);
+  for (const fx of [x + 8, x + 14]) g.line(fx, y + 7 - lift(fx), fx, y + 8 - lift(fx), fill);
 }
 
 export function citySign({ x, base = WORLD.GROUND, height = 240, w = 84 }) {
@@ -164,7 +162,7 @@ export function citySign({ x, base = WORLD.GROUND, height = 240, w = 84 }) {
       g.text('OSLO', l + (w >> 1), top + 7, white, 2, 'center');
       g.line(l + 9, top + 23, r - 9, top + 23, white);
       g.text('CITY LIMITS', l + (w >> 1), top + 27, white, 1, 'center');
-      sprayTag(g, 'Rune', r - 31, top + h - 12, [0, 0, 0], [150, 215, 175]); // black paint, with a pale edge so it reads on the green
+      sprayTag(g, 'Rune', r - 36, top + h - 12, [0, 0, 0]); // pure black paint
     },
   };
 }
