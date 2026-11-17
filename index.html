@@ -92,13 +92,18 @@
         el.textContent = 'STICKFLIP ERROR: ' + msg + ' (try reloading)';
       }
       window.addEventListener('error', function (e) {
-        // A failed file load (script, module) has a target with a src.
-        if (e.target && e.target.src) return showError('could not load ' + e.target.src);
+        // A failed file load (script, module) has a target with a src. Only our
+        // own files count: an ad blocker (Brave) blocking the analytics script
+        // is not a game error, and the game runs fine without it.
+        if (e.target && e.target.src) {
+          if (e.target.src.indexOf(location.origin + '/') === 0) showError('could not load ' + e.target.src);
+          return;
+        }
         // Only the game's own code (our src/*.js files) puts an error on screen.
         // Browsers inject scripts of their own (Brave's wallet sets
         // window.ethereum, content blockers, extensions, analytics), and those
         // report as this page or a bare "Script error." with no file.
-        var own = /\/src\/[\w\/-]+\.js/;
+        var own = /\/src(-[0-9a-f]+)?\/[\w\/-]+\.js/; // deployed as src-<sha>/
         var where = (e.filename || '') + ' ' + ((e.error && e.error.stack) || '');
         if (where.indexOf(location.origin) === -1 || !own.test(where)) return;
         showError(e.message || 'unknown');
