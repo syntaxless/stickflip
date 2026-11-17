@@ -89,11 +89,11 @@ const refreshScores = (stageIndex = runStage) =>
     .top()
     .then((list) => (highScores = list));
 
-// The Mega Ramp: finish the last stage with at least SECRET_SCORE points in
+// The Mega Ramp: finish any stage with at least SECRET_SCORE points in
 // that one run (before the no-bail bonus) and you're taken there. It counts
 // toward the run total like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_SCORE = 5000;
+const SECRET_SCORE = 8000;
 
 // A run is one stage, plus the Mega Ramp when it's earned: two slots.
 const RUN_SLOTS = 2;
@@ -252,10 +252,10 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
   if (autoStart) game.tap();
 }
 
-// A stage is done: on to the Mega Ramp after a big enough Stage 1, or end the run.
+// A stage is done: on to the Mega Ramp after a big enough run, or end the run.
 function nextScreen() {
   if (levelIndex !== SECRET_INDEX) openNextStage(levelIndex);
-  if (levelIndex === 0 && run.total() >= SECRET_SCORE) unlockSecret();
+  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE) unlockSecret();
   else finishRun();
 }
 

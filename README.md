@@ -187,12 +187,13 @@ in from a high deck and fly off the kicker at a raised, gently curved
 "rainbow" rail. Ollie off the kicker to clear the whole rail and land in the
 long bank that starts right at its end, or grind over the curve and pop (or
 roll) off the end into the bank. Finish with a big air out of a tall quarter
-pipe. Rails take an `arc` option for the curve. Finish Stage 1 with at least
-5,000 points in that run (`SECRET_SCORE` in `src/main.js`, before the no-bail
+pipe. Rails take an `arc` option for the curve. Finish any stage with at least
+8,000 points in that run (`SECRET_SCORE` in `src/main.js`, before the no-bail
 bonus) and you're taken there; its score counts toward the run total. A
 blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has
-its own palette from the 16 named HTML colours (purple sky, yellow text).
+its own look: a night sky with moon and stars, a faint lit skyline, an
+all-wood plank ground and a wooden-sign banner.
 
 * Bails explain what went wrong: slammed or clipped the rail, landed mid-flip,
   came up short, landed on the stairs or a step, rolled off an edge, or hit
