@@ -282,7 +282,8 @@ export class Renderer {
         this.drawWood(g, x, top, bottom);
       } else if (top < bottom) {
         g.fill(x, top, 1, bottom - top, ink);
-        this.drawGround(g, x, top, bottom, !!game.level.sidewalk);
+        // raised ground (ramps, banks, stair platforms) is solid earth down to where the street's own dirt ends
+        this.drawGround(g, x, top, bottom, !!game.level.sidewalk, ASPHALT_H, GRASS_H, G + ASPHALT_H + GRASS_H + DIRT_H);
       } else if (patches.length) {
         // a dirt-filled gap: a strip sunk a little below the street, no asphalt or grass
         const wx = x * S + S / 2;
@@ -317,10 +318,10 @@ export class Renderer {
   // stage: the surface in greys with the odd speckle (a sidewalk also has
   // a dark joint every 28 px), the grass in greens, the dirt in muted browns
   // with the odd grey stone. Below that the ground is plain black.
-  drawGround(g, x, top, bottom, sidewalk, asphalt = ASPHALT_H, grassH = GRASS_H) {
+  drawGround(g, x, top, bottom, sidewalk, asphalt = ASPHALT_H, grassH = GRASS_H, floor = 0) {
     const surfaceEnd = top + asphalt;
     const grassEnd = surfaceEnd + grassH;
-    const dirtEnd = grassEnd + DIRT_H;
+    const dirtEnd = Math.max(grassEnd + DIRT_H, floor);
     const end = Math.min(bottom, dirtEnd);
     for (let y = top; y < end; y++) {
       const hb = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block

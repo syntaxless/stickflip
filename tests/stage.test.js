@@ -310,7 +310,7 @@ test('stage 4: the seesaw tips down to the ground under a grind, and springs bac
 
 const stage5 = STAGES[4];
 
-function ride5(index, taps) {
+function ride5(index, taps, hold = false) {
   const game = new Game(stage5, null, { index, score: 0 });
   game.tap();
   const queue = [...taps];
@@ -319,6 +319,7 @@ function ride5(index, taps) {
     while (queue.length && queue[0] <= t + 1e-9) {
       queue.shift();
       game.tap();
+      if (hold) game.setHold(true); // finger down: lock the grind on a rail
     }
     game.update(STEP);
   }
@@ -336,7 +337,7 @@ test('stage 5 is the skate park: seven checkpoints', () => {
 test('stage 5: a timed ollie clears every checkpoint', () => {
   const clears = [[0.3, 1.3], [0.35, 0.9], [0.8], [], [0.55], [0.8], [0.85]];
   clears.forEach((taps, i) => {
-    const game = ride5(i, taps);
+    const game = ride5(i, taps, i === 4); // the long fun box rail is a grind: hold to lock it
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage5.sections[i].name} bailed: ${game.bailReason}`);
   });
 });
@@ -457,4 +458,14 @@ test('stage 5: the Big Set is three concrete steps with no rail to grind', () =>
   assert.ok(set);
   assert.equal(set.surfaces.length, 0);
   assert.equal(set.ground.filter((s) => s.bail === 'stairs').length, 2);
+});
+
+test('stage 5: the curb cut is a dip cut into the ground, and the fun box is long', () => {
+  const cut = stage5.obstacles.find((o) => o.type === 'curb-cut');
+  const lowest = Math.max(...cut.ground.map((s) => Math.max(s.y1 ?? s.y, s.y2 ?? s.y)));
+  assert.ok(lowest > 450, 'the driveway sits below street level');
+  assert.ok(cut.ground.every((s) => !s.under), 'not a bump laid on top of the ground');
+  const box = stage5.obstacles.find((o) => o.type === 'fun-box');
+  const [x1, x2] = [Math.min(...box.ground.map((s) => s.x1)), Math.max(...box.ground.map((s) => s.x2))];
+  assert.ok(x2 - x1 >= 580, `fun box ${x2 - x1} wide`);
 });

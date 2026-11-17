@@ -61,41 +61,33 @@ export function hubba({ x, steps = 5, run = 46, rise = 16, wallHeight = 32 }) {
   };
 }
 
-// A curb cut: a driveway entrance where the curb dips to the street. Two raised
-// curbs (landable, grindable on top) with sloped flares down to a driveway at
-// street level between them. Ride it, ollie onto a curb, or grind it.
+// A curb cut: a driveway entrance, a dip cut down into the ground (not a bump
+// on top of it): sloped flares down to a driveway a little below the sidewalk
+// and back up. A free ride; the concrete apron is drawn over the surface.
 export function curbCut({ x }) {
-  const H = 30; // curb height
+  const D = 30; // how far the driveway dips below the sidewalk
   const segs = [
-    { x1: x, x2: x + 36, y1: G, y2: G - H }, // up the face of the first curb
-    { x1: x + 36, x2: x + 150, y1: G - H, y2: G - H },
-    { x1: x + 150, x2: x + 270, y1: G - H, y2: G }, // the flare down into the driveway
-    { x1: x + 350, x2: x + 470, y1: G, y2: G - H }, // the flare back up
-    { x1: x + 470, x2: x + 560, y1: G - H, y2: G - H },
-    { x1: x + 560, x2: x + 596, y1: G - H, y2: G }, // down the far curb's face
-  ].map((s) => ({ ...s, landable: true, under: true }));
-  const tops = [
-    { x1: x + 36, x2: x + 150, y: G - H, grindable: true, landable: true },
-    { x1: x + 470, x2: x + 560, y: G - H, grindable: true, landable: true },
-  ];
+    { x1: x, x2: x + 130, y1: G, y2: G + D }, // the flare down into the driveway
+    { x1: x + 130, x2: x + 270, y1: G + D, y2: G + D }, // the driveway, below the sidewalk
+    { x1: x + 270, x2: x + 400, y1: G + D, y2: G }, // the flare back up
+  ].map((s) => ({ ...s, landable: true }));
   const yAt = (wx) => {
     for (const s of segs) if (wx >= s.x1 && wx < s.x2) return s.y1 + ((s.y2 - s.y1) * (wx - s.x1)) / (s.x2 - s.x1);
     return G;
   };
   return {
     type: 'curb-cut',
-    surfaces: tops,
+    surfaces: [],
     solids: [],
     ground: segs,
+    // The dip is cut into the ground; this lays a concrete apron over its surface.
     draw(g) {
-      fillShape(g, P(x), P(x + 596) - 1, (px) => P(yAt(px * 3)), (px, y, d) => {
-        if (d < 2) return CONCRETE_LIT;
-        // a joint line across each slab, darker toward the bottom
-        if (px % 12 === 0) return CONCRETE_DARK;
-        return d > 7 ? CONCRETE_DARK : CONCRETE;
-      });
-      // the curbs' edges: a darker face line where the curb meets the street
-      for (const [a, b] of [[x, x + 36], [x + 560, x + 596]]) g.line(P(a), P(G) - 1, P(b), P(G) - 1, ink);
+      for (let px = P(x); px < P(x + 400); px++) {
+        const t = P(yAt(px * 3));
+        for (let d = 0; d < 6; d++) g.pset(px, t + d, d < 2 ? CONCRETE_LIT : px % 12 === 0 ? CONCRETE_DARK : d > 3 ? CONCRETE_DARK : CONCRETE);
+        g.pset(px, t - 1, ink);
+      }
+      for (const wx of [x, x + 400]) g.line(P(wx), P(G) - 1, P(wx), P(G) + 1, ink); // the cut's edges
     },
   };
 }
@@ -129,7 +121,7 @@ export function concreteSet({ x, steps = 3, run = 100, rise = 48, from = 0 }) {
 
 // A fun box: a wooden trapezoid sitting on the flat street, with a rail along
 // its flat top. Ride up one end, ollie onto the rail and grind it, or ride it.
-export function funBox({ x, topHeight = 50, up = 110, top = 190, down = 110, barHeight = 34 }) {
+export function funBox({ x, topHeight = 50, up = 150, top = 290, down = 150, barHeight = 34 }) {
   const TOP = G - topHeight;
   const segs = [
     { x1: x, x2: x + up, y1: G, y2: TOP },
