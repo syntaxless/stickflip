@@ -280,18 +280,18 @@ test('stage 4 is the playground: seven checkpoints', () => {
 });
 
 test('stage 4: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.95], [], null, [0.35, 0.9], [0.35, 0.9], [0.85], [0.85]]; // the sandbox needs a charged ollie (below)
+  const clears = [[0.95], [0.5], null, [0.35, 0.9], [0.35, 0.9], [0.6], [0.85]]; // the sandbox needs a charged ollie (below)
   clears.forEach((taps, i) => {
     if (!taps) return;
-    const game = ride4(i, taps, i === 1); // the slide is grinded: roll off the top with the finger held
+    const game = ride4(i, taps, i === 1); // the slide is grinded: ollie onto it with the finger held
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage4.sections[i].name} bailed: ${game.bailReason}`);
   });
 });
 
-test('stage 4: the slide needs the finger held to grind it; the rest bail without an ollie', () => {
-  assert.equal(ride4(1, []).bailReason, 'clipped');
-  assert.equal(ride4(1, [], true).phase, 'playing');
-  for (const i of [0, 2, 3, 4, 5, 6]) assert.equal(ride4(i, []).phase, 'bailed', stage4.sections[i].name);
+test('stage 4: the slide needs an ollie (with the finger held to lock the grind); every checkpoint bails without one', () => {
+  for (const i of [0, 1, 2, 3, 4, 5, 6]) assert.equal(ride4(i, []).phase, 'bailed', stage4.sections[i].name);
+  assert.equal(ride4(1, [], true).phase, 'bailed', 'holding with no ollie: you hit the platform');
+  assert.equal(ride4(1, [0.5]).phase, 'bailed', 'an ollie without holding or tapping again clips the chute');
 });
 
 test('stage 4: the seesaw tips down to the ground under a grind, and springs back after', () => {
@@ -600,9 +600,99 @@ test('stage 3: the Big Gap kicker is a broken slab of concrete and the gap is fi
   assert.equal(stage3.obstacles.find((o) => o.type === 'broken-gap').dirt.kind, 'rubble');
 });
 
-test('stage 4: the slide is held up by a ladder (open underneath), not a ramp of ground', () => {
-  const ladder = stage4.obstacles.find((o) => o.type === 'slide-ladder');
-  assert.ok(ladder);
-  assert.ok(ladder.ground.every((s) => s.under), 'the street runs beneath it');
-  assert.ok(!stage4.obstacles.some((o) => o.type === 'bank' && o.ground[0].x1 > 960 && o.ground[0].x1 < 1920));
+test('stage 4: the slide is a tall platform with a chute curving out flat at the bottom, no ladder or ramp up; the window to ollie on is over 0.35 s', () => {
+  const slide = stage4.obstacles.find((o) => o.type === 'slide');
+  assert.ok(slide);
+  assert.ok(!stage4.obstacles.some((o) => o.type === 'slide-ladder' || (o.type === 'bank' && o.ground[0].x1 > 960 && o.ground[0].x1 < 1920)));
+  const chute = slide.surfaces.find((x) => x.grindable);
+  assert.ok(chute.y2 > chute.y1, 'slopes down');
+  const lip = slide.surfaces.find((x) => !x.grindable && x.y > chute.y2);
+  assert.ok(lip, 'a flat lip at the bottom of the curve');
+  const clears = (at) => {
+    const g = new Game(stage4, null, { index: 1, score: 0 });
+    g.tap();
+    let t = 0;
+    let done = false;
+    while (t < 5 && g.phase === 'playing' && g.sk.x < stage4.sections[2].x + 200) {
+      if (!done && t >= at) { g.tap(); g.setHold(true); done = true; }
+      g.update(STEP);
+      t += STEP;
+    }
+    return g.phase === 'playing';
+  };
+  const ok = [];
+  for (let at = 0; at < 1.6; at += 0.02) if (clears(at)) ok.push(at);
+  assert.ok(ok.length && ok[ok.length - 1] - ok[0] > 0.35, `window ${ok[0]}..${ok[ok.length - 1]}`);
+});
+
+test('stage 4: the block tower is a stack of three toy blocks, one tall solid with a landable top', () => {
+  const tower = stage4.obstacles.find((o) => o.type === 'block-tower');
+  assert.equal(tower.ground.length, 0, 'no stair steps');
+  assert.equal(tower.solids.length, 1);
+  assert.ok(tower.solids[0].h >= 90 && tower.surfaces[0].landable);
+});
+
+// ------------------------------------------------------------ the cop car
+
+test('stage 5: grinding the cop car light bar blows it up once the grind is over; the rider is fine and SIREN GRIND still scores', () => {
+  const car = stage5.obstacles.find((o) => o.type === 'cop-car');
+  const barX = car.surfaces[0];
+  const sec = 6;
+  let found = null;
+  for (let at = 0.3; at < 1.6 && !found; at += 0.02) {
+    const g = new Game(stage5, null, { index: sec, score: 0 });
+    g.tap();
+    let t = 0;
+    let did = false;
+    const names = [];
+    let boomAtX = null;
+    while (t < 6 && g.phase === 'playing') {
+      if (!did && t >= at) { g.tap(); g.setHold(true); did = true; }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) {
+        if (e.type === 'gap') names.push(e.name);
+        if (e.type === 'boom') boomAtX = g.sk.x;
+      }
+      if (boomAtX !== null && t > 2) break;
+    }
+    if (boomAtX !== null) found = { g, names, boomAtX, at };
+  }
+  assert.ok(found, 'a grind of the light bar sets the blast off');
+  assert.equal(found.g.phase, 'playing', 'the rider is not bailed or hurt');
+  assert.ok(found.g.boomAt !== null);
+  assert.ok(found.boomAtX >= barX.x2 - 6, 'it goes off after the grind is over, at the end of the bar');
+  assert.ok(found.names.includes('SIREN GRIND'));
+});
+
+test('stage 5: ollieing over the cop car leaves it alone (no blast), and a restart makes it whole again', () => {
+  let cleared = null;
+  for (let at = 0.3; at < 1.6 && !cleared; at += 0.02) {
+    const g = new Game(stage5, null, { index: 6, score: 0 });
+    g.tap();
+    let t = 0;
+    let did = false;
+    while (t < 6 && g.phase === 'playing' && g.sk.x < stage5.sections[6].x + 800) {
+      if (!did && t >= at) { g.tap(); did = true; } // a plain ollie: no hold, so no grind
+      g.update(STEP);
+      t += STEP;
+    }
+    if (g.phase === 'playing' && g.sk.x > stage5.sections[6].x + 700) cleared = g;
+  }
+  assert.ok(cleared, 'a plain ollie clears the car');
+  assert.equal(cleared.boomAt, null);
+  cleared.boomAt = 1;
+  cleared.reset();
+  assert.equal(cleared.boomAt, null);
+});
+
+test('stage 5: the exploded cop car draws a wreck and flames without error, and the whole car before', () => {
+  const car = stage5.obstacles.find((o) => o.type === 'cop-car');
+  const frames = [null, 0, 0.05, 0.2, 0.4, 0.6, 1, 3, 8];
+  for (const boom of frames) {
+    const pix = new Set();
+    const g = { fill: (...a) => pix.add(`f${a}`), rect: (...a) => pix.add(`r${a}`), line: (...a) => pix.add(`l${a}`), pset: (...a) => pix.add(`p${a}`), circle: (...a) => pix.add(`c${a}`), text() {} };
+    car.draw(g, { time: 1.3, boom });
+    assert.ok(pix.size > 20, `frame ${boom} drew`);
+  }
 });

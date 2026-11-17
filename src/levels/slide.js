@@ -1,16 +1,10 @@
-import { slideChute, slideLadder } from '../obstacles/index.js';
-import { WORLD } from '../config.js';
+import { playSlide } from '../obstacles/index.js';
 
-// Stage 4, section 2: a slide, raised on legs. Ride up the ladder and
-// roll off the top with your finger held to lock onto the chute and grind it
-// down; let go and you clip it. The chute ends 24 above the street.
-const G = WORLD.GROUND;
-
+// Stage 4, section 2: a slide. A tall platform with a yellow chute curving down
+// from its edge. There's no ramp up: ollie onto the slide (over the platform
+// onto the chute, tap or hold as you land to lock the grind) and ride it down.
 export default {
   id: 'slide',
   name: 'Slide',
-  obstacles: [
-    slideLadder({ x: 260, run: 120, rise: 70, deck: 60 }),
-    slideChute({ x1: 440, y1: G - 70, x2: 700, y2: G - 24 }),
-  ],
+  obstacles: [playSlide({ x: 380 })],
 };

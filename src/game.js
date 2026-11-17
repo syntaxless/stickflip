@@ -92,6 +92,7 @@ export class Game {
     this.score = cp.score;
     this.combo = []; // tricks done since leaving the ground: { name, points }
     this.gapsDone = new Set(); // named gaps earned this attempt
+    this.boomAt = null; // when the cop car blew up (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.stars = 0;
@@ -675,8 +676,13 @@ export class Game {
 
   endGrind() {
     const s = this.sk;
-    const { dist, type, slappy } = s.grind;
+    const { dist, type, slappy, surface } = s.grind;
     s.grind = null;
+    // a surface that blows up (the cop car's light bar) goes off once the grind is over
+    if (surface.explodes && this.boomAt === null) {
+      this.boomAt = this.time;
+      this.emit('boom');
+    }
     this.addTrick(slappy ? `SLAPPY ${type.name}` : type.name, type.base + Math.round(dist * SCORE.GRIND_PER_PX));
   }
 

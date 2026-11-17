@@ -3,7 +3,6 @@ import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
 import { rail } from './rail.js';
 import { gap } from './gap.js';
-import { stepsUp } from './steps-up.js';
 import { pipe, post } from '../render/shaded.js';
 
 // Stage 4's playground. Toy and playground gear built from the same pieces as
@@ -45,94 +44,63 @@ export function toyBlocks({ blocks, base = WORLD.GROUND }) {
   };
 }
 
-// A slide: a yellow chute standing on legs, raised off the street, sloping
-// from (x1, y1) down to (x2, y2). Grind it like a rail: roll off the top of the
-// ladder platform with the finger held and you lock onto it. (Let go and you
-// clip it.) You ride it down and drop the last bit to the street.
-export function slideChute({ x1, y1, x2, y2, base = WORLD.GROUND }) {
-  const surface = { x1, x2, y1, y2, grindable: true, landable: false };
+// A playground slide: a tall platform (a solid block you ollie up onto, or over)
+// and a yellow chute running down from its right edge, curving out flat at the
+// bottom. Ollie from the ground and lock onto the chute to grind it down (hold
+// your finger or tap just before you land on it). Land on the platform instead
+// and roll off its end with the finger held to lock on, or let go and you clip
+// the chute. The chute's end drops onto a short flat lip.
+export function playSlide({ x, deckW = 90, deckH = 96, run = 210, drop = 62, base = WORLD.GROUND }) {
+  const deck = box({ x, w: deckW, h: deckH, landable: true, base });
+  const [x1, y1] = [x + deckW, base - deckH];
+  const [x2, y2] = [x1 + run, y1 + drop];
+  const lipY = base - 20; // the flat lip at the bottom of the curve
+  const chute = { x1, x2, y1, y2, grindable: true, landable: false };
+  const lip = { x1: x2, x2: x2 + 150, y: lipY, grindable: false, landable: true };
   return {
     type: 'slide',
-    surfaces: [surface],
-    solids: [],
+    surfaces: [chute, lip, ...deck.surfaces],
+    solids: deck.solids,
     draw(g) {
       const [a, b, c, d] = [P(x1), P(y1), P(x2), P(y2)];
       const floor = P(base) - 1;
+      const [dl, dt, dr] = [P(x), P(base - deckH), P(x1) - 1];
       const yAt = (px) => b + Math.round(((px - a) * (d - b)) / Math.max(1, c - a));
-      // legs: a post every ~25 px under the chute
-      for (let px = a + 6; px < c; px += 26) {
-        g.line(px, yAt(px) + 1, px, floor, ink);
-        g.line(px + 1, yAt(px) + 1, px + 1, floor, steel);
-        g.line(px + 2, yAt(px) + 1, px + 2, floor, ink);
+      // the platform: a blue block with plank lines, a yellow top and a red guard post
+      g.fill(dl, dt, dr - dl + 1, floor - dt + 1, BLUE);
+      g.rect(dl, dt, dr - dl + 1, floor - dt + 1, ink);
+      for (let y = dt + 8; y < floor - 2; y += 8) g.line(dl + 1, y, dr - 1, y, [60, 60, 190]);
+      g.line(dl + 1, dt + 2, dl + 1, floor - 1, [150, 150, 255]);
+      g.fill(dl - 1, dt - 3, dr - dl + 3, 3, YELLOW);
+      g.rect(dl - 1, dt - 3, dr - dl + 3, 3, ink);
+      g.line(dl + 2, dt - 4, dr - 2, dt - 4, white);
+      // legs under the chute: a post every ~28 px, down to the ground
+      for (let px = a + 14; px < c - 6; px += 28) {
+        g.line(px, yAt(px) + 3, px, floor, ink);
+        g.line(px + 1, yAt(px) + 3, px + 1, floor, steel);
+        g.line(px + 2, yAt(px) + 3, px + 2, floor, ink);
       }
-      // the chute: a thick yellow trough with a dark underside and a white lit edge
-      g.line(a, b - 3, c, d - 3, ink);
-      g.line(a, b - 2, c, d - 2, white);
-      g.line(a, b - 1, c, d - 1, YELLOW);
-      g.line(a, b, c, d, YELLOW);
-      g.line(a, b + 1, c, d + 1, [210, 170, 40]);
-      g.line(a, b + 2, c, d + 2, ink);
-      // a red side rail along the top and a post at the lip
-      g.line(a, b - 9, a, b, ink);
-      g.line(a + 1, b - 9, a + 1, b, RED);
-      g.line(a, b - 9, a + 14, b - 7, ink);
-      g.line(a, b - 8, a + 14, b - 6, RED);
-    },
-  };
-}
-
-// The slide's ladder and deck: a sloped ladder (side rails and rungs) leading up
-// to a small platform on legs, standing on the street. You ride up it like a
-// ramp: the ground under it is the street, so it is open underneath.
-export function slideLadder({ x, run = 120, rise = 70, deck = 60 }) {
-  const G = WORLD.GROUND;
-  const ground = [
-    { x1: x, x2: x + run, y1: G, y2: G - rise, landable: true, under: true },
-    { x1: x + run, x2: x + run + deck, y1: G - rise, y2: G - rise, landable: true, under: true },
-  ];
-  return {
-    type: 'slide-ladder',
-    surfaces: [],
-    solids: [],
-    ground,
-    draw(g) {
-      const [a, m, e] = [P(x), P(x + run), P(x + run + deck) - 1];
-      const [street, top] = [P(G), P(G - rise)];
-      const floor = street - 1;
-      const slopeY = (px) => street + Math.round(((px - a) * (top - street)) / Math.max(1, m - a));
-      // legs under the platform: two posts down to the street
-      for (const px of [m + 4, e - 6]) {
-        g.line(px, top + 4, px, floor, ink);
-        g.line(px + 1, top + 4, px + 1, floor, steel);
-        g.line(px + 2, top + 4, px + 2, floor, ink);
-      }
-      // the ladder: an upper side rail along the riding line, a lower one 8 px below, and rungs between
-      for (let px = a; px <= m; px++) {
-        const y = slopeY(px);
+      // the curve at the bottom: the chute eases out flat onto the lip
+      const lip0 = P(lipY);
+      const cl = Math.max(30, Math.round((2 * (lip0 - d)) / Math.max(0.05, (d - b) / Math.max(1, c - a)))); // px the curve takes to flatten
+      const yCurve = (px) => {
+        const t = Math.min(1, (px - c) / cl);
+        const slope = (d - b) / Math.max(1, c - a);
+        return Math.round(d + slope * cl * t + (lip0 - d - slope * cl) * t * t);
+      };
+      const chuteLine = (px, y) => {
+        g.pset(px, y - 3, ink);
+        g.pset(px, y - 2, white);
+        g.pset(px, y - 1, YELLOW);
         g.pset(px, y, YELLOW);
         g.pset(px, y + 1, [210, 170, 40]);
         g.pset(px, y + 2, ink);
-        g.pset(px, y - 1, ink);
-        g.pset(px, y + 8, ink);
-        g.pset(px, y + 9, steel);
-        g.pset(px, y + 10, ink);
-      }
-      for (let px = a + 3; px < m; px += 6) {
-        const y = slopeY(px);
-        g.line(px, y + 3, px, y + 7, ink);
-        g.line(px + 1, y + 3, px + 1, y + 7, white);
-        g.line(px + 2, y + 3, px + 2, y + 7, ink);
-      }
-      // the deck: a thick yellow platform with a dark underside, and a red guard post at the slide's top
-      g.fill(m, top, e - m + 1, 3, YELLOW);
-      g.line(m, top - 1, e, top - 1, ink);
-      g.line(m, top, e, top, white);
-      g.line(m, top + 2, e, top + 2, [210, 170, 40]);
-      g.line(m, top + 3, e, top + 3, ink);
-      g.line(e, top - 10, e, top - 1, ink);
-      g.line(e - 1, top - 10, e - 1, top - 1, RED);
-      g.line(m, top - 10, m, top - 1, ink);
-      g.line(m + 1, top - 10, m + 1, top - 1, RED);
+      };
+      for (let px = a; px < c; px++) chuteLine(px, yAt(px));
+      for (let px = c; px < c + cl + 14; px++) chuteLine(px, px < c + cl ? yCurve(px) : lip0);
+      // the side rail along the chute: a red tube with posts
+      for (let px = a; px < c; px++) g.pset(px, yAt(px) - 11, px % 2 ? RED : ink);
+      for (const px of [a + 2, Math.round((a + c) / 2), c - 2]) g.line(px, yAt(px) - 11, px, yAt(px) - 3, RED);
     },
   };
 }
@@ -259,17 +227,33 @@ export function monkeyBars({ x, length = 380, height = 80, base = WORLD.GROUND }
 }
 
 // A tower of toy blocks to ollie up onto: three steps of coloured blocks.
-export function blockTower({ x, steps = 3, run = 45, rise = 28, base = WORLD.GROUND }) {
-  const steppedUp = stepsUp({ x, steps, run, rise, base });
+export function blockTower({ x, w = 96, h = 100, base = WORLD.GROUND }) {
+  const top = box({ x, w, h, landable: true, base });
   return {
-    ...steppedUp,
+    ...top,
     type: 'block-tower',
     draw(g) {
-      for (let i = 0; i < steps; i++) {
-        const h = (i + 1) * rise;
-        // each step's block sits on top of the one before
-        drawBlock(g, P(x + i * run), P(base - h), P(x + (i + 1) * run) - 1, P(base - h + rise) - 1, COLORS[i % 4], i % 2 === 0);
-      }
+      // three toy blocks piled up, each a little off-centre and a different size,
+      // with a letter on the face (A, B, C) and a small block perched on top
+      const [l, r, b] = [P(x), P(x + w) - 1, P(base) - 1];
+      const bh = Math.round(P(h) / 3);
+      const rows = [
+        { l, r, c: RED, ch: 'A' }, // the big bottom block
+        { l: l + 1, r: r - 3, c: YELLOW, ch: 'B' }, // shifted left, a bit narrower
+        { l: l + 3, r: r - 1, c: BLUE, ch: 'C' }, // shifted right
+      ];
+      rows.forEach((row, i) => {
+        const bottom = b - i * bh;
+        const t = bottom - bh + 1;
+        drawBlock(g, row.l, t, row.r, bottom, row.c, false);
+        // a little depth: a lit strip along the top and a shaded strip down the right
+        g.line(row.l + 1, t + 1, row.r - 1, t + 1, [255, 255, 255]);
+        g.line(row.r - 1, t + 2, row.r - 1, bottom - 1, row.c.map((v) => Math.round(v * 0.65)));
+        g.line(row.l + 1, bottom - 1, row.r - 1, bottom - 1, row.c.map((v) => Math.round(v * 0.65)));
+        // the letter, in white on the dark colours and dark red on the yellow
+        const cx = Math.round((row.l + row.r) / 2) - 2;
+        g.text(row.ch, cx, t + Math.round((bh - 7) / 2) + 1, row.c === YELLOW ? [170, 0, 0] : white);
+      });
     },
   };
 }

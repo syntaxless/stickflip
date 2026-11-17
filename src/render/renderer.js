@@ -163,7 +163,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -224,7 +224,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
