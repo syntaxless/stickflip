@@ -8,8 +8,8 @@ export const WORLD = Object.freeze({
 });
 
 export const PHYS = Object.freeze({
-  ROLL_SPEED: 300, // px/s while rolling and in the air
-  GRIND_SPEED: 285, // px/s while grinding (a little friction)
+  ROLL_SPEED: 330, // px/s while rolling and in the air
+  GRIND_SPEED: 313, // px/s while grinding (a little friction)
   GRAVITY: 2400, // px/s^2
   OLLIE_V: 900, // take-off speed of an ollie from the ground
   POP_V: 780, // take-off speed when popping out of a grind

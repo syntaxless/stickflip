@@ -52,7 +52,7 @@ test('ollie onto the rail without a grind tap clips it', () => {
 });
 
 test('ollie then a late tap locks a grind and finishes the level', () => {
-  const { game, seen } = play(level1, [0.75, 1.32]);
+  const { game, seen } = play(level1, [0.71, 1.32]);
   assert.ok(seen.has('grind'));
   assert.equal(game.phase, 'complete');
   assert.ok(game.score > 250, `score ${game.score}`);
@@ -278,7 +278,7 @@ test('stairs: a timed tap grinds the handrail down', () => {
 });
 
 test('stairs: kickflip in, grind, pop and kickflip out gets three stars', () => {
-  const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.14, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
+  const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.16, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.equal(game.stars, 3, `score ${game.score}`);
 });
@@ -335,8 +335,8 @@ test('euro gap: ollie off the bank up onto the top; early lands on the step, non
 test('quarter pipe: grind in, air out of the quarter, grind back and exit left', () => {
   const { game, seen } = playActs(quarter, [
     [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
-    [2.74, 'tap'], // kickflip in the air
-    [4.5, 'tap'], [4.5, 'hold', 'left'], [7, 'up'],
+    [2.54, 'tap'], // kickflip in the air
+    [4.0, 'tap'], [4.0, 'hold', 'left'], [6.5, 'up'],
   ]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.ok(seen.has('50-50 GRIND') && seen.has('KICKFLIP') && seen.has('FS AIR'));
@@ -354,8 +354,8 @@ test('quarter pipe: doing nothing slams the rail, a late flip in the air is a ba
 test('quarter pipe: straight up and down at riding speed, over a second of hang time for two tricks', () => {
   const { game, seen } = playActs(quarter, [
     [0.4, 'tap'], [0.4, 'hold'], [1.5, 'up'],
-    [2.69, 'swipe', 'treflip'], // 360 flip
-    [3.29, 'tap'], // then a kickflip
+    [2.49, 'swipe', 'treflip'], // 360 flip
+    [3.09, 'tap'], // then a kickflip
   ], 4.2);
   assert.ok(seen.has('360 FLIP') && seen.has('KICKFLIP') && seen.has('FS AIR'), [...seen].join());
   assert.equal(game.phase, 'playing');

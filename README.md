@@ -129,6 +129,16 @@ then drop off its end), Trash Can (a tall can: a well-timed ollie clears it)
 and Ring of Fire (a kicker, a gap, and a burning ring to fly through: feet
 below it or head above it is a bail; clean through is a RING OF FIRE trick).
 
+**Stage 3** (construction site): Rock (a tiny rock stops the board dead, so
+ollie it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap
+(a jersey barrier you can ollie onto or grind, then a gap right behind it),
+Barricade (a sawhorse across the street), Long Rail, Big Set (six stairs with a
+handrail) and Big Gap (a tall kicker and a 240-unit gap). Road signs stand
+behind the action as decor.
+
+The ground is a thin strip of pixel asphalt over dirt, and the rider is 10%
+faster than the first release (ROLL_SPEED 330).
+
 **Stage 1** is the six original levels in order, joined by a bank up to Five
 Stair's platform and a drop off the Euro Gap stairs. The Quarter Pipe is the
 finale: ride back out to the left to finish.
