@@ -217,7 +217,7 @@ test('a held drag picks the grind: forward is a nose grind, back is a 5-0', () =
   for (const [dir, name] of [['right', 'NOSE GRIND'], ['left', '5-0 GRIND']]) {
     const { game, names } = playHold(level1, [[0.75, 'tap'], [0.75, 'hold'], [0.9, 'hold', dir]]);
     assert.equal(game.phase, 'complete', `${dir}: bailed ${game.bailReason}`);
-    assert.deepEqual(names, [name]);
+    assert.deepEqual(names.slice(0, 1), [name]); // (landing off the rail still holding drag rolls into a manual)
   }
 });
 
