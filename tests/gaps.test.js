@@ -51,7 +51,7 @@ const SCRIPTS = {
   'pool-jump': [[0, 'cs'], [0.75, 'cr']],
   'euro-to-rail': [[0.22, 'tap'], [0.22, 'hold']],
   'trash-hop': [[0, 'cs'], [0.75, 'cr']],
-  'big-leap': [[0, 'cs'], [0.75, 'cr']],
+  'big-leap': [[0, 'cs'], [0.56, 'cr']],
   'bench-to-hydrant': [[0.5, 'tap'], [1.36, 'tap']],
   'stair-set': [[0.7, 'tap']],
   handrail: [[0.3, 'tap'], [0.3, 'hold']],
