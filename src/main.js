@@ -270,6 +270,23 @@ function nextScreen() {
 // 27 px from the left edge and the rail sits well inside, so 20 keeps all of
 // the action on screen.
 const MAX_PORTRAIT_CROP = 20;
+// Portrait: share of the leftover height placed above the game frame. The
+// rest (the larger share) is the touch area below it.
+const PORTRAIT_FRAME_TOP = 0.28;
+
+let safeProbe = null;
+function safeTop() {
+  try {
+    if (!safeProbe) {
+      safeProbe = document.createElement('div');
+      safeProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;padding-top:env(safe-area-inset-top,0px)';
+      document.body.appendChild(safeProbe);
+    }
+    return safeProbe.offsetHeight || 0;
+  } catch {
+    return 0;
+  }
+}
 
 
 function resize() {
@@ -292,8 +309,17 @@ function resize() {
   }
   view.scale = k / view.dpr; // CSS px per game pixel
   view.ox = Math.round(((w - RES.W * view.scale) / 2) * view.dpr) / view.dpr;
-  view.oy = Math.round(((h - RES.H * view.scale) / 2) * view.dpr) / view.dpr;
   view.portrait = h > w;
+  view.oy = Math.round(((h - RES.H * view.scale) / 2) * view.dpr) / view.dpr;
+  if (view.portrait) {
+    // Portrait: the game frame rides high (below the notch / status bar) and
+    // the whole lower part of the screen is the touch pad, so a thumb never
+    // covers the action. Touches are read anywhere on the canvas.
+    const frameH = RES.H * view.scale;
+    const top = Math.max(safeTop(), 0);
+    const want = Math.max(top + 8, (h - frameH) * PORTRAIT_FRAME_TOP);
+    view.oy = Math.round(Math.min(want, h - frameH) * view.dpr) / view.dpr;
+  }
   view.inset = Math.max(0, -view.ox / view.scale); // game pixels hidden at each side
 }
 window.addEventListener('resize', resize);
@@ -361,6 +387,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
+  if (view.portrait && e.clientY > view.oy + RES.H * view.scale) noteTouchPad();
   stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 }], read: false, charge: false, t0: performance.now() };
   canvas.setPointerCapture?.(e.pointerId);
   // On the ground, a touch charges an ollie: crouch while held, pop on lift.
@@ -591,8 +618,48 @@ function frame(now) {
   drawLetterbox();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
+  if (view.portrait) drawTouchPad();
   if (TESTING) drawStrokeDebug();
   requestAnimationFrame(frame);
+}
+
+// Portrait touch-area hint: a dotted line under the game frame, with a short
+// label that fades for good once the player has used the area a few times.
+const padHint = { cv: document.createElement('canvas'), pix: null };
+let padTouches = store.get('pad-touches', 0);
+function noteTouchPad() {
+  if (padTouches >= 6) return;
+  padTouches++;
+  store.set('pad-touches', padTouches);
+}
+function drawTouchPad() {
+  const k = view.scale * view.dpr;
+  const frameBottom = (view.oy + RES.H * view.scale) * view.dpr;
+  const room = canvas.height - frameBottom;
+  if (room < 40 * k) return;
+  const W = Math.ceil(canvas.width / k) + 1;
+  const H = 28;
+  if (!padHint.pix || padHint.cv.width !== W) {
+    padHint.cv.width = W;
+    padHint.cv.height = H;
+    padHint.pix = new Pix(padHint.cv.getContext('2d'), W, H);
+  }
+  const g = padHint.pix;
+  g.data.fill(0);
+  const col = [200, 40, 40];
+  for (let x = 0; x < W; x += 4) g.fill(x, 0, 2, 1, col);
+  const label = padTouches < 6 && (game.phase === 'ready' || game.section === 0);
+  if (label) {
+    g.text('TAP  HOLD  SWIPE HERE', Math.floor(W / 2), 10, col, 1, 'center');
+  }
+  // the pixel buffer's alpha is 0 where nothing was drawn; mark drawn pixels opaque
+  for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
+  g.flush();
+  ctx.save();
+  ctx.globalAlpha = label ? 0.55 : 0.25;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(padHint.cv, 0, 0, W, H, view.ox * 0 + 0, Math.round(frameBottom + 6 * k), W * k, H * k);
+  ctx.restore();
 }
 
 // The bars around the game (a screen wider or taller than 16:9) show more of
