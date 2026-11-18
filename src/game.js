@@ -97,7 +97,6 @@ export class Game {
     this.combo = []; // tricks done since leaving the ground: { name, points, base, exempt }
     this.recent = []; // names of the last SCORE.RUN_WINDOW banked tricks of the run (for the repeat decay)
     this.gapsDone = new Set(); // named gaps earned this attempt
-    this.openAt = null; // when a grind opened the dumpster lid (game time), or null
     this.boomAt = null; // when the cop car blew up (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
@@ -706,7 +705,6 @@ export class Game {
     s.y = surfaceY(surface, s.x);
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
-    if (surface.opens && this.openAt === null) this.openAt = this.time;
     this.emit('grind', { key });
     this.checkGaps('grind');
   }

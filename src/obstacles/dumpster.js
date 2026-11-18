@@ -5,7 +5,7 @@ import { box } from './box.js';
 const P = (v) => Math.round(v / 3);
 const { ink, steel, shine, wheel: white } = PAL;
 
-// A shaded green dumpster, in the same style as the trash can and hydrant:
+// An open-topped, lidless dumpster full of bin bags, in the same style as the trash can and hydrant:
 // black outline, a lit left edge and a darker right edge, a light line under
 // each dark rib, dents, rust and street grime, steel handles and wheels.
 const BODY = [34, 128, 72];
@@ -19,78 +19,57 @@ const INSIDE = [12, 34, 24];
 const RUST = [150, 82, 40];
 const GRIME = [46, 58, 40];
 const TAG = [236, 200, 60];
-const BAGS = [[150, 70, 160], [236, 220, 120], [200, 50, 50], [210, 210, 218], [90, 150, 200], [236, 220, 120], [150, 70, 160], [200, 50, 50]];
+// Tied bin bags: a body colour, a lit patch top-left and a shaded underside.
+const BLACK = { body: [38, 40, 52], lit: [104, 108, 128], dark: [18, 18, 26] };
+const WHITE = { body: [226, 228, 236], lit: [255, 255, 255], dark: [160, 164, 184] };
+const BLUE = { body: [56, 104, 196], lit: [124, 172, 240], dark: [32, 62, 134] };
 
-// The lid is hinged along the back rim and swings up and back (fx.open is the
-// seconds since a grind on the rim began, or null while it is shut). It is
-// scenery either way: only the box below has a hitbox.
-const SWING = 0.34; // seconds to swing open
-const OPEN_DEG = 106; // a little past upright, so you see the lid's underside
-function lidAngle(age) {
-  if (age === null) return 0;
-  const k = Math.min(1, age / SWING);
-  const ease = 1 - (1 - k) * (1 - k); // fast off the mark, slowing as it opens
-  const bounce = k >= 1 ? Math.max(0, Math.sin((age - SWING) * 22)) * Math.exp(-(age - SWING) * 9) * 5 : 0;
-  return OPEN_DEG * ease - bounce;
+// A tied bin bag: a lumpy ellipse with a black outline, a lit patch, a shaded
+// lower right, and a knot with two ears on top. Its bottom half hides behind the rim.
+function trashBag(g, cx, bottom, w, h, c) {
+  const [rx, ry] = [w / 2, h / 2];
+  const cy = bottom - ry;
+  const inBag = (x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+  for (let y = Math.floor(cy - ry); y <= bottom; y++) {
+    for (let x = Math.floor(cx - rx) - 1; x <= Math.ceil(cx + rx) + 1; x++) {
+      if (!inBag(x, y)) continue;
+      const edge = !inBag(x - 1, y) || !inBag(x + 1, y) || !inBag(x, y - 1) || !inBag(x, y + 1);
+      const lit = x < cx - rx * 0.1 && y < cy - ry * 0.15 && x > cx - rx * 0.75 && y > cy - ry * 0.8;
+      const shade = x > cx + rx * 0.35 || y > cy + ry * 0.45;
+      g.pset(x, y, edge ? ink : lit ? c.lit : shade ? c.dark : c.body);
+    }
+  }
+  const kx = Math.round(cx);
+  const ky = Math.floor(cy - ry);
+  g.pset(kx, ky - 1, c.body); // the tied-off neck, with one ear flopping over
+  g.pset(kx + 1, ky - 2, c.body);
+  g.pset(kx, ky - 2, ink);
+  g.pset(kx + 2, ky - 2, ink);
+  g.pset(kx - 1, ky - 1, ink);
+  g.pset(kx + 1, ky - 3, ink);
 }
 
 // Ollie over it, land on it and roll off, or grind the front top edge with a
 // timed tap (like a rail). Its sides slam you.
 export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
   const b0 = box({ x, w, h, landable: true, grindable: true, base });
-  b0.surfaces[0].opens = true;
   return {
     ...b0,
     type: 'dumpster',
-    draw(g, fx = {}) {
-      const deg = lidAngle(fx.open ?? null);
-      const th = (deg * Math.PI) / 180;
+    draw(g) {
       const [l, t, r, b] = [P(x), P(base - h), P(x + w) - 1, P(base) - 1];
       const wheelTop = b - 2;
       const bodyBottom = wheelTop - 1;
-      const hinge = t - 8; // the back rim, as seen from just above
       const span = r - l;
 
-      // ---- Inside of the bin: back wall, then a pile of rubbish rising over the rim.
-      g.fill(l + 1, hinge, span - 1, t - 1 - hinge, INSIDE);
-      g.line(l + 1, hinge, r - 1, hinge, ink);
-      g.line(l + 2, hinge + 1, r - 2, hinge + 1, BODY_DARK); // the back rim's lit edge
-      let px = l + 3;
-      for (let i = 0; px + 5 < r - 2; i++) {
-        const bw = 4 + ((i * 5) % 3);
-        const bh = 3 + ((i * 7) % 4);
-        const top = t - 2 - bh;
-        const c = BAGS[i % BAGS.length];
-        g.fill(px, top, bw, t - 2 - top, c);
-        g.line(px, top, px + bw - 1, top, ink);
-        g.pset(px, top + 1, shine);
-        g.pset(px + bw - 1, top + 1, ink);
-        px += bw + 1;
-      }
-      g.line(l + 1, t - 2, r - 1, t - 2, ink);
-
-      // ---- The lid: a quad from the hinge (fixed) to its swinging front edge.
-      const lift = Math.round(5 * Math.cos(th) - 15 * Math.sin(th)); // front edge relative to the hinge
-      const yFront = hinge + lift;
-      const [ya, yb] = [Math.min(yFront, hinge), Math.max(yFront, hinge)];
-      const inside = deg > 90; // swung past upright: we see the lid's underside
-      for (let y = ya; y <= yb; y++) {
-        const up = Math.max(0, hinge - y);
-        const inset = 2 + Math.floor(up / 4);
-        const edge = y === ya;
-        g.line(l + inset, y, r - inset, y, edge ? (inside ? LID : LID_LIT) : inside ? LID_DARK : LID);
-        g.pset(l + inset - 1, y, ink);
-        g.pset(r - inset + 1, y, ink);
-        if (y > ya + 1 && y < yb) {
-          g.pset(l + inset, y, inside ? LID : LID_LIT); // lit left edge
-          g.pset(r - inset, y, inside ? INSIDE : BODY_DARK); // shaded right edge
-        }
-      }
-      const topInset = 2 + Math.floor(Math.max(0, hinge - ya) / 4);
-      g.line(l + topInset, ya - 1, r - topInset, ya - 1, ink);
-      g.line(l + 2, yb + 1, r - 2, yb + 1, ink);
-      if (yb - ya > 3) for (const gx of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(gx, ya + 2, gx, yb - 1, inside ? LID : LID_DARK); // ribs
-      if (deg < 50) g.line(l + 3, yFront, r - 3, yFront, LID_LIT); // lit front lip of a closed lid
+      // ---- No lid: the back of the bin, then bags of rubbish bulging over the rim.
+      g.fill(l + 1, t - 4, span - 1, 4, INSIDE);
+      g.line(l + 1, t - 4, r - 1, t - 4, ink);
+      g.line(l + 2, t - 3, r - 2, t - 3, BODY_DARK); // the back rim, just visible
+      // [centre x from the left, width, height above the rim, bag]
+      for (const [bx, bw, bh, bag] of [
+        [5, 11, 11, BLACK], [13, 10, 14, WHITE], [22, 12, 10, BLUE], [30, 10, 15, BLACK], [38, 12, 11, WHITE], [45, 10, 13, BLUE],
+      ]) trashBag(g, l + bx, t + 1, bw, bh + 1, bag);
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
       g.fill(l, t, span + 1, bodyBottom - t + 1, BODY);
