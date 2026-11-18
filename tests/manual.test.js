@@ -229,3 +229,40 @@ for (const [name, dir, grind] of [['50-50', null, '50-50 GRIND'], ['5-0', 'left'
     }
   });
 }
+
+// A slappy (riding into a low curb with the finger held) is a grind too: a new
+// touch pops off it and a trick goes straight into the combo.
+test('every air trick can be done popping off a slappy', async () => {
+  const { STAGES } = await import('../src/stages/index.js');
+  for (const key of Object.keys(TRICKS)) {
+    if (key === 'circle') continue;
+    const g = new Game(STAGES[1], null, { index: 0, score: 0 });
+    g.tap();
+    g.setHold(true);
+    let t = 0;
+    let slapT = null;
+    let swiped = false;
+    const names = [];
+    let bank = null;
+    while (t < 5 && g.phase === 'playing') {
+      if (g.sk.mode === 'grind' && slapT === null) slapT = t;
+      if (slapT !== null && !swiped && t >= slapT + 0.2) {
+        g.setHold(false);
+        g.tap();
+        g.swipe(key);
+        swiped = true;
+      }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) {
+        if (e.type === 'trick') names.push(e.name);
+        if (e.type === 'bank') bank = e;
+      }
+      if (bank) break; // (the stage rides on into the next obstacle)
+    }
+    assert.ok(swiped, `${key}: never slappied`);
+    assert.notEqual(g.phase, 'bailed', `${key} out of a slappy: bailed (${g.bailReason})`);
+    assert.ok(names.includes('SLAPPY 50-50 GRIND') && names.includes(TRICKS[key].name), `${key}: ${names}`);
+    assert.ok(bank && bank.mult >= 2, `${key}: banked ${bank?.mult}`);
+  }
+});
