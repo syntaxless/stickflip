@@ -24,37 +24,47 @@ const BLACK = { body: [38, 40, 52], lit: [104, 108, 128], dark: [18, 18, 26] };
 const WHITE = { body: [226, 228, 236], lit: [255, 255, 255], dark: [160, 164, 184] };
 const BLUE = { body: [56, 104, 196], lit: [124, 172, 240], dark: [32, 62, 134] };
 
-// A tied bin bag: a rounded top, a flat bottom (so it sits on something instead of
-// balancing on a point), a black outline, a lit patch top-left, a shaded lower
-// right, and a knot with an ear. `lean` slides the top sideways, in pixels.
+// A tied bin bag: a bulging body, widest low down, with a flat bottom (so it sits
+// on something instead of balancing on a point), gathered in to a knotted neck
+// with two floppy ears. Dark plastic with a few lighter crinkle highlights, a
+// shaded lower right and a black outline. `lean` slides the top sideways.
 function trashBag(g, cx, bottom, w, h, c, lean = 0) {
   const rx = w / 2;
+  const neckRows = 2;
   const top = bottom - h + 1;
-  // the half-width at a row: an ellipse over the top half, straight sides below it
+  const bodyH = h - neckRows;
+  const mid = (y) => cx + (lean * (bottom - y)) / (h - 1);
   const half = (y) => {
-    const k = (bottom - y) / (h - 1); // 0 at the bottom, 1 at the top
-    const hw = k < 0.45 ? rx : rx * Math.sqrt(Math.max(0, 1 - ((k - 0.45) / 0.55) ** 2));
+    if (y < top + neckRows) return 1.5; // the gathered neck
+    const k = (bottom - y) / (bodyH - 1); // 0 at the bottom of the body, 1 under the neck
+    const hw = k < 0.5 ? rx : rx * (1 - ((k - 0.5) / 0.5) ** 1.8 * 0.6);
     return y === bottom ? hw - 1 : hw; // the bottom corners are clipped a pixel
   };
-  const mid = (y) => cx + (lean * (bottom - y)) / (h - 1);
   const inBag = (x, y) => y >= top && y <= bottom && Math.abs(x - mid(y)) <= half(y);
   for (let y = top; y <= bottom; y++) {
     for (let x = Math.floor(cx - rx - Math.abs(lean)) - 1; x <= Math.ceil(cx + rx + Math.abs(lean)) + 1; x++) {
       if (!inBag(x, y)) continue;
       const edge = !inBag(x - 1, y) || !inBag(x + 1, y) || !inBag(x, y - 1) || !inBag(x, y + 1);
       const dx = x - mid(y);
-      const lit = dx < -rx * 0.1 && dx > -rx * 0.75 && y > top + h * 0.15 && y < top + h * 0.55;
-      const shade = dx > rx * 0.4 || y > bottom - h * 0.22;
-      g.pset(x, y, edge ? ink : lit ? c.lit : shade ? c.dark : c.body);
+      const shade = dx > rx * 0.45 || y > bottom - 2;
+      g.pset(x, y, edge ? ink : shade ? c.dark : c.body);
     }
   }
+  // crinkle highlights: short light streaks down the lit side, in fixed spots
+  for (const [fx, fy, len] of [[-0.5, 0.42, 3], [-0.15, 0.3, 2], [-0.62, 0.7, 2], [0.1, 0.62, 2]]) {
+    const hx = Math.round(mid(bottom - fy * bodyH) + fx * rx);
+    const hy = Math.round(bottom - fy * bodyH);
+    for (let i = 0; i < len; i++) if (inBag(hx + (i >> 1), hy + i) && !(i === 0 && !inBag(hx, hy - 1))) g.pset(hx + (i >> 1), hy + i, c.lit);
+  }
+  // the knot: a gathered tuft with an ear flopping out each side
   const kx = Math.round(mid(top));
-  g.pset(kx, top - 1, c.body); // the tied-off neck, with one ear flopping over
-  g.pset(kx + 1, top - 2, c.body);
-  g.pset(kx, top - 2, ink);
-  g.pset(kx + 2, top - 2, ink);
   g.pset(kx - 1, top - 1, ink);
-  g.pset(kx + 1, top - 3, ink);
+  g.pset(kx, top - 1, c.body);
+  g.pset(kx + 1, top - 1, ink);
+  g.pset(kx - 2, top, ink); // left ear
+  g.pset(kx - 2, top + 1, c.lit);
+  g.pset(kx + 2, top, ink); // right ear
+  g.pset(kx + 2, top + 1, c.body);
 }
 
 // Ollie over it, land on it and roll off, or grind the front top edge with a
@@ -77,7 +87,7 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       // Four chunky bags dumped in a heap, overlapping at different heights and angles:
       // [centre x from the left, bottom above the rim, width, height, lean, bag], back to front.
       for (const [bx, lift, bw, bh, lean, bag] of [
-        [10, 0, 15, 12, -2, BLACK], [28, 0, 14, 13, 2, BLUE], [41, 1, 13, 9, -3, BLACK], [19, 8, 14, 11, 3, WHITE],
+        [10, 0, 16, 15, -2, BLACK], [28, 0, 15, 16, 2, BLUE], [41, 1, 13, 12, -3, BLACK], [19, 9, 15, 14, 3, WHITE],
       ]) trashBag(g, l + bx, t + 1 - lift, bw, bh, bag, lean);
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
@@ -149,7 +159,7 @@ export function groundBag({ x, base = WORLD.GROUND }) {
     surfaces: [],
     solids: [],
     draw(g) {
-      trashBag(g, P(x), P(base) - 1, 12, 9, BLUE, 1);
+      trashBag(g, P(x), P(base) - 1, 12, 11, BLUE, 1);
     },
   };
 }
