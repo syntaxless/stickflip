@@ -194,18 +194,18 @@ test('dumpster: rolling into it, or an ollie off the kicker too early, slams', (
   for (const t of [0.4, 0.46, 0.5]) assert.equal(ridePark('tap', t).game.bailReason, 'slam', `tap at ${t}`);
 });
 
-test('dumpster: a normal ollie lands on the lid and rolls off (0.56 to 0.82 s), or clears it for BIG LEAP (0.86 to 1.0 s)', () => {
+test('dumpster: a normal ollie lands on the lid and rolls off (0.56 to 0.81 s), or clears it for BIG LEAP (0.82 to 0.90 s, a tight window)', () => {
   for (const t of [0.58, 0.7, 0.8]) {
     const { game, names } = ridePark('tap', t);
     assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
     assert.ok(!names.has('BIG LEAP'), `no leap at ${t}`);
   }
-  for (const t of [0.86, 0.94, 1.0]) {
+  for (const t of [0.83, 0.86, 0.89]) {
     const { game, names } = ridePark('tap', t);
     assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
     assert.ok(names.has('BIG LEAP'), `leap at ${t}: ${[...names]}`);
   }
-  assert.equal(ridePark('tap', 1.1).game.bailReason, 'slam', 'too late slams into the side');
+  assert.equal(ridePark('tap', 0.95).game.bailReason, 'slam', 'too late slams into the side');
 });
 
 test('dumpster: a tap with the finger held locks a grind on the lid edge', () => {
@@ -216,8 +216,8 @@ test('dumpster: a tap with the finger held locks a grind on the lid edge', () =>
   }
 });
 
-test('dumpster: a charged ollie also clears it for BIG LEAP (0.68 to 0.86 s)', () => {
-  for (const t of [0.68, 0.76, 0.84]) {
+test('dumpster: a charged ollie clears it for BIG LEAP over a wide window (0.56 to 0.79 s)', () => {
+  for (const t of [0.58, 0.68, 0.78]) {
     const { game, names } = ridePark('charge', t);
     assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
     assert.ok(names.has('BIG LEAP'), `charged at ${t}: ${[...names]}`);
