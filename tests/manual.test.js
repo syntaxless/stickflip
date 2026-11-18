@@ -153,6 +153,7 @@ test('a manual keeps speeding up, and the speed resets when it ends', () => {
 });
 
 import { TRICKS } from '../src/config.js';
+import { LEVELS } from '../src/levels/index.js';
 
 // Land into a manual, hold it a moment, lift to pop out, then do the trick.
 test('every air trick can be done out of a manual, scoring in the same combo (x2)', () => {
@@ -189,3 +190,42 @@ test('every air trick can be done out of a manual, scoring in the same combo (x2
     assert.ok(names.includes('MANUAL') && names.includes(TRICKS[key].name), `${key}: ${names}`);
   }
 });
+
+// ------------------------------------------------ tricks out of grinds
+
+const railLevel = LEVELS[2]; // First Rail
+for (const [name, dir, grind] of [['50-50', null, '50-50 GRIND'], ['5-0', 'left', '5-0 GRIND']]) {
+  test(`every air trick can be done popping off a ${name}, scoring in the same combo`, () => {
+    for (const key of Object.keys(TRICKS)) {
+      if (key === 'circle') continue; // needs big air
+      const g = new Game(railLevel);
+      g.tap();
+      let t = 0;
+      let grindT = null;
+      let swiped = false;
+      let bank = null;
+      const names = [];
+      while (t < 5 && g.phase === 'playing') {
+        if (Math.abs(t - 0.75) < STEP / 2) g.tap(); // ollie at the rail
+        if (Math.abs(t - 0.75) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
+        if (g.sk.mode === 'grind' && grindT === null) grindT = t;
+        if (grindT !== null && !swiped && t >= grindT + 0.2) {
+          g.setHold(false); // (a held grind ignores the lift) then a new touch pops
+          g.tap(); // the pop
+          g.swipe(key);
+          swiped = true;
+        }
+        g.update(STEP);
+        t += STEP;
+        for (const e of g.drainEvents()) {
+          if (e.type === 'trick') names.push(e.name);
+          if (e.type === 'bank') bank = e;
+        }
+      }
+      assert.ok(swiped, `${key}: never grinded`);
+      assert.equal(g.phase === 'bailed', false, `${key} out of ${name}: bailed (${g.bailReason})`);
+      assert.ok(names.includes(grind) && names.includes(TRICKS[key].name), `${key}: ${names}`);
+      assert.ok(bank && bank.mult >= 2, `${key}: banked ${bank?.mult}`);
+    }
+  });
+}
