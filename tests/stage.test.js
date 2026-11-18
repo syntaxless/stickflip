@@ -803,9 +803,11 @@ test('stage 5: the cop sits at the wheel (the driver side, on the right as you l
   assert.ok(Math.min(...cops(1.4).map(([cx]) => cx)) > r + 30, 'well clear of the wreck');
 });
 
-test('stage 2: the Oslo City Limits sign is background decor only, and Step Up still clears', () => {
-  const sign = stage2.obstacles.find((o) => o.type === 'city-sign');
-  assert.ok(sign, 'the sign is in 2-2');
+test('stage 1: the Oslo City Limits sign sits just past the rock as decor only, and is gone from 2-2', () => {
+  const stage1 = STAGES.find((s) => s.id === 'stage-1');
+  assert.ok(!stage2.obstacles.some((o) => o.type === 'city-sign'), 'no sign left in stage 2');
+  assert.equal(stage1.obstacles.filter((o) => o.type === 'city-sign').length, 1);
+  const sign = stage1.obstacles.find((o) => o.type === 'city-sign');
   assert.equal(sign.surfaces.length + sign.solids.length + (sign.ground || []).length, 0);
   const g = { fill() {}, rect() {}, line() {}, pset() {}, circle() {}, text(s) { texts.push(s); } };
   const texts = [];
