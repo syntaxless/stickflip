@@ -17,6 +17,7 @@ const LID_LIT = [104, 134, 124];
 const LID_DARK = [44, 68, 60];
 const INSIDE = [12, 34, 24];
 const RUST = [150, 82, 40];
+const SOOT = [22, 28, 24];
 const GRIME = [46, 58, 40];
 const TAG = [236, 200, 60];
 // Tied bin bags: a body colour, a lit patch top-left and a shaded underside.
@@ -67,6 +68,31 @@ function trashBag(g, cx, bottom, w, h, c, lean = 0) {
   g.pset(kx + 2, top + 1, c.body);
 }
 
+// The fire: red, orange, yellow and cream steps, flickering over six frames at
+// about nine a second. Scenery only. `front` draws the short tongues that lick over
+// the bags along the rim; the tall flames are drawn first, behind the bags.
+const FIRE = { red: [214, 54, 58], orange: [250, 150, 40], yellow: [255, 214, 90], cream: [255, 244, 190] };
+const hash = (a, b) => (((a * 374761393 + b * 668265263) ^ (a * 2246822519)) >>> 0) % 1000;
+function flames(g, l, r, base, time, tall, front) {
+  const frame = Math.floor(time * 9) % 6;
+  const span = r - l;
+  for (let x = l + 2; x <= r - 2; x++) {
+    const u = (x - l) / span; // 0..1 across the opening
+    const profile = tall ? 0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, Math.max(0, u * 0.9 + 0.05))) : 1;
+    const n = hash(x >> 1, frame + (front ? 11 : 0)) / 1000;
+    const flicker = 0.55 + 0.45 * n;
+    const hgt = Math.round((tall ? 21 : 4) * profile * flicker);
+    if (!hgt || (front && n < 0.25)) continue; // gaps in the low tongues let the bags show
+    for (let i = 0; i < hgt; i++) {
+      const f = i / Math.max(1, hgt - 1); // 0 at the bottom of the column, 1 at the tip
+      const col = f < 0.3 ? FIRE.cream : f < 0.55 ? FIRE.yellow : f < 0.8 ? FIRE.orange : FIRE.red;
+      // ragged edges: the outer columns lose their lower pixels on some frames
+      if ((x === l + 2 || x === r - 2) && hash(x, frame + i) < 450) continue;
+      g.pset(x, base - i, col);
+    }
+  }
+}
+
 // Ollie over it, land on it and roll off, or grind the front top edge with a
 // timed tap (like a rail). Its sides slam you.
 export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
@@ -74,7 +100,8 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
   return {
     ...b0,
     type: 'dumpster',
-    draw(g) {
+    draw(g, fx = {}) {
+      const time = fx.time || 0;
       const [l, t, r, b] = [P(x), P(base - h), P(x + w) - 1, P(base) - 1];
       const wheelTop = b - 2;
       const bodyBottom = wheelTop - 1;
@@ -84,11 +111,13 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       g.fill(l + 1, t - 4, span - 1, 4, INSIDE);
       g.line(l + 1, t - 4, r - 1, t - 4, ink);
       g.line(l + 2, t - 3, r - 2, t - 3, BODY_DARK); // the back rim, just visible
+      flames(g, l, r, t - 4, time, true, false); // the tall flames, behind the bags
       // Three chunky bags dumped in a heap, overlapping at different heights and angles:
       // [centre x from the left, bottom above the rim, width, height, lean, bag], back to front.
       for (const [bx, lift, bw, bh, lean, bag] of [
         [10, 0, 16, 15, -2, BLACK], [28, 0, 15, 16, 2, BLUE], [41, 1, 13, 12, -3, BLACK],
       ]) trashBag(g, l + bx, t + 1 - lift, bw, bh, bag, lean);
+      flames(g, l, r, t - 1, time, false, true); // short tongues licking over the bags along the rim
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
       g.fill(l, t, span + 1, bodyBottom - t + 1, BODY);
@@ -122,6 +151,15 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
         const hsh = (gx * 37 + 11) % 7;
         if (hsh < 3) g.pset(gx, bodyBottom - 2 - (hsh % 2), GRIME);
         if (hsh === 0) g.pset(gx, bodyBottom - 4, GRIME);
+      }
+      // scorch: soot speckled along the rim and streaked up from it, darker toward the middle
+      for (let sx = l + 2; sx < r - 1; sx++) {
+        const h2 = hash(sx, 7);
+        const mid = 1 - Math.abs((sx - (l + r) / 2) / (span / 2));
+        if (h2 < 160 + 280 * mid) g.pset(sx, t + 2, BODY_DEEP);
+        if (h2 < 120 + 220 * mid) g.pset(sx, t + 3, SOOT);
+        if (h2 < 70 + 150 * mid) g.fill(sx, t + 4, 1, 2 + (h2 % 4), SOOT); // a streak running down
+        if (h2 > 880 - 100 * mid) g.pset(sx, t + 1, SOOT); // soot on the lit rim
       }
       // the front plate
       g.fill(r - 20, t + 14, 12, 5, TAG);

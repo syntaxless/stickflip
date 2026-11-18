@@ -20,11 +20,11 @@ export const GAPS = [
   { id: 'euro-to-rail', stage: 'stage-1', section: 6, name: 'EURO TO RAIL', points: 500, from: [-250, 40], to: [220, 460], on: 'grind' },
   // ---- Stage 2
   { id: 'trash-hop', stage: 'stage-2', section: 2, name: 'TRASH HOP', points: 250, from: [300, 456], to: [510, 960], on: 'land' },
-  { id: 'big-leap', stage: 'stage-2', section: 3, name: 'BIG LEAP', points: 300, from: [200, 600], to: [640, 960], on: 'land' },
+  { id: 'big-leap', stage: 'stage-2', section: 6, name: 'BIG LEAP', points: 300, from: [200, 600], to: [640, 960], on: 'land' },
   { id: 'bench-to-hydrant', stage: 'stage-2', section: 4, name: 'BENCH TO HYDRANT', points: 350, from: [380, 650], to: [760, 1100], on: 'land' },
   { id: 'stair-set', stage: 'stage-2', section: 5, name: 'STAIR SET', points: 250, from: [140, 410], to: [530, 960], on: 'land' },
   { id: 'handrail', stage: 'stage-2', section: 5, name: 'HANDRAIL', points: 350, from: null, to: [360, 510], on: 'grind' },
-  { id: 'kicker-to-rail', stage: 'stage-2', section: 6, name: 'KICKER TO RAIL', points: 450, from: [300, 440], to: [520, 760], on: 'grind' },
+  { id: 'kicker-to-rail', stage: 'stage-2', section: 3, name: 'KICKER TO RAIL', points: 450, from: [300, 440], to: [520, 760], on: 'grind' },
   // ---- Stage 3
   { id: 'barrier-to-gap', stage: 'stage-3', section: 2, name: 'BARRIER TO GAP', points: 500, from: [300, 620], to: [780, 960], on: 'land' },
   { id: 'barrel-drop', stage: 'stage-3', section: 5, name: 'BARREL DROP', points: 600, from: [0, 550], to: [850, 960], on: 'land' },
