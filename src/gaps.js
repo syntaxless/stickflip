@@ -18,7 +18,7 @@ export const GAPS = [
   { id: 'pool-jump', stage: 'stage-1', section: 4, name: 'POOL JUMP', points: 300, from: [100, 380], to: [540, 960], on: 'land' },
   { id: 'euro-to-rail', stage: 'stage-1', section: 6, name: 'EURO TO RAIL', points: 500, from: [-250, 40], to: [220, 460], on: 'grind' },
   // ---- Stage 2
-  { id: 'trash-hop', stage: 'stage-2', section: 2, name: 'TRASH HOP', points: 250, from: [300, 450], to: [516, 960], on: 'land' },
+  { id: 'trash-hop', stage: 'stage-2', section: 2, name: 'TRASH HOP', points: 250, from: [300, 456], to: [510, 960], on: 'land' },
   { id: 'big-leap', stage: 'stage-2', section: 3, name: 'BIG LEAP', points: 300, from: [200, 600], to: [640, 960], on: 'land' },
   // ---- Stage 3
   { id: 'barrier-to-gap', stage: 'stage-3', section: 2, name: 'BARRIER TO GAP', points: 500, from: [300, 620], to: [780, 960], on: 'land' },

@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { STAGES } from '../src/stages/index.js';
+import trashCanLevel from '../src/levels/trash-can.js';
+import rockLevel from '../src/levels/rock.js';
 
 const STEP = 1 / 120;
 const stage1 = STAGES[0];
@@ -142,6 +144,20 @@ test('trash can: no ollie slams, and the lid is no place to land', () => {
   assert.equal(ride2(2, []).game.bailReason, 'slam');
   const late = ride2(2, [1.1]).game;
   assert.equal(late.phase, 'bailed');
+});
+
+test('trash can: the same size as the fire hydrant, and a plain ollie clears it in a wide window', () => {
+  const can = trashCanLevel.obstacles.find((o) => o.type === 'trash-can');
+  const hydrant = rockLevel.obstacles.find((o) => o.type === 'hydrant');
+  assert.equal(can.solids[0].w, hydrant.solids[0].w);
+  assert.equal(can.solids[0].h, hydrant.solids[0].h);
+  // Tap times (seconds from the checkpoint) that clear it, bail short, or slam late.
+  for (const t of [0.7, 0.8, 0.9, 0.96]) {
+    const { game } = ride2(2, [t]);
+    assert.equal(game.phase, 'playing', `tap at ${t}: ${game.bailReason}`);
+  }
+  assert.equal(ride2(2, [0.6]).game.phase, 'bailed', 'too early clips the lid');
+  assert.equal(ride2(2, [1.02]).game.bailReason, 'slam', 'too late slams the side');
 });
 
 // Section 4 (the dumpster), ridden from its start. `mode`: 'tap' (a plain ollie),
