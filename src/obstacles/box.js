@@ -24,6 +24,31 @@ export function box({ x, w, h, landable = false, grindable = false, lid = false,
     draw(g) {
       const P = (v) => Math.round(v / 3);
       const [l, t, r, b] = [P(x), P(top), P(x + w) - 1, P(base) - 1];
+      if (paint === 'bench') {
+        // A wooden park bench: slatted backrest behind, plank seat on top (the grind line), iron legs.
+        const [wl, wm, wd, iron] = [[210, 140, 70], [176, 108, 50], [120, 68, 28], [60, 60, 70]];
+        const back = t - 9;
+        for (const px of [l + 3, r - 4]) g.fill(px, back, 2, 10, iron); // backrest uprights
+        for (const [y, c] of [[back, wl], [back + 4, wm]]) { // two backrest slats, outlined
+          g.fill(l + 1, y, r - l - 1, 3, c);
+          g.rect(l + 1, y - 1, r - l - 1, 5, ink);
+          g.line(l + 2, y, r - 2, y, wl);
+        }
+        g.fill(l, t, r - l + 1, 5, wm); // seat planks
+        g.rect(l, t, r - l + 1, 5, ink);
+        g.line(l + 1, t + 1, r - 1, t + 1, wl);
+        g.line(l + 1, t + 3, r - 1, t + 3, wd); // the gap between planks
+        for (let px = l + 6; px < r - 4; px += 11) g.pset(px, t + 2, wd); // grain
+        for (const px of [l + 4, r - 5]) { // iron legs with a foot
+          g.fill(px, t + 5, 3, b - t - 4, iron);
+          g.rect(px - 1, t + 5, 5, b - t - 3, ink);
+          g.fill(px, t + 6, 3, b - t - 5, iron);
+          g.line(px, t + 6, px, b - 1, shine);
+          g.line(px - 2, b, px + 4, b, ink);
+        }
+        g.line(l + 8, t + 6, r - 8, t + 6, ink); // under-seat rail
+        return;
+      }
       if (paint === 'red') {
         g.fill(l, t, r - l + 1, b - t + 1, CURB.red);
         g.rect(l, t, r - l + 1, b - t + 1, ink);
