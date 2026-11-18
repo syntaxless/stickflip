@@ -6,5 +6,5 @@ import { stairs } from '../obstacles/index.js';
 export default {
   id: 'four-stair',
   name: 'Four Stair',
-  obstacles: [stairs({ x: 360, steps: 4, run: 50, rise: 16, material: 'concrete' })],
+  obstacles: [stairs({ x: 440, steps: 4, run: 50, rise: 16, material: 'concrete' })],
 };

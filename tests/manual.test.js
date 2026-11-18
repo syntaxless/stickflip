@@ -206,8 +206,8 @@ for (const [name, dir, grind] of [['50-50', null, '50-50 GRIND'], ['5-0', 'left'
       let bank = null;
       const names = [];
       while (t < 5 && g.phase === 'playing') {
-        if (Math.abs(t - 0.75) < STEP / 2) g.tap(); // ollie at the rail
-        if (Math.abs(t - 0.75) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
+        if (Math.abs(t - 0.45) < STEP / 2) g.tap(); // ollie at the rail
+        if (Math.abs(t - 0.45) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
         if (g.sk.mode === 'grind' && grindT === null) grindT = t;
         if (grindT !== null && !swiped && t >= grindT + 0.2) {
           g.setHold(false); // (a held grind ignores the lift) then a new touch pops
@@ -267,7 +267,7 @@ test('every air trick can be done popping off a slappy', async () => {
   }
 });
 
-test('the manual speed ramp is steep: about 1.8x after a second, 2.6x after two, capped at 3x', () => {
+test('the manual speed ramp is brutal: lands at 1.4x, about 2.6x after a second, 3.8x after two, capped at 4x', () => {
   const g = new Game(level);
   g.tap();
   const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
@@ -285,8 +285,8 @@ test('the manual speed ramp is steep: about 1.8x after a second, 2.6x after two,
     if (g.sk.manual && t0 === null) t0 = t;
     if (t0 !== null && g.sk.manual) for (const s of [1, 2]) if (!at[s] && t - t0 >= s) at[s] = g.speed / g.cruise;
   }
-  assert.ok(at[1] > 1.75 && at[1] < 1.85, `1 s: ${at[1]}`);
-  assert.ok(at[2] > 2.55 && at[2] < 2.65, `2 s: ${at[2]}`);
+  assert.ok(at[1] > 2.55 && at[1] < 2.65, `1 s: ${at[1]}`);
+  assert.ok(at[2] > 3.75 && at[2] < 3.85, `2 s: ${at[2]}`);
   assert.ok(g.speed / g.cruise <= PHYS.MANUAL_SPEED_MAX + 1e-6);
 });
 
@@ -307,4 +307,66 @@ test('a faster manual pays more per pixel than the same distance at cruising spe
   const m = g.sk.manual;
   assert.ok(m, 'in a manual');
   assert.ok(m.pts > m.dist * m.type.perPx * 1.3, `${m.pts} vs flat ${m.dist * m.type.perPx}`);
+});
+
+test('landing into a manual jumps the speed by MANUAL_ENTRY_BOOST, and it resets when the manual ends', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  let entry = null;
+  while (t < 1.2 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    const before = g.speed;
+    g.update(STEP);
+    t += STEP;
+    if (g.sk.manual && entry === null) entry = g.speed / before;
+  }
+  assert.ok(Math.abs(entry - PHYS.MANUAL_ENTRY_BOOST) < 0.02, `entry jump ${entry}`);
+  g.setHold(false);
+  assert.equal(g.speed, g.cruise);
+});
+
+test('a long manual adds to the combo multiplier: x2 at 1 s, x3 at 2 s, x4 at 3 s', async () => {
+  const { manualWeight, comboMult } = await import('../src/game.js');
+  assert.equal(manualWeight(0.3), 1);
+  assert.equal(manualWeight(1), 2);
+  assert.equal(manualWeight(2), 3);
+  assert.equal(manualWeight(3), 4);
+  assert.equal(comboMult([{ weight: 3 }, {}, {}]), 5, 'a 2 s manual and two tricks');
+});
+
+test('a manual held 1 s, 2 s, 3 s banks its payout times its multiplier', () => {
+  const out = [];
+  for (const hold of [1, 2, 3]) {
+    const g = new Game({ ...level, width: 30000 });
+    g.tap();
+    const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+    let t = 0;
+    let t0 = null;
+    let released = false;
+    let bank = null;
+    while (t < 9 && g.phase === 'playing' && !bank) {
+      while (q.length && q[0][0] <= t + 1e-9) {
+        const [, k, d] = q.shift();
+        if (k === 'tap') g.tap();
+        else g.setHold(true, d || null);
+      }
+      if (g.sk.manual && t0 === null) t0 = t;
+      if (g.sk.manual && !released && t >= t0 + hold) {
+        g.setHold(false);
+        released = true;
+      }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) if (e.type === 'bank') bank = e;
+    }
+    out.push([bank.mult, bank.total]);
+  }
+  assert.deepEqual(out.map((o) => o[0]), [2, 3, 4]);
+  assert.ok(out[0][1] > 500 && out[1][1] > out[0][1] * 3 && out[2][1] > out[1][1] * 2, JSON.stringify(out));
 });

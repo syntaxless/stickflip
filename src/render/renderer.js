@@ -1,5 +1,5 @@
 import { WORLD, PHYS } from '../config.js';
-import { slopeOf } from '../game.js';
+import { slopeOf, comboMult, manualWeight } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
@@ -729,7 +729,7 @@ export class Renderer {
     }
     // A manual in progress counts as a trick in the combo already (it joins it for good when it ends).
     const m = game.sk.manual;
-    const live = m ? [{ name: m.type.name, points: m.type.base + Math.round(m.pts), base: 0 }] : [];
+    const live = m ? [{ name: m.type.name, points: m.type.base + Math.round(m.pts), base: 0, weight: manualWeight(m.t) }] : [];
     const tricks = [...game.combo, ...live];
     if (tricks.length && game.phase === 'playing') {
       // Under the level name, kept clear of the right-hand column: the oldest
@@ -741,9 +741,10 @@ export class Renderer {
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
       g.text(fit(g, text, room), L, 15, red);
       // The running combo value, big: it swells as each trick is added.
-      const comboTotal = tricks.reduce((a, t) => a + t.points, 0) * tricks.length;
+      const mult = comboMult(tricks);
+      const comboTotal = tricks.reduce((a, t) => a + t.points, 0) * mult;
       const sc = this.pulse > 0 ? 3 : 2;
-      const readout = `+${comboTotal}${tricks.length > 1 ? ` ${tricks.length}X` : ''}`;
+      const readout = `+${comboTotal}${mult > 1 ? ` ${mult}X` : ''}`;
       g.text(readout, L + 1, 25, ink, sc);
       g.text(readout, L, 24, red, sc);
     }
