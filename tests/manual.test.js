@@ -127,3 +127,27 @@ test('hold and drag down brakes after a short delay; a quick down flick does not
   g.update(STEP);
   assert.ok(g.speed - v <= PHYS.HOLD_ACCEL * STEP + 1e-9);
 });
+
+test('a manual keeps speeding up, and the speed resets when it ends', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  let at2 = 0;
+  let started = null;
+  while (t < 2.8) {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    g.update(STEP);
+    t += STEP;
+    if (g.sk.manual && started === null) started = g.speed;
+    if (started !== null && g.sk.manual && g.sk.manual.t >= 1.5 && !at2) at2 = g.speed;
+  }
+  assert.ok(started !== null && at2 > started * 1.2, `${started} -> ${at2}`);
+  assert.ok(g.speed <= g.cruise * PHYS.MANUAL_SPEED_MAX + 1e-6);
+  g.setHold(false); // pop out
+  assert.equal(g.speed, g.cruise);
+});
