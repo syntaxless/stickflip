@@ -179,11 +179,11 @@ its end), Trash Can (a tall can: a well-timed ollie clears it), Kicker Rail (a w
 kicker, then a flat rail: ollie off the kicker and hold to lock the grind for KICKER TO
 RAIL, or clear it with a charged ollie), Bench (a wooden park bench, then a fire hydrant
 just past its end: ollie on, roll along the seat and ollie off over the hydrant for BENCH
-TO HYDRANT, or grind the seat and pop off the end), Four Stair (a bank up to four stairs
+TO HYDRANT, or grind the seat and pop off the end), Four Stair (a bank up to a long platform, then four stairs
 with a handrail: ollie the set for STAIR SET, or ollie onto the rail and grind it down for
 HANDRAIL) and, as the finale, a burning Dumpster (a wooden kicker, a gap, then a lidless
-dumpster full of bags: a plain ollie lands on the rim to roll off or, with a held tap,
-grind the front edge; only a charged ollie in a narrow window clears it for BIG LEAP).
+dumpster full of bags: you can't ride across it: grind the front edge with a held tap,
+or clear it with a charged ollie in a narrow window for BIG LEAP; landing on it any other way bails).
 
 **Stage 3** (construction site): Rock (a tiny rock stops the board dead, so ollie
 it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long
@@ -211,7 +211,7 @@ a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ol
 off the kicker to clear the whole rail and land in the long bank that starts right
 at its end, or grind over the curve and pop (or roll) off the end into the bank.
 Finish with a big air out of a tall quarter pipe; riding back down ends it. Finish
-any stage with at least 15,000 points in that run (`SECRET_SCORE` in `src/main.js`,
+any stage with at least 25,000 points in that run (`SECRET_SCORE` in `src/main.js`,
 before the no-bail bonus) and you're taken there; its score counts toward the run
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a morning

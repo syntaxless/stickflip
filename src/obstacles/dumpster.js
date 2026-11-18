@@ -93,10 +93,10 @@ function flames(g, l, r, base, time, tall, front) {
   }
 }
 
-// Ollie over it, land on it and roll off, or grind the front top edge with a
-// timed tap (like a rail). Its sides slam you.
+// Ollie over it or grind the front top edge with a
+// timed tap (like a rail). Landing on it without a grind clips you, and its sides slam you.
 export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
-  const b0 = box({ x, w, h, landable: true, grindable: true, base });
+  const b0 = box({ x, w, h, landable: false, grindable: true, base });
   return {
     ...b0,
     type: 'dumpster',
