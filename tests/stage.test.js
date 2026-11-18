@@ -822,3 +822,9 @@ test('cop sprites: every row is the same width and every letter is in the palett
   assert.equal(CAR_SPRITE.length, 32);
   assert.equal(CAR_SPRITE[0].length, 44);
 });
+
+test('dumpster: the lid stays shut until a grind starts on it, and a plain ollie never opens it', () => {
+  const closed = ridePark('tap', 0.7).game;
+  assert.equal(closed.openAt, null);
+  assert.notEqual(ridePark('grind', 0.7).game.openAt, null);
+});

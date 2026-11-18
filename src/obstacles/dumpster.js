@@ -5,6 +5,8 @@ import { box } from './box.js';
 const P = (v) => Math.round(v / 3);
 const { ink, steel, shine } = PAL;
 
+// The lid starts shut and pops open once you grind the rim (fx.open is the
+// seconds since the grind began, or null before it); it is scenery either way.
 // A flat-colour green dumpster: black outline, a lit rim along the front top
 // edge, two dark ribs, handles on each end, little wheels, and a dark lid
 // propped open behind the rim with some rubbish peeking over.
@@ -20,30 +22,46 @@ const TAG = [236, 200, 60];
 // timed tap (like a rail). Its sides slam you; the open lid is only scenery.
 export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
   const b0 = box({ x, w, h, landable: true, grindable: true, base });
+  const surface = b0.surfaces[0];
+  surface.opens = true;
   return {
     ...b0,
     type: 'dumpster',
-    draw(g) {
+    draw(g, fx = {}) {
+      const age = fx.open ?? null;
+      const amount = age === null ? 0 : age < 0.06 ? 0.3 : age < 0.14 ? 0.7 : 1;
       const [l, t, r, b] = [P(x), P(base - h), P(x + w) - 1, P(base) - 1];
       const wheelTop = b - 2;
       const bodyBottom = wheelTop - 1;
 
-      // The lid, tipped back: a trapezoid behind the rim, narrower at the top.
-      const lidH = 10;
-      for (let i = 0; i < lidH; i++) {
-        const y = t - 2 - i;
-        const inset = 2 + Math.floor(i / 3);
-        g.line(l + inset, y, r - inset, y, i === lidH - 1 ? LID_LIT : LID);
-        g.pset(l + inset - 1, y, ink);
-        g.pset(r - inset + 1, y, ink);
+      if (amount === 0) {
+        // Shut: a flat dark slab over the rim with a lit top and a seam.
+        g.fill(l - 1, t - 5, r - l + 3, 4, LID);
+        g.line(l - 1, t - 5, r + 1, t - 5, LID_LIT);
+        g.line(l - 1, t - 1, r + 1, t - 1, INSIDE);
+        g.rect(l - 1, t - 6, r - l + 3, 6, ink);
+        g.line(l, t - 5, r, t - 5, LID_LIT);
+        for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, t - 4, px, t - 2, INSIDE);
+      } else {
+        // Open, tipped back: a trapezoid behind the rim, narrower at the top.
+        const lidH = Math.round(10 * amount);
+        for (let i = 0; i < lidH; i++) {
+          const y = t - 2 - i;
+          const inset = 2 + Math.floor(i / 3);
+          g.line(l + inset, y, r - inset, y, i === lidH - 1 ? LID_LIT : LID);
+          g.pset(l + inset - 1, y, ink);
+          g.pset(r - inset + 1, y, ink);
+        }
+        g.line(l + 5, t - 2 - lidH, r - 5, t - 2 - lidH, ink);
+        if (amount === 1) for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, t - 2 - lidH + 2, px, t - 4, LID_LIT); // lid ribs
+        // dark inside of the bin between lid and rim, with rubbish peeking out
+        g.line(l + 2, t - 1, r - 2, t - 1, INSIDE);
+        g.line(l + 2, t - 2, r - 2, t - 2, ink);
+        if (amount === 1) {
+          const junk = [[l + 10, 2, [150, 70, 160]], [l + 19, 1, [236, 220, 120]], [r - 16, 2, [200, 50, 50]], [r - 26, 1, [236, 220, 120]]];
+          for (const [px, hh, c] of junk) g.fill(px, t - 1 - hh, 3, hh, c);
+        }
       }
-      g.line(l + 5, t - 2 - lidH, r - 5, t - 2 - lidH, ink);
-      for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, t - 2 - lidH + 2, px, t - 4, LID_LIT); // lid ribs
-      // dark inside of the bin between lid and rim, with rubbish peeking out
-      g.line(l + 2, t - 1, r - 2, t - 1, INSIDE);
-      g.line(l + 2, t - 2, r - 2, t - 2, ink);
-      const junk = [[l + 10, 2, [150, 70, 160]], [l + 19, 1, [236, 220, 120]], [r - 16, 2, [200, 50, 50]], [r - 26, 1, [236, 220, 120]]];
-      for (const [px, hh, c] of junk) g.fill(px, t - 1 - hh, 3, hh, c);
 
       // Body: flat colour, lit rim (the grind line), ribs, shaded foot.
       g.fill(l, t, r - l + 1, bodyBottom - t + 1, BODY);
@@ -60,7 +78,7 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       g.rect(r - 17, t + 14, 11, 5, ink);
       g.line(r - 15, t + 16, r - 9, t + 16, BODY_DARK);
       g.rect(l, t, r - l + 1, bodyBottom - t + 1, ink);
-      g.line(l, t - 1, r, t - 1, ink); // outline above the rim
+      if (amount > 0) g.line(l, t - 1, r, t - 1, ink); // outline above the rim
 
       // Handles on each end: little black loops with a grey grip.
       for (const [hx, dir] of [[l, -1], [r, 1]]) {
