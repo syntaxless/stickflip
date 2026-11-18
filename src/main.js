@@ -623,7 +623,7 @@ function frame(now) {
 }
 
 // Portrait touch-area hint: a dark dashed rectangle filling the area below the
-// game frame (20px margin all round) with "Tap/Gesture Here" centred in it.
+// game frame (20px margin all round) with a stacked Tap / Hold / Swipe label centred in it.
 // Always visible, in dark grey.
 const PAD_MARGIN = 20; // CSS px
 const padHint = { cv: document.createElement('canvas'), pix: null };
@@ -641,16 +641,16 @@ function drawTouchPad() {
   ctx.strokeRect(x, y, w, h);
   ctx.restore();
   // pixel-font label, centred in the rectangle
-  const k = Math.max(1, Math.round(view.scale * dpr * 0.9)); // device px per label pixel
-  const label = 'TAP/GESTURE HERE';
-  const W = label.length * 6 + 2, H = 9;
+  const k = Math.max(1, Math.round(view.scale * dpr * 1.5)); // device px per label pixel
+  const lines = ['TAP', 'HOLD', 'SWIPE'];
+  const W = 5 * 6 + 2, H = 7 * 3 + 2 * 4 + 2; // 5 letters wide, 3 lines with 4px gaps
   if (!padHint.pix) {
     padHint.cv.width = W;
     padHint.cv.height = H;
     padHint.pix = new Pix(padHint.cv.getContext('2d'), W, H);
     const g = padHint.pix;
     g.data.fill(0);
-    g.text(label, Math.floor(W / 2), 1, [80, 80, 92], 1, 'center');
+    lines.forEach((t, i) => g.text(t, Math.floor(W / 2), 1 + i * 11, [80, 80, 92], 1, 'center'));
     for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
     g.flush();
   }
