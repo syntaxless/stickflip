@@ -658,15 +658,13 @@ export class Renderer {
         g.text('HIGH SCORES', cx + 1, 39, ink, 2, 'center');
         g.text('HIGH SCORES', cx, 38, red, 2, 'center');
         this.drawTable(opts.highScores, 62, -1, 11);
-        tapY = 118;
+        tapY = 124;
       } else {
         g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
         g.text('STICKFLIP', cx, 38, red, 4, 'center');
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
-      // More than one stage open: a way back to the stage list (kept up in the sky, off the ground strip).
-      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, showTable ? 129 : 100, 60, true);
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
@@ -792,7 +790,7 @@ export class Renderer {
       const open = i < scr.unlocked;
       this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
     });
-    // Opened from a stage's start or bail screen: a way back to it.
+    // Opened from the bail screen: a way back to it.
     if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);
   }
 
