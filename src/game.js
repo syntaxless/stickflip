@@ -172,8 +172,10 @@ export class Game {
     const s = this.sk;
     if (s.manual) {
       // a manual keeps speeding up the longer it lasts (see updateManual)
+    } else if (this.speed > this.cruise * PHYS.SPEED_MAX && !(s.charge && this.hold?.dir === 'down' && this.hold.dirT >= PHYS.BRAKE_DELAY)) {
+      this.easeCarry(dt); // extra speed from a manual fades out gradually
     } else if (s.charge && this.hold?.dir === 'down' && this.hold.dirT >= PHYS.BRAKE_DELAY) {
-      this.speed = this.clampSpeed(this.speed - PHYS.BRAKE * dt);
+      this.speed = Math.max(this.cruise * PHYS.SPEED_MIN, this.speed - PHYS.BRAKE * dt);
     } else if (s.charge) {
       this.speed = this.clampSpeed(this.speed + PHYS.HOLD_ACCEL * dt); // the crouched push
     } else {
@@ -183,10 +185,17 @@ export class Game {
     s.vx = s.dir * this.speed;
   }
 
+  // Speed won in a manual carries through tricks, grinds and the air, then eases back to normal.
+  easeCarry(dt) {
+    const top = this.cruise * PHYS.SPEED_MAX;
+    this.speed = Math.max(top, this.speed - this.cruise * PHYS.CARRY_RETURN * dt);
+    if (this.sk.mode !== 'roll') this.sk.vx = this.sk.dir * this.speed;
+  }
+
   // 0 at cruising speed, up to 1 at top speed, down to -1 at the slowest.
   speedLevel() {
     const r = this.speed / this.cruise;
-    return r >= 1 ? (r - 1) / (PHYS.SPEED_MAX - 1) : -(1 - r) / (1 - PHYS.SPEED_MIN);
+    return r >= 1 ? Math.min(1, (r - 1) / (PHYS.SPEED_MAX - 1)) : -(1 - r) / (1 - PHYS.SPEED_MIN);
   }
 
   setPhase(phase) {
@@ -479,6 +488,7 @@ export class Game {
     }
 
     if (s.manual && s.mode !== 'roll') this.endManual(); // rolled off an edge
+    if (s.mode !== 'roll' && !s.manual && this.speed > this.cruise * PHYS.SPEED_MAX) this.easeCarry(dt);
     if (s.mode === 'roll') {
       if (s.manual) this.updateManual(dt);
       if (s.charge) s.charge.t += dt;
@@ -523,7 +533,8 @@ export class Game {
       this.updateRamp(dt);
     } else if (s.mode === 'grind') {
       const surf = s.grind.surface;
-      const grindSpeed = this.speed * (PHYS.GRIND_SPEED / PHYS.ROLL_SPEED);
+      const carried = this.speed > this.cruise * PHYS.SPEED_MAX; // manual speed isn't slowed by rail friction
+      const grindSpeed = carried ? this.speed : this.speed * (PHYS.GRIND_SPEED / PHYS.ROLL_SPEED);
       const step = grindSpeed * dt;
       const slope = slopeOf(surf, s.x);
       s.x += s.dir * step;
@@ -810,7 +821,6 @@ export class Game {
     const s = this.sk;
     const m = s.manual;
     s.manual = null;
-    if (m) this.speed = this.cruise; // the speed resets when the manual ends
     if (!m || m.dist < 20) return;
     this.addTrick(m.type.name, m.type.base + Math.round(m.pts), 'trick', manualWeight(m.t));
   }
