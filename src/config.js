@@ -38,6 +38,7 @@ export const PHYS = Object.freeze({
   HOLD_ACCEL: 120, // px/s^2 while holding (crouched push)
   BRAKE: 420, // px/s^2 while holding and dragging down
   BRAKE_DELAY: 0.2, // s the finger must have been dragging down before it brakes
+  CARRY_RETURN: 1.2, // cruise-speeds per second that a manual's extra speed eases away after it ends
   SPEED_RETURN: 90, // px/s^2 back toward cruising once you let go
   // Manuals: still holding and dragging back (manual) or forward (nose manual)
   // when you land from an ollie lands you into a manual. Lift to pop out of it.
