@@ -24,29 +24,37 @@ const BLACK = { body: [38, 40, 52], lit: [104, 108, 128], dark: [18, 18, 26] };
 const WHITE = { body: [226, 228, 236], lit: [255, 255, 255], dark: [160, 164, 184] };
 const BLUE = { body: [56, 104, 196], lit: [124, 172, 240], dark: [32, 62, 134] };
 
-// A tied bin bag: a lumpy ellipse with a black outline, a lit patch, a shaded
-// lower right, and a knot with two ears on top. Its bottom half hides behind the rim.
-function trashBag(g, cx, bottom, w, h, c) {
-  const [rx, ry] = [w / 2, h / 2];
-  const cy = bottom - ry;
-  const inBag = (x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
-  for (let y = Math.floor(cy - ry); y <= bottom; y++) {
-    for (let x = Math.floor(cx - rx) - 1; x <= Math.ceil(cx + rx) + 1; x++) {
+// A tied bin bag: a rounded top, a flat bottom (so it sits on something instead of
+// balancing on a point), a black outline, a lit patch top-left, a shaded lower
+// right, and a knot with an ear. `lean` slides the top sideways, in pixels.
+function trashBag(g, cx, bottom, w, h, c, lean = 0) {
+  const rx = w / 2;
+  const top = bottom - h + 1;
+  // the half-width at a row: an ellipse over the top half, straight sides below it
+  const half = (y) => {
+    const k = (bottom - y) / (h - 1); // 0 at the bottom, 1 at the top
+    const hw = k < 0.45 ? rx : rx * Math.sqrt(Math.max(0, 1 - ((k - 0.45) / 0.55) ** 2));
+    return y === bottom ? hw - 1 : hw; // the bottom corners are clipped a pixel
+  };
+  const mid = (y) => cx + (lean * (bottom - y)) / (h - 1);
+  const inBag = (x, y) => y >= top && y <= bottom && Math.abs(x - mid(y)) <= half(y);
+  for (let y = top; y <= bottom; y++) {
+    for (let x = Math.floor(cx - rx - Math.abs(lean)) - 1; x <= Math.ceil(cx + rx + Math.abs(lean)) + 1; x++) {
       if (!inBag(x, y)) continue;
       const edge = !inBag(x - 1, y) || !inBag(x + 1, y) || !inBag(x, y - 1) || !inBag(x, y + 1);
-      const lit = x < cx - rx * 0.1 && y < cy - ry * 0.15 && x > cx - rx * 0.75 && y > cy - ry * 0.8;
-      const shade = x > cx + rx * 0.35 || y > cy + ry * 0.45;
+      const dx = x - mid(y);
+      const lit = dx < -rx * 0.1 && dx > -rx * 0.75 && y > top + h * 0.15 && y < top + h * 0.55;
+      const shade = dx > rx * 0.4 || y > bottom - h * 0.22;
       g.pset(x, y, edge ? ink : lit ? c.lit : shade ? c.dark : c.body);
     }
   }
-  const kx = Math.round(cx);
-  const ky = Math.floor(cy - ry);
-  g.pset(kx, ky - 1, c.body); // the tied-off neck, with one ear flopping over
-  g.pset(kx + 1, ky - 2, c.body);
-  g.pset(kx, ky - 2, ink);
-  g.pset(kx + 2, ky - 2, ink);
-  g.pset(kx - 1, ky - 1, ink);
-  g.pset(kx + 1, ky - 3, ink);
+  const kx = Math.round(mid(top));
+  g.pset(kx, top - 1, c.body); // the tied-off neck, with one ear flopping over
+  g.pset(kx + 1, top - 2, c.body);
+  g.pset(kx, top - 2, ink);
+  g.pset(kx + 2, top - 2, ink);
+  g.pset(kx - 1, top - 1, ink);
+  g.pset(kx + 1, top - 3, ink);
 }
 
 // Ollie over it, land on it and roll off, or grind the front top edge with a
@@ -66,11 +74,11 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       g.fill(l + 1, t - 4, span - 1, 4, INSIDE);
       g.line(l + 1, t - 4, r - 1, t - 4, ink);
       g.line(l + 2, t - 3, r - 2, t - 3, BODY_DARK); // the back rim, just visible
-      // Four chunky bags, piled up high on the left and sloping down to the right:
-      // [centre x from the left, bottom above the rim, width, height, bag]
-      for (const [bx, lift, bw, bh, bag] of [
-        [9, 0, 15, 13, BLACK], [23, 0, 15, 12, BLUE], [38, 0, 14, 9, WHITE], [14, 9, 13, 11, WHITE],
-      ]) trashBag(g, l + bx, t + 1 - lift, bw, bh + 1, bag);
+      // Four chunky bags dumped in a heap, overlapping at different heights and angles:
+      // [centre x from the left, bottom above the rim, width, height, lean, bag], back to front.
+      for (const [bx, lift, bw, bh, lean, bag] of [
+        [10, 0, 15, 12, -2, BLACK], [28, 0, 14, 13, 2, BLUE], [41, 1, 13, 9, -3, BLACK], [19, 8, 14, 11, 3, WHITE],
+      ]) trashBag(g, l + bx, t + 1 - lift, bw, bh, bag, lean);
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
       g.fill(l, t, span + 1, bodyBottom - t + 1, BODY);
@@ -141,7 +149,7 @@ export function groundBag({ x, base = WORLD.GROUND }) {
     surfaces: [],
     solids: [],
     draw(g) {
-      trashBag(g, P(x), P(base) - 1, 12, 9, BLUE);
+      trashBag(g, P(x), P(base) - 1, 12, 9, BLUE, 1);
     },
   };
 }
