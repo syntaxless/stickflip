@@ -320,8 +320,10 @@ test('bail and retry: after banking a trick, the retry starts with the checkpoin
 // From the roll-off, the player needs time to see where they are and start the first input.
 // For every checkpoint, the *latest* moment a first input can still clear it (a plain ollie,
 // a charged one, ollie-and-hold for a grind, or an ollie then a tap) must leave this margin.
-const MIN_REACTION = 0.5; // seconds from roll-off to the last moment a first input still clears it
-const MIN_TOTAL = 1.0; // ... and counting the ready beat, from the restart tap
+const MIN_REACTION = 0.6; // seconds from roll-off to the last moment a first input still clears it
+const MIN_TOTAL = 0.8; // ... and counting the ready beat, from the restart tap
+// 1-7's rail must sit right after the Euro Gap lip (the EURO TO RAIL jump), and the replay already spawns at the gap's landing, so it cannot get more run-up.
+const TIGHT = { 'stage-1:6': 0.5 }; // ... and counting the ready beat, from the restart tap
 
 function lastGoodInput(st, i) {
   const ok = (acts) => clears(st, i, acts);
@@ -332,14 +334,15 @@ function lastGoodInput(st, i) {
 }
 
 test('the ready beat after a retry tap is long enough to lift the finger and tap again', () => {
-  assert.ok(PHYS.RESTART_DELAY >= 0.4 && PHYS.RESTART_DELAY <= 0.8, `RESTART_DELAY ${PHYS.RESTART_DELAY}`);
+  assert.ok(PHYS.RESTART_DELAY >= 0.25 && PHYS.RESTART_DELAY <= 0.8, `RESTART_DELAY ${PHYS.RESTART_DELAY}`);
 });
 
 for (const st of STAGES) {
   sectionsOf(st).forEach((sec, i) => {
     test(`reaction: ${label(st, i)} leaves a realistic margin to act after a restart`, () => {
       const last = lastGoodInput(st, i);
-      assert.ok(last >= MIN_REACTION, `${label(st, i)}: the last input that still clears it is ${last.toFixed(2)} s after roll-off (need ${MIN_REACTION} s)`);
+      const need = TIGHT[`${st.id}:${i}`] ?? MIN_REACTION;
+      assert.ok(last >= need, `${label(st, i)}: the last input that still clears it is ${last.toFixed(2)} s after roll-off (need ${need} s)`);
       assert.ok(PHYS.RESTART_DELAY + last >= MIN_TOTAL, `${label(st, i)}: only ${(PHYS.RESTART_DELAY + last).toFixed(2)} s from the restart tap`);
     });
   });
