@@ -1,7 +1,7 @@
 import { bank, rail } from '../obstacles/index.js';
 import { WORLD } from '../config.js';
 
-// Stage 2, section 7: a wooden kicker and a flat rail past it. Ollie off the
+// Stage 2, section 4: a wooden kicker and a flat rail past it. Ollie off the
 // kicker and lock a grind on the rail (KICKER TO RAIL), roll up and grind it
 // from a flat-ground ollie, or fly the whole rail with a charged ollie.
 const G = WORLD.GROUND;

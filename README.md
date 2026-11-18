@@ -175,15 +175,15 @@ and a drop off the Euro Gap stairs.
 
 **Stage 2** (street): Curb (ollie over a long, low curb, or land on it and roll or
 grind along the top), Step Up (ollie up three steps onto a ledge, then drop off
-its end), Trash Can (a tall can: a well-timed ollie clears it) and Dumpster (a kicker and a
-dumpster: ollie over it for BIG LEAP, land on the lid and roll off, or hold a tap
-to grind the lid edge; too early or too late slams into its side).
-Bench (a wooden park bench, then a fire hydrant just past its end: ollie on, roll
-along the seat and ollie off over the hydrant for BENCH TO HYDRANT, or grind the
-seat and pop off the end), Four Stair (a bank up to four stairs with a handrail:
-ollie the set for STAIR SET, or ollie onto the rail and grind it down for HANDRAIL)
-and Kicker Rail (a wooden kicker, then a flat rail: ollie off the kicker and hold to
-lock the grind for KICKER TO RAIL, or clear it with a charged ollie).
+its end), Trash Can (a tall can: a well-timed ollie clears it), Kicker Rail (a wooden
+kicker, then a flat rail: ollie off the kicker and hold to lock the grind for KICKER TO
+RAIL, or clear it with a charged ollie), Bench (a wooden park bench, then a fire hydrant
+just past its end: ollie on, roll along the seat and ollie off over the hydrant for BENCH
+TO HYDRANT, or grind the seat and pop off the end), Four Stair (a bank up to four stairs
+with a handrail: ollie the set for STAIR SET, or ollie onto the rail and grind it down for
+HANDRAIL) and, as the finale, a burning Dumpster (a wooden kicker, a gap, then a lidless
+dumpster full of bags: a plain ollie lands on the rim to roll off or, with a held tap,
+grind the front edge; only a charged ollie in a narrow window clears it for BIG LEAP).
 
 **Stage 3** (construction site): Rock (a tiny rock stops the board dead, so ollie
 it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long
