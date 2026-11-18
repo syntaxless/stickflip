@@ -15,6 +15,7 @@
 export const GAPS = [
   // ---- Stage 1
   { id: 'five-stair', stage: 'stage-1', section: 3, name: 'STAIR SET', points: 300, from: [250, 430], to: [584, 960], on: 'land' },
+  { id: 'bank-to-rail', stage: 'stage-1', section: 3, name: 'BANK TO HANDRAIL', points: 400, from: [-90, 400], to: [400, 700], on: 'grind' },
   { id: 'pool-jump', stage: 'stage-1', section: 4, name: 'POOL JUMP', points: 300, from: [100, 380], to: [540, 960], on: 'land' },
   { id: 'euro-to-rail', stage: 'stage-1', section: 6, name: 'EURO TO RAIL', points: 500, from: [-250, 40], to: [220, 460], on: 'grind' },
   // ---- Stage 2

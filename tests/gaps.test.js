@@ -47,6 +47,7 @@ function play(stage, index, acts, tmax = 5, start) {
 // One timeline that earns each gap (found by search; see src/gaps.js for what it is).
 const SCRIPTS = {
   'five-stair': [[0, 'cs'], [0.75, 'cr']],
+  'bank-to-rail': [[0.45, 'tap'], [0.45, 'hold']],
   'pool-jump': [[0, 'cs'], [0.75, 'cr']],
   'euro-to-rail': [[0.22, 'tap'], [0.22, 'hold']],
   'trash-hop': [[0, 'cs'], [0.75, 'cr']],
