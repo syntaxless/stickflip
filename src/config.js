@@ -26,6 +26,7 @@ export const PHYS = Object.freeze({
   QP_AIR_SPEED: 1.25, // and the air off it goes straight up and down at this times riding speed (sets its height)
   QP_RAMP_BOOST: 1.6, // most a quarter pipe's curve speeds up to keep the riding pace across the screen
   QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
+  RESTART_DELAY: 0.3, // seconds the rider stands ready after the retry tap, before rolling off (time to lift and tap again, or hold to crouch)
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
   // Speed control. The rider rolls on his own at ROLL_SPEED. Holding on the
   // ground charges an ollie (and the crouched push builds a little speed, so a

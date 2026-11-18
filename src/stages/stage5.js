@@ -29,6 +29,7 @@ export default stage({
     bank({ x: 5 * W - 130, run: 200, y1: G, y2: SET_TOP }),
     bank({ x: 5 * W + 70, run: 50, y1: SET_TOP, y2: SET_TOP }),
   ],
+  starts: { 1: 40 }, // 5-2 spawns further back (more run-up to the flat bar)
   camTop: 100,
   palette: 'park', // sunset sky
   sidewalk: true, // concrete skate park surface
