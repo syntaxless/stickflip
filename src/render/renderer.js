@@ -3,6 +3,8 @@ import { slopeOf } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
+import { drawSticker } from './sticker.js';
+import { squashOf, RAG_SIZE } from '../ragdoll.js';
 
 // Pixel-art renderer. The game world is 960x540 units; it is drawn into a
 // 320x180 framebuffer (1 pixel = 3 units), then scaled up with
@@ -564,14 +566,19 @@ export class Renderer {
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
-      if (advance) this.pose.update('bail', dt, 10);
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang * 0.15), b.bang);
-      const onGround = b.y >= game.groundAt(b.x).y - 0.5 && b.vy === 0;
-      const ang = onGround ? Math.sign(b.ang || 1) * Math.min(Math.abs(b.ang), Math.PI / 2) : b.ang;
-      const hip = this.pose.pose.hip;
-      // rotate around the hip, which sits at the bail body position
-      const base = makeTransform(snap(b.x), b.y - (onGround ? 12 : 40), ang);
-      drawFigure(g, (p) => base({ x: p.x - hip.x, y: p.y - hip.y }), this.pose.pose);
+      // the board tumbles end over end on its own
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0);
+      // the ragdoll's joints are in world units: 3 world units to a pixel
+      const r = b.rag;
+      const pts = r.pts;
+      const { sx, sy } = squashOf(r);
+      let low = -Infinity;
+      for (const k in pts) low = Math.max(low, pts[k].y);
+      const px = pts.hip.x;
+      // squash and stretch sit on the lowest joint, in three steps so it stays pixel art
+      const tf = (p) => ({ x: (px + (p.x - px) * sx) / S, y: (low + (p.y - low) * sy) / S });
+      const tilt = Math.atan2(pts.head.x - pts.neck.x, -(pts.head.y - pts.neck.y));
+      drawFigure(g, tf, pts, { k: RAG_SIZE, face: r.dir, tilt });
       return;
     }
 
@@ -794,6 +801,8 @@ export class Renderer {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
+      // a sticker slapped up in the corner: clear of the rider, the text and the buttons
+      drawSticker(g, RES.W - 56, 40, 'LOSER');
       const ready = game.phaseTime >= PHYS.BAIL_RETRY_DELAY;
       if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
       // Past the first checkpoint, the whole stage can be started over.
