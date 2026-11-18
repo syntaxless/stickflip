@@ -368,7 +368,13 @@ canvas.addEventListener('pointerdown', (e) => {
   // Riding up the quarter pipe: start drawing now, the trick goes on lift.
   else if (!screen && game.phase === 'playing' && game.sk.mode === 'ramp') stroke.read = true;
   // A tap that would lock a grind can't wait for the finger to lift.
-  else if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
+  else if (!inAir || game.grindHint() === 'ready') {
+    // Touching down on a rail pops off it right away; keep reading the stroke so
+    // a shape drawn from here goes into a trick (a plain tap is just the pop).
+    const onGrind = game.phase === 'playing' && game.sk.mode === 'grind';
+    press(e.clientX, e.clientY);
+    if (onGrind) stroke.read = stroke.grindPop = true;
+  }
   else stroke.read = true;
   if (game.phase === 'playing') game.setHold(true);
 });
@@ -382,7 +388,7 @@ canvas.addEventListener('pointermove', (e) => {
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
-  const { read, points, charge, t0 } = stroke;
+  const { read, points, charge, t0, grindPop } = stroke;
   stroke = null;
   const popped = (charge && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
   const grinded = game.setHold(false); // lifting in a manual pops an ollie out of it
@@ -398,6 +404,7 @@ function endStroke(e) {
   if (game.phase !== 'playing' || game.sk.mode !== 'air') return showStroke(points, { key: 'landed first' });
   const r = readStroke(points);
   showStroke(points, r);
+  if (grindPop && r.key === 'tap') return; // just the pop off the rail
   if (r.key === 'tap') game.tap();
   else game.swipe(r.key, (performance.now() - t0) / 1000);
 }
