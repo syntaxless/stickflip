@@ -387,7 +387,6 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.isPrimary === false) return; // ignore extra fingers
   audio.unlock();
   const inAir = game.phase === 'playing' && game.sk.mode === 'air';
-  if (view.portrait && e.clientY > view.oy + RES.H * view.scale) noteTouchPad();
   stroke = { id: e.pointerId, points: [{ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 }], read: false, charge: false, t0: performance.now() };
   canvas.setPointerCapture?.(e.pointerId);
   // On the ground, a touch charges an ollie: crouch while held, pop on lift.
@@ -623,42 +622,50 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-// Portrait touch-area hint: a dotted line under the game frame, with a short
-// label that fades for good once the player has used the area a few times.
-const padHint = { cv: document.createElement('canvas'), pix: null };
-let padTouches = store.get('pad-touches', 0);
-function noteTouchPad() {
-  if (padTouches >= 6) return;
-  padTouches++;
-  store.set('pad-touches', padTouches);
-}
+// Portrait touch-area hint: a dark dashed rectangle filling the area below the
+// game frame (20px margin all round) with "Tap/Gesture Here" centred in it. It
+// shows for a few seconds after the game opens, then is gone for good.
+const PAD_HINT_SECS = 4;
+const PAD_HINT_FADE = 0.6;
+const PAD_MARGIN = 20; // CSS px
+const padHint = { cv: document.createElement('canvas'), pix: null, start: 0 };
 function drawTouchPad() {
-  const k = view.scale * view.dpr;
-  const frameBottom = (view.oy + RES.H * view.scale) * view.dpr;
-  const room = canvas.height - frameBottom;
-  if (room < 40 * k) return;
-  const W = Math.ceil(canvas.width / k) + 1;
-  const H = 28;
-  if (!padHint.pix || padHint.cv.width !== W) {
+  const now = performance.now() / 1000;
+  if (!padHint.start) padHint.start = now;
+  const age = now - padHint.start;
+  if (age >= PAD_HINT_SECS) return;
+  const dpr = view.dpr;
+  const frameBottom = (view.oy + RES.H * view.scale) * dpr;
+  const m = PAD_MARGIN * dpr;
+  const x = m, y = frameBottom + m;
+  const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
+  if (w < 40 * dpr || h < 40 * dpr) return;
+  const alpha = Math.min(1, (PAD_HINT_SECS - age) / PAD_HINT_FADE);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#7a7a88';
+  ctx.lineWidth = 3 * dpr;
+  ctx.setLineDash([12 * dpr, 8 * dpr]);
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+  // pixel-font label, centred in the rectangle
+  const k = Math.max(1, Math.round(view.scale * dpr * 0.9)); // device px per label pixel
+  const label = 'TAP/GESTURE HERE';
+  const W = label.length * 6 + 2, H = 9;
+  if (!padHint.pix) {
     padHint.cv.width = W;
     padHint.cv.height = H;
     padHint.pix = new Pix(padHint.cv.getContext('2d'), W, H);
+    const g = padHint.pix;
+    g.data.fill(0);
+    g.text(label, Math.floor(W / 2), 1, [122, 122, 136], 1, 'center');
+    for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
+    g.flush();
   }
-  const g = padHint.pix;
-  g.data.fill(0);
-  const col = [200, 40, 40];
-  for (let x = 0; x < W; x += 4) g.fill(x, 0, 2, 1, col);
-  const label = padTouches < 6 && (game.phase === 'ready' || game.section === 0);
-  if (label) {
-    g.text('TAP  HOLD  SWIPE HERE', Math.floor(W / 2), 10, col, 1, 'center');
-  }
-  // the pixel buffer's alpha is 0 where nothing was drawn; mark drawn pixels opaque
-  for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
-  g.flush();
   ctx.save();
-  ctx.globalAlpha = label ? 0.55 : 0.25;
+  ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(padHint.cv, 0, 0, W, H, view.ox * 0 + 0, Math.round(frameBottom + 6 * k), W * k, H * k);
+  ctx.drawImage(padHint.cv, 0, 0, W, H, Math.round(x + (w - W * k) / 2), Math.round(y + (h - H * k) / 2), W * k, H * k);
   ctx.restore();
 }
 
