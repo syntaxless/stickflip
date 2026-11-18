@@ -5,5 +5,5 @@ import { trashCan } from '../obstacles/index.js';
 export default {
   id: 'trash-can',
   name: 'Trash Can',
-  obstacles: [trashCan({ x: 450 })],
+  obstacles: [trashCan({ x: 456 })],
 };
