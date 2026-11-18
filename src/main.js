@@ -143,7 +143,8 @@ async function finishRun() {
   }
 }
 
-const selectScreen = () => ({ type: 'select', stages: LEVELS, unlocked, t: 0 });
+// `back`: opened from a stage's own start/bail screen, so it can be closed again.
+const selectScreen = (back = false) => ({ type: 'select', stages: LEVELS, unlocked, back, t: 0 });
 
 function scoresScreen(stageIndex, score, bonus, highlight) {
   const title = `${LEVELS[stageIndex].name.toUpperCase()} TOP 5`;
@@ -202,6 +203,10 @@ function screenPress(clientX, clientY) {
     if (screen.t < 0.3 || clientX == null) return;
     const p = toWorld(clientX, clientY);
     const id = renderer.hitButton(p.x, p.y);
+    if (id === 'back' && screen.back) {
+      screen = null;
+      return;
+    }
     if (!id?.startsWith('stage')) return;
     const i = Number(id.slice(5));
     if (i >= unlocked) return;
@@ -301,6 +306,8 @@ function toWorld(clientX, clientY) {
   return { x: ((clientX - view.ox) / view.scale) * u, y: ((clientY - view.oy) / view.scale) * u };
 }
 
+const stagesAvailable = () => unlocked > 1 && levelIndex !== SECRET_INDEX;
+
 function press(clientX, clientY) {
   if (screen) return screenPress(clientX, clientY);
   if (game.phase === 'complete') return; // between screens / end of the run
@@ -309,6 +316,14 @@ function press(clientX, clientY) {
     if (renderer.hitButton(p.x, p.y) === 'restart') {
       game.restartStage();
       store.set('checkpoint', null);
+      return;
+    }
+  }
+  // The STAGES button on a stage's start and bail screens opens the stage list.
+  if ((game.phase === 'ready' || game.phase === 'bailed') && clientX != null && stagesAvailable()) {
+    const p = toWorld(clientX, clientY);
+    if (renderer.hitButton(p.x, p.y) === 'stages') {
+      screen = selectScreen(true);
       return;
     }
   }
@@ -559,7 +574,7 @@ function frame(now) {
     highScores,
     gameCenter: gameCenterReady(),
     attract: levelIndex !== SECRET_INDEX && game.section === 0,
-    stagesButton: unlocked > 1 && levelIndex !== SECRET_INDEX && game.section === 0,
+    stagesButton: stagesAvailable() && (game.phase === 'bailed' || game.section === 0),
   });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
