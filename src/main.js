@@ -627,7 +627,9 @@ function frame(now) {
 // Always visible, in dark grey.
 const PAD_MARGIN = 20; // CSS px
 const padHint = { cv: document.createElement('canvas'), pix: null };
+const IS_TOUCH = !!window.matchMedia?.('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia?.('(pointer: fine)').matches;
 function drawTouchPad() {
+  if (!IS_TOUCH) return; // touch devices only; a narrow desktop window doesn't need the hint
   const dpr = view.dpr;
   const frameBottom = (view.oy + RES.H * view.scale) * dpr;
   const m = PAD_MARGIN * dpr;
