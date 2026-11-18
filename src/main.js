@@ -623,27 +623,19 @@ function frame(now) {
 }
 
 // Portrait touch-area hint: a dark dashed rectangle filling the area below the
-// game frame (20px margin all round) with "Tap/Gesture Here" centred in it. It
-// shows for a few seconds after the game opens, then is gone for good.
-const PAD_HINT_SECS = 4;
-const PAD_HINT_FADE = 0.6;
+// game frame (20px margin all round) with "Tap/Gesture Here" centred in it.
+// Always visible, in dark grey.
 const PAD_MARGIN = 20; // CSS px
-const padHint = { cv: document.createElement('canvas'), pix: null, start: 0 };
+const padHint = { cv: document.createElement('canvas'), pix: null };
 function drawTouchPad() {
-  const now = performance.now() / 1000;
-  if (!padHint.start) padHint.start = now;
-  const age = now - padHint.start;
-  if (age >= PAD_HINT_SECS) return;
   const dpr = view.dpr;
   const frameBottom = (view.oy + RES.H * view.scale) * dpr;
   const m = PAD_MARGIN * dpr;
   const x = m, y = frameBottom + m;
   const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
   if (w < 40 * dpr || h < 40 * dpr) return;
-  const alpha = Math.min(1, (PAD_HINT_SECS - age) / PAD_HINT_FADE);
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = '#7a7a88';
+  ctx.strokeStyle = '#50505c';
   ctx.lineWidth = 3 * dpr;
   ctx.setLineDash([12 * dpr, 8 * dpr]);
   ctx.strokeRect(x, y, w, h);
@@ -658,12 +650,11 @@ function drawTouchPad() {
     padHint.pix = new Pix(padHint.cv.getContext('2d'), W, H);
     const g = padHint.pix;
     g.data.fill(0);
-    g.text(label, Math.floor(W / 2), 1, [122, 122, 136], 1, 'center');
+    g.text(label, Math.floor(W / 2), 1, [80, 80, 92], 1, 'center');
     for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
     g.flush();
   }
   ctx.save();
-  ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(padHint.cv, 0, 0, W, H, Math.round(x + (w - W * k) / 2), Math.round(y + (h - H * k) / 2), W * k, H * k);
   ctx.restore();
