@@ -267,7 +267,7 @@ test('every air trick can be done popping off a slappy', async () => {
   }
 });
 
-test('the manual speed ramp is obvious: about 1.45x after a second, 1.9x after two, capped at 2.2x', () => {
+test('the manual speed ramp is steep: about 1.8x after a second, 2.6x after two, capped at 3x', () => {
   const g = new Game(level);
   g.tap();
   const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
@@ -285,8 +285,8 @@ test('the manual speed ramp is obvious: about 1.45x after a second, 1.9x after t
     if (g.sk.manual && t0 === null) t0 = t;
     if (t0 !== null && g.sk.manual) for (const s of [1, 2]) if (!at[s] && t - t0 >= s) at[s] = g.speed / g.cruise;
   }
-  assert.ok(at[1] > 1.4 && at[1] < 1.5, `1 s: ${at[1]}`);
-  assert.ok(at[2] > 1.85 && at[2] < 1.95, `2 s: ${at[2]}`);
+  assert.ok(at[1] > 1.75 && at[1] < 1.85, `1 s: ${at[1]}`);
+  assert.ok(at[2] > 2.55 && at[2] < 2.65, `2 s: ${at[2]}`);
   assert.ok(g.speed / g.cruise <= PHYS.MANUAL_SPEED_MAX + 1e-6);
 });
 
