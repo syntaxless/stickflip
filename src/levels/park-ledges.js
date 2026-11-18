@@ -5,5 +5,5 @@ import { box } from '../obstacles/index.js';
 export default {
   id: 'park-ledges',
   name: 'Ledges',
-  obstacles: [box({ x: 280, w: 150, h: 36, landable: true, grindable: true }), box({ x: 580, w: 170, h: 36, landable: true, grindable: true })],
+  obstacles: [box({ x: 340, w: 150, h: 36, landable: true, grindable: true }), box({ x: 640, w: 170, h: 36, landable: true, grindable: true })],
 };

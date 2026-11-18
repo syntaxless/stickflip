@@ -583,7 +583,7 @@ export class Renderer {
     }
 
     let target = 'roll';
-    if (game.phase === 'ready') target = 'idle';
+    if (game.phase === 'ready' || game.wait > 0) target = 'idle';
     else if (s.mode === 'grind') target = 'grind';
     else if (s.mode === 'air') target = s.flip ? 'flip' : s.primed ? 'prime' : 'air';
     else if (s.mode === 'ramp') target = 'crouch';
@@ -726,6 +726,12 @@ export class Renderer {
     const total = opts.total ?? game.score;
     g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
     if (game.phase === 'playing') this.drawSpeed(game, R, 15);
+    // After a retry the rider stands ready for a moment before rolling off.
+    if (game.phase === 'playing' && game.wait > 0) {
+      const cx = RES.W / 2;
+      g.text('READY', cx + 1, 63, ink, 2, 'center');
+      g.text('READY', cx, 62, red, 2, 'center');
+    }
     // A manual in progress counts as a trick in the combo already (it joins it for good when it ends).
     const m = game.sk.manual;
     const live = m ? [{ name: m.type.name, points: m.type.base + Math.round(m.pts), base: 0 }] : [];

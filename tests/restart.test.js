@@ -116,6 +116,17 @@ function bailAndRetry(game, st, i, why, reason = 'slam') {
   }
   game.tap();
   assert.equal(game.phase, 'playing', `${why}: softlocked on the bail screen`);
+  const x0 = game.sk.x;
+  assert.ok(game.wait > 0 && game.sk.mode === 'idle', `${why}: the rider stands ready after the retry tap`);
+  let waited = 0;
+  while (game.wait > 0) {
+    assert.equal(game.sk.x, x0, `${why}: the rider must not move during the ready delay`);
+    game.update(STEP);
+    waited += STEP;
+    assert.ok(waited < PHYS.RESTART_DELAY + 0.05, `${why}: the ready delay never ended`);
+  }
+  assert.ok(Math.abs(waited - PHYS.RESTART_DELAY) < 0.02, `${why}: ready delay was ${waited.toFixed(2)} s`);
+  assert.equal(game.sk.mode, 'roll', `${why}: rolls off after the delay`);
   const ref = fresh(st, game.checkpoint.index, banked);
   ref.tap();
   const s = game.sk;
@@ -227,7 +238,8 @@ test('restarting the whole stage from the bail screen starts at checkpoint 1 wit
     assert.equal(g.score, 0);
     assert.equal(g.checkpoint.index, 0);
     assert.equal(g.sk.x, st.sections[0].x + (st.sections[0].start ?? PHYS.START_X));
-    assert.equal(g.sk.mode, 'roll');
+    assert.equal(g.sk.mode, 'idle', 'stands ready first');
+    assert.ok(g.wait > 0);
   }
 });
 
@@ -300,4 +312,69 @@ test('bail and retry: after banking a trick, the retry starts with the checkpoin
     bailAndRetry(run.game, st, i, `${label(st, i)} after a banked trick`, 'slam');
   }
   assert.ok(n >= 10, `only ${n} checkpoints banked a trick before the bail`);
+});
+
+// ---- reaction time after a restart
+
+// The retry tap gives the rider a short beat standing ready (RESTART_DELAY) before rolling off.
+// From the roll-off, the player needs time to see where they are and start the first input.
+// For every checkpoint, the *latest* moment a first input can still clear it (a plain ollie,
+// a charged one, ollie-and-hold for a grind, or an ollie then a tap) must leave this margin.
+const MIN_REACTION = 0.5; // seconds from roll-off to the last moment a first input still clears it
+const MIN_TOTAL = 1.0; // ... and counting the ready beat, from the restart tap
+
+function lastGoodInput(st, i) {
+  const ok = (acts) => clears(st, i, acts);
+  for (let t = 2.8; t >= 0; t -= 0.02) {
+    if (ok([[t, 'tap']]) || ok([[0, 'cs'], [Math.min(t, 1.6), 'cr']]) || ok([[t, 'tap'], [t, 'hold']]) || [0.15, 0.3, 0.45, 0.6, 0.8, 1.0].some((d) => ok([[t, 'tap'], [t + d, 'tap']]))) return t;
+  }
+  return -1;
+}
+
+test('the ready beat after a retry tap is long enough to lift the finger and tap again', () => {
+  assert.ok(PHYS.RESTART_DELAY >= 0.4 && PHYS.RESTART_DELAY <= 0.8, `RESTART_DELAY ${PHYS.RESTART_DELAY}`);
+});
+
+for (const st of STAGES) {
+  sectionsOf(st).forEach((sec, i) => {
+    test(`reaction: ${label(st, i)} leaves a realistic margin to act after a restart`, () => {
+      const last = lastGoodInput(st, i);
+      assert.ok(last >= MIN_REACTION, `${label(st, i)}: the last input that still clears it is ${last.toFixed(2)} s after roll-off (need ${MIN_REACTION} s)`);
+      assert.ok(PHYS.RESTART_DELAY + last >= MIN_TOTAL, `${label(st, i)}: only ${(PHYS.RESTART_DELAY + last).toFixed(2)} s from the restart tap`);
+    });
+  });
+}
+
+test('restart: nothing hurts the rider while ready, a tap then does nothing, and a finger kept down crouches on roll-off', () => {
+  const st = STAGES[0];
+  const g = fresh(st, 2);
+  g.tap();
+  g.bail('slam');
+  for (let t = 0; t < PHYS.BAIL_RETRY_DELAY + 0.05; t += STEP) g.update(STEP);
+  g.tap(); // the retry tap
+  g.setHold(true); // the finger stays down
+  assert.ok(g.wait > 0);
+  assert.equal(g.startCharge(), false, 'no crouch while standing ready');
+  g.tap(); // a stray second tap during the beat does nothing
+  assert.equal(g.sk.mode, 'idle');
+  while (g.wait > 0) g.update(STEP);
+  assert.equal(g.sk.mode, 'roll');
+  assert.ok(g.sk.charge, 'the held finger crouches when the rider rolls off');
+  for (let t = 0; t < 0.3; t += STEP) g.update(STEP);
+  assert.ok(g.releaseCharge(), 'letting go pops the charged ollie');
+  assert.equal(g.sk.mode, 'air');
+});
+
+test('restart: a finger lifted during the ready beat rolls off normally, with no crouch', () => {
+  const g = fresh(STAGES[0], 2);
+  g.tap();
+  g.bail('slam');
+  for (let t = 0; t < PHYS.BAIL_RETRY_DELAY + 0.05; t += STEP) g.update(STEP);
+  g.tap();
+  g.setHold(true);
+  for (let t = 0; t < 0.1; t += STEP) g.update(STEP);
+  g.setHold(false); // quick tap, lifted
+  while (g.wait > 0) g.update(STEP);
+  assert.equal(g.sk.mode, 'roll');
+  assert.equal(g.sk.charge, null);
 });
