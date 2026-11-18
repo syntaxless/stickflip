@@ -60,6 +60,21 @@ function makeSkyline(seed, count, minW, maxW, minH, maxH) {
 }
 const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
 const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
+// The Mega Ramp's forest: two repeating rows of trees (far pines, near pines and
+// round-topped trees), same idea as the skyline.
+function makeForest(seed, count, minW, maxW, minH, maxH) {
+  const list = [];
+  let x = 0;
+  for (let i = 0; i < count; i++) {
+    const h = hash(i, seed);
+    const w = minW + (h % (maxW - minW + 1));
+    list.push({ x, w, h: minH + (hash(seed, i * 3 + 1) % (maxH - minH + 1)), round: hash(i, seed + 7) % 3 === 0 });
+    x += w - 4 + (hash(i, seed + 2) % 8);
+  }
+  return { list, width: x };
+}
+const FOREST_FAR = makeForest(31, 16, 30, 46, 96, 170);
+const FOREST_NEAR = makeForest(47, 13, 34, 52, 70, 130);
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
@@ -244,11 +259,19 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline) return;
+    if (!game.level.skyline && !game.level.forest) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
     if (game.level.morning) this.drawMorningSky(g, cam);
+    if (game.level.forest) {
+      // distant trees: they move only a little with the camera's height, so they stay in view up on the decks
+      g.oy = -Math.round(cam.y * 0.3);
+      this.drawForest(g, cam, horizon);
+      g.ox = ox;
+      g.oy = oy;
+      return;
+    }
     for (const [sky2, factor, colour, windows] of [[SKY_FAR, 0.12, PAL.far, false], [SKY_NEAR, 0.28, PAL.near, true]]) {
       // The bars around the game draw this scene again from a wider frame: `px`
       // is the true camera, `left` how far that frame reaches left of the game,
@@ -273,6 +296,66 @@ export class Renderer {
     }
     g.ox = ox;
     g.oy = oy;
+  }
+
+  // The Mega Ramp's forest: two layers of chunky pixel trees with a black outline,
+  // slower than the stage, standing on the horizon. Far trees are pale and misty so
+  // the rider still reads against them.
+  drawForest(g, cam, horizon) {
+    const layers = [
+      [FOREST_FAR, 0.1, { body: [160, 198, 160], edge: [124, 164, 134], trunk: [140, 130, 110], line: [96, 128, 104] }],
+      [FOREST_NEAR, 0.26, { body: [100, 164, 108], edge: [68, 124, 82], trunk: [110, 74, 44], line: [8, 20, 12] }],
+    ];
+    for (const [f, factor, c] of layers) {
+      const shift = Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+      const T = f.width;
+      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 40; tile++) {
+        for (const t of f.list) {
+          const bx = tile * T + t.x - shift;
+          if (bx > g.w || bx + t.w < 0) continue;
+          g.ox = 0;
+          const cx = bx + (t.w >> 1);
+          const base = horizon + 60;
+          const trunkH = 14;
+          g.fill(cx - 2, horizon - trunkH, 5, trunkH + 60, c.line);
+          g.fill(cx - 1, horizon - trunkH, 3, trunkH + 60, c.trunk);
+          const crown = t.round ? Math.min(t.h - trunkH + 4, Math.round(t.w * 1.15)) : t.h - trunkH + 4;
+          const top = horizon - trunkH + 4 - crown;
+          if (t.round) {
+            // a round-topped tree: stacked rows of a blob
+            const r = t.w >> 1;
+            for (let y = 0; y < crown; y += 2) {
+              const k = y / crown;
+              const half = Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * k) ** 2)) * 0.95) || 1;
+              const hw = Math.max(2, half);
+              const row = top + y;
+              g.fill(cx - hw - 1, row, hw * 2 + 3, 2, c.line);
+            }
+            for (let y = 0; y < crown; y += 2) {
+              const k = y / crown;
+              const hw = Math.max(1, Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * k) ** 2)) * 0.95));
+              g.fill(cx - hw, top + y, hw * 2 + 1, 2, y > crown * 0.55 ? c.edge : c.body);
+            }
+          } else {
+            // a pine: tiers that widen downward, each a stack of 2 px rows
+            const tiers = Math.max(3, Math.round(t.h / 16));
+            const tierH = Math.ceil(crown / tiers);
+            for (let pass = 0; pass < 2; pass++) {
+              for (let i = 0; i < tiers; i++) {
+                const y0 = top + i * (tierH - 3);
+                const maxHalf = Math.round((t.w / 2) * (0.45 + (0.55 * (i + 1)) / tiers));
+                for (let y = 0; y < tierH; y += 2) {
+                  const half = Math.max(1, Math.round((maxHalf * (y + 2)) / tierH));
+                  const o = pass === 0 ? 1 : 0;
+                  g.fill(cx - half - o, y0 + y - o, half * 2 + 1 + o * 2, 2 + o * 2, pass === 0 ? c.line : y > tierH * 0.6 ? c.edge : c.body);
+                }
+              }
+            }
+          }
+          void base;
+        }
+      }
+    }
   }
 
   // Stages 1-2: chunky pale clouds in three layers, each drifting past slower than

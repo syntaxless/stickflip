@@ -205,11 +205,11 @@ a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ol
 off the kicker to clear the whole rail and land in the long bank that starts right
 at its end, or grind over the curve and pop (or roll) off the end into the bank.
 Finish with a big air out of a tall quarter pipe; riding back down ends it. Finish
-any stage with at least 8,000 points in that run (`SECRET_SCORE` in `src/main.js`,
+any stage with at least 15,000 points in that run (`SECRET_SCORE` in `src/main.js`,
 before the no-bail bonus) and you're taken there; its score counts toward the run
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a morning
-sky with a low sun and gold haze, a faint skyline, an all-wood plank ground and a
+sky with a low sun and gold haze, a forest of pines and round trees (two parallax layers), an all-wood plank ground and a
 wooden-sign banner.
 
 Bails explain what went wrong: slammed or clipped the rail, landed mid-flip, came
