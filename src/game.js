@@ -749,7 +749,7 @@ export class Game {
   startManual(key) {
     const s = this.sk;
     s.charge = null;
-    s.manual = { key, type: MANUALS[key], dist: 0, t: 0 };
+    s.manual = { key, type: MANUALS[key], dist: 0, pts: 0, t: 0 };
     this.emit('manual', { key });
   }
 
@@ -760,6 +760,8 @@ export class Game {
     this.speed = Math.min(this.cruise * PHYS.MANUAL_SPEED_MAX, this.speed + this.cruise * PHYS.MANUAL_ACCEL * dt);
     s.vx = s.dir * this.speed;
     m.dist += this.speed * dt;
+    // The faster it gets the more each pixel pays (the risk is the reward).
+    m.pts += this.speed * dt * m.type.perPx * (this.speed / this.cruise);
     const d = this.hold?.dir;
     if (d === 'left' || d === 'right') m.key = this.manualKeyFor(d);
     m.type = MANUALS[m.key];
@@ -782,7 +784,7 @@ export class Game {
     s.manual = null;
     if (m) this.speed = this.cruise; // the speed resets when the manual ends
     if (!m || m.dist < 20) return;
-    this.addTrick(m.type.name, m.type.base + Math.round(m.dist * m.type.perPx));
+    this.addTrick(m.type.name, m.type.base + Math.round(m.pts));
   }
 
   bankCombo() {
