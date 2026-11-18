@@ -268,7 +268,8 @@ export class Renderer {
     if (game.level.morning) this.drawMorningSky(g, cam);
     if (game.level.forest) {
       // distant trees: they move only a little with the camera's height, so they stay in view up on the decks
-      g.oy = -Math.round(cam.y * 0.3);
+      // (cam.py is the true camera; `top` lifts the bars' bigger frame so the trees line up with the game picture instead of repeating it)
+      g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
       this.drawForest(g, cam, horizon);
       g.ox = ox;
       g.oy = oy;
@@ -317,44 +318,38 @@ export class Renderer {
           if (bx > g.w || bx + t.w < 0) continue;
           g.ox = 0;
           const cx = bx + (t.w >> 1);
-          const base = horizon + 60;
-          const trunkH = 14;
-          g.fill(cx - 2, horizon - trunkH, 5, trunkH + 60, c.line);
-          g.fill(cx - 1, horizon - trunkH, 3, trunkH + 60, c.trunk);
+          const trunkH = 14; // trunk showing under the lowest branches
           const crown = t.round ? Math.min(t.h - trunkH + 4, Math.round(t.w * 1.15)) : t.h - trunkH + 4;
           const top = horizon - trunkH + 4 - crown;
+          // one continuous trunk from the crown's top down past the horizon; the
+          // branches are drawn over it, so every tier visibly hangs off the trunk
+          g.fill(cx - 2, top + 2, 5, horizon + 60 - top - 2, c.line);
+          g.fill(cx - 1, top + 2, 3, horizon + 60 - top - 2, c.trunk);
           if (t.round) {
-            // a round-topped tree: stacked rows of a blob
+            // a round-topped tree: a blob of stacked 2 px rows
             const r = t.w >> 1;
-            for (let y = 0; y < crown; y += 2) {
-              const k = y / crown;
-              const half = Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * k) ** 2)) * 0.95) || 1;
-              const hw = Math.max(2, half);
-              const row = top + y;
-              g.fill(cx - hw - 1, row, hw * 2 + 3, 2, c.line);
-            }
-            for (let y = 0; y < crown; y += 2) {
-              const k = y / crown;
-              const hw = Math.max(1, Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * k) ** 2)) * 0.95));
-              g.fill(cx - hw, top + y, hw * 2 + 1, 2, y > crown * 0.55 ? c.edge : c.body);
-            }
+            const half = (y) => Math.max(1, Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * (y / crown)) ** 2)) * 0.95));
+            for (let y = 0; y < crown; y += 2) g.fill(cx - half(y) - 1, top + y - 1, half(y) * 2 + 3, 4, c.line);
+            for (let y = 0; y < crown; y += 2) g.fill(cx - half(y), top + y, half(y) * 2 + 1, 2, y > crown * 0.55 ? c.edge : c.body);
           } else {
-            // a pine: tiers that widen downward, each a stack of 2 px rows
+            // a pine: tiers that widen downward, each a triangle of 2 px rows, with a
+            // 4 px gap of bare trunk between tiers
             const tiers = Math.max(3, Math.round(t.h / 16));
-            const tierH = Math.ceil(crown / tiers);
+            const tierH = Math.floor(crown / tiers / 2) * 2;
+            const gap = 4;
             for (let pass = 0; pass < 2; pass++) {
               for (let i = 0; i < tiers; i++) {
-                const y0 = top + i * (tierH - 3);
+                const y0 = top + i * tierH;
+                const rows = tierH - gap;
                 const maxHalf = Math.round((t.w / 2) * (0.45 + (0.55 * (i + 1)) / tiers));
-                for (let y = 0; y < tierH; y += 2) {
-                  const half = Math.max(1, Math.round((maxHalf * (y + 2)) / tierH));
+                for (let y = 0; y < rows; y += 2) {
+                  const half = Math.max(2, Math.round((maxHalf * (y + 2)) / rows));
                   const o = pass === 0 ? 1 : 0;
-                  g.fill(cx - half - o, y0 + y - o, half * 2 + 1 + o * 2, 2 + o * 2, pass === 0 ? c.line : y > tierH * 0.6 ? c.edge : c.body);
+                  g.fill(cx - half - o, y0 + y - o, half * 2 + 1 + o * 2, 2 + o * 2, pass === 0 ? c.line : y > rows * 0.6 ? c.edge : c.body);
                 }
               }
             }
           }
-          void base;
         }
       }
     }
