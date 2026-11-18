@@ -43,6 +43,11 @@ function surfaceY(surf, x) {
   return surf.y1 + (surf.y2 - surf.y1) * t;
 }
 
+// How many tricks a combo counts as for its multiplier: one each, and a long
+// manual counts for more (see PHYS.MANUAL_MULT_EVERY).
+export const comboMult = (tricks) => tricks.reduce((a, t) => a + (t.weight || 1), 0);
+export const manualWeight = (t) => 1 + Math.floor(t / PHYS.MANUAL_MULT_EVERY + 0.02);
+
 const FLAT = Object.freeze({ x1: -Infinity, x2: Infinity, y: WORLD.GROUND, landable: true });
 
 export const slopeOf = (surf, x) => {
@@ -691,7 +696,7 @@ export class Game {
   //
   // Repeats are worth less (SCORE.REPEAT_*): the same trick again in this combo,
   // or already in the recent tricks of the run. Specials and gaps are exempt.
-  addTrick(name, points, kind = 'trick') {
+  addTrick(name, points, kind = 'trick', weight = 1) {
     const exempt = kind === 'gap' || points >= SPECIAL_POINTS;
     let value = points;
     if (!exempt) {
@@ -700,7 +705,7 @@ export class Game {
       const f = Math.max(SCORE.REPEAT_MIN, SCORE.REPEAT_COMBO ** inCombo * SCORE.REPEAT_RUN ** inRun);
       value = Math.round(points * f);
     }
-    this.combo.push({ name, points: value, base: points, exempt });
+    this.combo.push({ name, points: value, base: points, exempt, weight });
     this.emit('trick', { name, points: value, base: points });
     if (exempt) this.emit('special', { name, points, kind });
   }
@@ -771,6 +776,8 @@ export class Game {
     const s = this.sk;
     s.charge = null;
     s.manual = { key, type: MANUALS[key], dist: 0, pts: 0, t: 0 };
+    this.speed = Math.min(this.cruise * PHYS.MANUAL_SPEED_MAX, this.speed * PHYS.MANUAL_ENTRY_BOOST); // lands fast
+    s.vx = s.dir * this.speed;
     this.emit('manual', { key });
   }
 
@@ -805,14 +812,14 @@ export class Game {
     s.manual = null;
     if (m) this.speed = this.cruise; // the speed resets when the manual ends
     if (!m || m.dist < 20) return;
-    this.addTrick(m.type.name, m.type.base + Math.round(m.pts));
+    this.addTrick(m.type.name, m.type.base + Math.round(m.pts), 'trick', manualWeight(m.t));
   }
 
   bankCombo() {
     if (!this.combo.length) return;
     this.recent = [...this.recent, ...this.combo.filter((t) => !t.exempt).map((t) => t.name)].slice(-SCORE.RUN_WINDOW);
     const sum = this.combo.reduce((a, t) => a + t.points, 0);
-    const mult = this.combo.length;
+    const mult = comboMult(this.combo);
     const total = sum * mult;
     this.score += total;
     this.emit('bank', { total, mult, names: this.combo.map((t) => t.name) });
