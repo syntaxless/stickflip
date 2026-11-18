@@ -635,7 +635,9 @@ function drawTouchPad() {
   const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
   if (w < 40 * dpr || h < 40 * dpr) return;
   ctx.save();
-  ctx.strokeStyle = '#50505c';
+  ctx.fillStyle = '#16161c'; // slightly lifted from black so the dark grey reads
+  ctx.fillRect(0, frameBottom, canvas.width, canvas.height - frameBottom);
+  ctx.strokeStyle = '#3c3c46';
   ctx.lineWidth = 3 * dpr;
   ctx.setLineDash([12 * dpr, 8 * dpr]);
   ctx.strokeRect(x, y, w, h);
@@ -650,7 +652,7 @@ function drawTouchPad() {
     padHint.pix = new Pix(padHint.cv.getContext('2d'), W, H);
     const g = padHint.pix;
     g.data.fill(0);
-    lines.forEach((t, i) => g.text(t, Math.floor(W / 2), 1 + i * 11, [80, 80, 92], 1, 'center'));
+    lines.forEach((t, i) => g.text(t, Math.floor(W / 2), 1 + i * 11, [60, 60, 70], 1, 'center'));
     for (let i = 0; i < g.data.length; i += 4) if (g.data[i] || g.data[i + 1] || g.data[i + 2]) g.data[i + 3] = 255;
     g.flush();
   }
