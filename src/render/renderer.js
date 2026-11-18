@@ -658,15 +658,15 @@ export class Renderer {
         g.text('HIGH SCORES', cx + 1, 39, ink, 2, 'center');
         g.text('HIGH SCORES', cx, 38, red, 2, 'center');
         this.drawTable(opts.highScores, 62, -1, 11);
-        tapY = 124;
+        tapY = 118;
       } else {
         g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
         g.text('STICKFLIP', cx, 38, red, 4, 'center');
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
-      // More than one stage open: a way back to the stage list.
-      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, 158, 60, true);
+      // More than one stage open: a way back to the stage list (kept up in the sky, off the ground strip).
+      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, showTable ? 129 : 100, 60, true);
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
@@ -674,7 +674,13 @@ export class Renderer {
       const ready = game.phaseTime >= PHYS.BAIL_RETRY_DELAY;
       if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
       // Past the first checkpoint, the whole stage can be started over.
-      if (ready && game.checkpoint.index > 0) this.button('restart', 'RESTART STAGE', cx - 45, 92, 90, true);
+      let by = 92;
+      if (ready && game.checkpoint.index > 0) {
+        this.button('restart', 'RESTART STAGE', cx - 45, by, 90, true);
+        by += 20;
+      }
+      // Stuck on a hard stage? Back to the list to play an earlier one.
+      if (ready && opts.stagesButton) this.button('stages', 'STAGES', cx - 30, by, 60, true);
     }
   }
 
@@ -786,6 +792,8 @@ export class Renderer {
       const open = i < scr.unlocked;
       this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
     });
+    // Opened from a stage's start or bail screen: a way back to it.
+    if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);
   }
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).
