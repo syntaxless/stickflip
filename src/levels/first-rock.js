@@ -5,6 +5,6 @@ import { rock, citySign } from '../obstacles/index.js';
 export default {
   id: 'first-rock',
   name: 'First Rock',
-  // the OSLO CITY LIMITS sign stands just past the rock: background decor, no hitbox
-  obstacles: [rock({ x: 500 }), citySign({ x: 640 })],
+  // the OSLO CITY LIMITS sign stands past the rock and just off the right edge of the opening screen, so it only scrolls into view once you roll: background decor, no hitbox
+  obstacles: [rock({ x: 500 }), citySign({ x: 970 })],
 };

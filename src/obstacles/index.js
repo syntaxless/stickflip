@@ -8,7 +8,7 @@ export { bank } from './bank.js';
 export { stepsUp } from './steps-up.js';
 export { quarterPipe } from './quarter-pipe.js';
 export { box } from './box.js';
-export { dumpster } from './dumpster.js';
+export { dumpster, groundBag } from './dumpster.js';
 export { trashCan } from './trash-can.js';
 export { rock } from './rock.js';
 export { water } from './water.js';
