@@ -72,7 +72,8 @@ export function drawFigure(g, tf, p) {
   poly(g, tf, [p.neck, p.elbowB, p.handB], W);
   poly(g, tf, [p.neck, p.elbowF, p.handF], W);
   const h = tf(p.head);
-  g.circle(h.x, h.y, 3, W, true);
+  // a slightly bigger head: two r=3 discs offset by one pixel make an 8x8 blob (7px before)
+  for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, W, true);
   // cap: crown + peak, following the body's rotation
   poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
   poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);

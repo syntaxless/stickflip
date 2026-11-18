@@ -602,7 +602,16 @@ export class Renderer {
     const R = RES.W - 4 - inset;
     // A stage's sections are numbered after it: 1-3 is stage 1's third.
     const sec = game.sections.length > 1 ? `-${game.section + 1}` : '';
-    g.text(`${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}${sec}: ${game.sectionName}`, L, 4, red);
+    const title = `${game.levelLabel || `LEVEL ${game.levelNumber || 1}`}${sec}: ${game.sectionName}`;
+    g.text(title, L, 4, red);
+    // With 2+ stages open, the title doubles as the stage list button on the
+    // start and bail screens: a thin underline hints at it.
+    this.titleBox = null;
+    if (opts.stagesButton && !opts.screen && (game.phase === 'ready' || game.phase === 'bailed')) {
+      const w = g.textWidth(title);
+      g.fill(L, 12, w, 1, red);
+      this.titleBox = { x: L - 2, y: 2, w: w + 4, h: 12 };
+    }
     // Top right: just the running total for the run, with the speed under it.
     // Tricks and combos pop up on screen; high scores wait for the end.
     const total = opts.total ?? game.score;
@@ -649,6 +658,9 @@ export class Renderer {
     if (opts.screen?.type === 'unlock') return this.drawUnlock(opts.screen);
     if (opts.screen?.type === 'select') return this.drawSelect(opts.screen);
 
+    const tb = this.titleBox;
+    if (tb) this.buttons.push({ id: 'stages', x: tb.x * S, y: tb.y * S, w: tb.w * S, h: tb.h * S });
+
     if (game.phase === 'ready') {
       // Arcade attract mode: on the first level, the title takes turns with the high scores.
       const showTable = opts.attract && opts.highScores?.length && Math.floor(this.time / 4) % 2 === 1;
@@ -665,8 +677,6 @@ export class Renderer {
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
-      // More than one stage open: a way back to the stage list.
-      if (opts.stagesButton) this.button('stages', 'STAGES', cx - 30, 158, 60, true);
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
@@ -786,6 +796,8 @@ export class Renderer {
       const open = i < scr.unlocked;
       this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
     });
+    // Opened from a stage's start or bail screen: a way back to it.
+    if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);
   }
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).
