@@ -46,13 +46,13 @@ test('doing nothing slams into the rail', () => {
 });
 
 test('ollie onto the rail without a grind tap clips it', () => {
-  const { game } = play(level1, [0.75]);
+  const { game } = play(level1, [0.45]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'clipped');
 });
 
 test('ollie then a late tap locks a grind and finishes the level', () => {
-  const { game, seen } = play(level1, [0.71, 1.32]);
+  const { game, seen } = play(level1, [0.41, 1.02]);
   assert.ok(seen.has('grind'));
   assert.equal(game.phase, 'complete');
   assert.ok(game.score > 250, `score ${game.score}`);
@@ -60,33 +60,33 @@ test('ollie then a late tap locks a grind and finishes the level', () => {
 });
 
 test('kickflip into the grind scores a 2x combo', () => {
-  const { game, seen } = play(level1, [0.75, 0.77, 1.32]);
+  const { game, seen } = play(level1, [0.45, 0.47, 1.02]);
   assert.ok(seen.has('KICKFLIP') && seen.has('grind'));
   assert.equal(game.phase, 'complete');
   assert.ok(game.score >= 700 && game.score < 1400, `score ${game.score}`);
 });
 
 test('kickflip in, grind, pop and kickflip out scores big', () => {
-  const { game } = play(level1, [0.75, 0.77, 1.32, 1.8, 1.82]);
+  const { game } = play(level1, [0.45, 0.47, 1.02, 1.5, 1.52]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.ok(game.score >= 1150, `score ${game.score}`); // (the second kickflip in the combo is a repeat: half value)
 });
 
 test('a tap during a flip is ignored, so the rail is clipped', () => {
-  const { game, seen } = play(level1, [0.75, 0.77, 1.0]);
+  const { game, seen } = play(level1, [0.45, 0.47, 0.7]);
   assert.ok(!seen.has('prime'));
   assert.equal(game.bailReason, 'clipped');
 });
 
 test('tapping for the grind too early starts a kickflip that lands on the rail', () => {
-  const { game } = play(level1, [0.75, 1.1]);
+  const { game } = play(level1, [0.45, 0.8]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'flip');
 });
 
 test('flipping too late before the ground is a bail', () => {
-  // Ollie early so the arc lands before the rail, flip right before landing.
-  const { game } = play(level1, [0.2, 0.85]);
+  // Ollie early, then start a flip (a tap) that is still turning when the arc comes down on the rail.
+  const { game } = play(level1, [0.1, 0.5]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'flip');
 });
@@ -138,20 +138,20 @@ test('swipes in the air do their tricks and still allow the grind', () => {
     ['bs360', 'BS 360'],
     ['treflip', '360 FLIP'],
   ]) {
-    const { game, names } = playInputs(level1, [[0.75, 'tap'], [0.77, key], [1.36, 'tap']]);
+    const { game, names } = playInputs(level1, [[0.45, 'tap'], [0.47, key], [1.06, 'tap']]);
     assert.ok(names.includes(name), `${key} -> ${names}`);
     assert.equal(game.phase, 'complete', `${key}: bailed ${game.bailReason}`);
   }
 });
 
 test('a swipe on the ground ollies, and a stroke that is no trick does nothing in the air', () => {
-  const { game, names } = playInputs(level1, [[0.75, 'fs360'], [0.77, null], [1.32, 'tap']]);
+  const { game, names } = playInputs(level1, [[0.45, 'fs360'], [0.47, null], [1.02, 'tap']]);
   assert.deepEqual(names, ['50-50 GRIND'], String(names));
   assert.equal(game.phase, 'complete');
 });
 
 test('a long trick started too late is a bail', () => {
-  const { game } = playInputs(level1, [[0.2, 'tap'], [0.75, 'treflip']]);
+  const { game } = playInputs(level1, [[0.1, 'tap'], [0.65, 'treflip']]);
   assert.equal(game.phase, 'bailed');
   assert.equal(game.bailReason, 'flip');
 });
@@ -208,26 +208,26 @@ function playHold(level, inputs, maxTime = 8) {
 }
 
 test('holding the finger down from the ollie locks a 50-50 on the rail', () => {
-  const { game, names } = playHold(level1, [[0.75, 'tap'], [0.75, 'hold'], [2.2, 'release']]);
+  const { game, names } = playHold(level1, [[0.45, 'tap'], [0.45, 'hold'], [1.9, 'release']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
   assert.deepEqual(names, ['50-50 GRIND']);
 });
 
 test('a held drag picks the grind: forward is a nose grind, back is a 5-0', () => {
   for (const [dir, name] of [['right', 'NOSE GRIND'], ['left', '5-0 GRIND']]) {
-    const { game, names } = playHold(level1, [[0.75, 'tap'], [0.75, 'hold'], [0.9, 'hold', dir]]);
+    const { game, names } = playHold(level1, [[0.45, 'tap'], [0.45, 'hold'], [0.6, 'hold', dir]]);
     assert.equal(game.phase, 'complete', `${dir}: bailed ${game.bailReason}`);
     assert.deepEqual(names.slice(0, 1), [name]); // (landing off the rail still holding drag rolls into a manual)
   }
 });
 
 test('the harder grinds score more', () => {
-  const score = (dir) => playHold(level1, [[0.75, 'tap'], [0.75, 'hold'], [0.9, 'hold', dir]]).game.score;
+  const score = (dir) => playHold(level1, [[0.45, 'tap'], [0.45, 'hold'], [0.6, 'hold', dir]]).game.score;
   assert.ok(score('right') > score('left') && score('left') > score(null));
 });
 
 test('letting go before the rail is a normal air tap, so the rail is clipped', () => {
-  const { game } = playHold(level1, [[0.75, 'tap'], [0.75, 'hold'], [0.8, 'release']]);
+  const { game } = playHold(level1, [[0.45, 'tap'], [0.45, 'hold'], [0.5, 'release']]);
   assert.equal(game.bailReason, 'clipped');
 });
 

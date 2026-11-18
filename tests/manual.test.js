@@ -206,8 +206,8 @@ for (const [name, dir, grind] of [['50-50', null, '50-50 GRIND'], ['5-0', 'left'
       let bank = null;
       const names = [];
       while (t < 5 && g.phase === 'playing') {
-        if (Math.abs(t - 0.75) < STEP / 2) g.tap(); // ollie at the rail
-        if (Math.abs(t - 0.75) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
+        if (Math.abs(t - 0.45) < STEP / 2) g.tap(); // ollie at the rail
+        if (Math.abs(t - 0.45) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
         if (g.sk.mode === 'grind' && grindT === null) grindT = t;
         if (grindT !== null && !swiped && t >= grindT + 0.2) {
           g.setHold(false); // (a held grind ignores the lift) then a new touch pops
