@@ -66,6 +66,16 @@ export const SPECIAL_POINTS = 300;
 
 export const SCORE = Object.freeze({
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
+  // Repeating a trick pays less, so variety wins. Each repeat of the same trick
+  // in one combo is worth REPEAT_COMBO times the last one (100%, 50%, 25%...);
+  // the same trick already banked in the last RUN_WINDOW tricks of the run is
+  // worth REPEAT_RUN times as much per earlier time (it recovers as other tricks
+  // push it out of the window). Never below REPEAT_MIN of its value. Specials
+  // (SPECIAL_POINTS or more) and named gap bonuses are exempt.
+  REPEAT_COMBO: 0.5,
+  REPEAT_RUN: 0.85,
+  REPEAT_MIN: 0.1,
+  RUN_WINDOW: 8,
 });
 
 // Grinds. A timed tap locks a 50-50. Holding the finger down as you reach the
