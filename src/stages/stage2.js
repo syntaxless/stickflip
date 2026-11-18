@@ -19,7 +19,7 @@ export default stage({
   name: 'Stage 2',
   sections: [curb, stepUp, trashCan, kickerRail, bench, fourStair, dumpster],
   // Four Stair's platform is up a bank: flat street, the ramp, then the top (the ground that comes first wins)
-  extra: [bank({ x: 5 * W, run: 140 }), bank({ x: 5 * W + 140, run: 140, y1: G, y2: TOP, material: 'concrete' }), bank({ x: 5 * W + 280, run: 80, y1: TOP, y2: TOP, material: 'concrete' })],
+  extra: [bank({ x: 5 * W, run: 140 }), bank({ x: 5 * W + 140, run: 140, y1: G, y2: TOP, material: 'concrete' }), bank({ x: 5 * W + 280, run: 160, y1: TOP, y2: TOP, material: 'concrete' })],
   camTop: 100,
   clouds: true,
 });

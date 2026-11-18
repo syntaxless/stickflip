@@ -194,12 +194,15 @@ test('dumpster: rolling into it, or an ollie off the kicker too early, slams', (
   for (const t of [0.3, 0.36, 0.4]) assert.equal(ridePark('tap', t).game.bailReason, 'slam', `tap at ${t}`);
 });
 
-test('dumpster: a normal ollie lands on the lid and rolls off (0.42 to 0.72 s) but can never clear it, so no BIG LEAP', () => {
+test('dumpster: a plain ollie can never ride across it or clear it: landing on the top without a grind bails', () => {
   for (const t of [0.44, 0.58, 0.7]) {
     const { game, names } = ridePark('tap', t);
-    assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
+    assert.equal(game.phase, 'bailed', `tap at ${t} should not get across`);
     assert.ok(!names.has('BIG LEAP'), `no leap at ${t}`);
   }
+  const dump = STAGES[1].obstacles.find((o) => o.type === 'dumpster');
+  assert.equal(dump.surfaces[0].landable, false);
+  assert.equal(dump.surfaces[0].grindable, true);
   for (let t = 0.3; t <= 1.3; t += 0.01) assert.ok(!ridePark('tap', t).names.has('BIG LEAP'), `a plain ollie at ${t.toFixed(2)} cleared it`);
 });
 
@@ -217,7 +220,7 @@ test('dumpster: only a charged ollie clears it for BIG LEAP, in a narrow window 
     assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
     assert.ok(names.has('BIG LEAP'), `charged at ${t}: ${[...names]}`);
   }
-  assert.ok(!ridePark('charge', 0.44).names.has('BIG LEAP'), 'a charge released early lands on the lid');
+  assert.equal(ridePark('charge', 0.44).game.phase, 'bailed', 'a charge released early lands on the lid and bails');
   assert.equal(ridePark('charge', 0.7).game.bailReason, 'slam', 'too late slams into the side');
 });
 
@@ -844,10 +847,10 @@ test('dumpster: the bag on the street is scenery, with no surface or solid to hi
   assert.deepEqual([bag.surfaces.length, bag.solids.length], [0, 0]);
 });
 
-test('the Mega Ramp unlocks at 15,000 points', async () => {
+test('the Mega Ramp unlocks at 25,000 points', async () => {
   const { readFile } = await import('node:fs/promises');
   const src = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.match(src, /const SECRET_SCORE = 15000;/);
+  assert.match(src, /const SECRET_SCORE = 25000;/);
 });
 
 // ------------------------------------------------------------ stage 2: Bench, Four Stair, Kicker Rail
@@ -892,17 +895,17 @@ test('bench: an ollie and a second tap in the air locks a grind on the seat, and
   assert.ok(found);
 });
 
-test('four stair: a plain ollie over the set (0.56 to 0.84 s) is a STAIR SET, and a ride-in slams', () => {
+test('four stair: a plain ollie over the set (0.8 to 1.08 s) is a STAIR SET, and a ride-in slams', () => {
   assert.equal(ride2(5, []).game.phase, 'bailed');
-  for (const t of [0.58, 0.7, 0.82]) {
+  for (const t of [0.82, 0.94, 1.06]) {
     const r = pass2(5, [[t, 'tap']]);
     assert.ok(r.ok && r.names.has('STAIR SET'), `ollie at ${t}`);
   }
-  assert.equal(pass2(5, [[1.1, 'tap']]).ok, false, 'too late');
+  assert.equal(pass2(5, [[1.35, 'tap']]).ok, false, 'too late');
 });
 
-test('four stair: ollie onto the handrail with a held tap grinds it down for HANDRAIL (0.18 to 0.44 s)', () => {
-  for (const t of [0.2, 0.3, 0.42]) {
+test('four stair: ollie onto the handrail with a held tap grinds it down for HANDRAIL (0.42 to 0.68 s)', () => {
+  for (const t of [0.44, 0.54, 0.66]) {
     const r = pass2(5, [[t, 'tap'], [t, 'hold']]);
     assert.ok(r.ok && r.names.has('HANDRAIL'), `grind at ${t}`);
   }
