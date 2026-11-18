@@ -627,7 +627,9 @@ function frame(now) {
 // Always visible, in dark grey.
 const PAD_MARGIN = 20; // CSS px
 const padHint = { cv: document.createElement('canvas'), pix: null };
+const IS_TOUCH = !!window.matchMedia?.('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia?.('(pointer: fine)').matches;
 function drawTouchPad() {
+  if (!IS_TOUCH) return; // touch devices only; a narrow desktop window doesn't need the hint
   const dpr = view.dpr;
   const frameBottom = (view.oy + RES.H * view.scale) * dpr;
   const m = PAD_MARGIN * dpr;
@@ -635,8 +637,6 @@ function drawTouchPad() {
   const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
   if (w < 40 * dpr || h < 40 * dpr) return;
   ctx.save();
-  ctx.fillStyle = '#16161c'; // slightly lifted from black so the dark grey reads
-  ctx.fillRect(0, frameBottom, canvas.width, canvas.height - frameBottom);
   ctx.strokeStyle = '#3c3c46';
   ctx.lineWidth = 3 * dpr;
   ctx.setLineDash([12 * dpr, 8 * dpr]);
