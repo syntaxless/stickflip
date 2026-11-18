@@ -266,3 +266,45 @@ test('every air trick can be done popping off a slappy', async () => {
     assert.ok(bank && bank.mult >= 2, `${key}: banked ${bank?.mult}`);
   }
 });
+
+test('the manual speed ramp is obvious: about 1.45x after a second, 1.9x after two, capped at 2.2x', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  let t0 = null;
+  const at = {};
+  while (t < 3.2 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    g.update(STEP);
+    t += STEP;
+    if (g.sk.manual && t0 === null) t0 = t;
+    if (t0 !== null && g.sk.manual) for (const s of [1, 2]) if (!at[s] && t - t0 >= s) at[s] = g.speed / g.cruise;
+  }
+  assert.ok(at[1] > 1.4 && at[1] < 1.5, `1 s: ${at[1]}`);
+  assert.ok(at[2] > 1.85 && at[2] < 1.95, `2 s: ${at[2]}`);
+  assert.ok(g.speed / g.cruise <= PHYS.MANUAL_SPEED_MAX + 1e-6);
+});
+
+test('a faster manual pays more per pixel than the same distance at cruising speed', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  while (t < 2.5 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    g.update(STEP);
+    t += STEP;
+  }
+  const m = g.sk.manual;
+  assert.ok(m, 'in a manual');
+  assert.ok(m.pts > m.dist * m.type.perPx * 1.3, `${m.pts} vs flat ${m.dist * m.type.perPx}`);
+});

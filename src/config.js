@@ -42,8 +42,8 @@ export const PHYS = Object.freeze({
   // when you land from an ollie lands you into a manual. Lift to pop out of it.
   MANUAL_DELAY: 0.1, // s the drag must have lasted before landing to count
   MANUAL_MAX: 3, // s: the rider drops the board after this long
-  MANUAL_ACCEL: 0.18, // the speed keeps climbing in a manual: this share of cruising speed per second
-  MANUAL_SPEED_MAX: 1.6, // ...up to this share of cruising speed (reached after ~3.3 s, so MANUAL_MAX comes first)
+  MANUAL_ACCEL: 0.45, // the speed keeps climbing in a manual: this share of cruising speed per second (1.45x after 1 s, 1.9x after 2 s)
+  MANUAL_SPEED_MAX: 2.2, // ...up to this share of cruising speed (reached after ~2.7 s)
   // Ollie height follows speed a little (distance follows it a lot): up to
   // this share higher at top speed, lower at the slowest. The total, with the
   // charge, never goes over 1 + CHARGE_BOOST (no backflips on flat ground).
