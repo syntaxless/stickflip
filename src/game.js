@@ -1,5 +1,5 @@
 import { GAPS } from './gaps.js';
-import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS } from './config.js';
+import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS, MANUALS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -15,6 +15,10 @@ import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS } from './config.js'
 //
 // Holding the finger down when you reach a rail also locks a grind, and the
 // direction dragged while holding picks which one (see GRINDS in config.js).
+//
+// Landing from an ollie while still holding a drag back (manual) or forward
+// (nose manual) lands into a manual, which keeps the combo running; lifting
+// pops an ollie out of it. Holding and dragging down on the ground brakes.
 //
 // Swipes in the air do the other tricks (see TRICKS in config.js). A swipe
 // anywhere else acts like a tap, so it can never get you stuck.
@@ -95,7 +99,7 @@ export class Game {
     this.boomAt = null; // when the cop car blew up (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
-    this.hold = null; // { dir, used } while the finger (or Space) is held down
+    this.hold = null; // { dir, used, dirT } while the finger (or Space) is held down
     this.tilt = 0; // a seesaw plank under a grind: 0 level .. 1 tipped down to the ground
     this.setSeesaw(0);
     const sec = this.sections[cp.index];
@@ -110,6 +114,7 @@ export class Game {
       slope: this.groundAt(startX).slope || 0, // of the ground being rolled on
       ramp: null, // { qp, th, dir } while riding a quarter pipe (th: 0 = bottom, PI/2 = vertical)
       qpAir: null, // { qp, t, dur, v } while in the air above a quarter pipe
+      manual: null, // { key, type, dist, t } while manualling
       charge: null, // { t } while holding down on the ground to charge an ollie
       mode: 'idle',
       support: null, // landable surface being rolled on (null = ground)
@@ -154,15 +159,15 @@ export class Game {
     return Math.max(this.cruise * PHYS.SPEED_MIN, Math.min(this.cruise * PHYS.SPEED_MAX, v));
   }
 
-  // Holding speeds up (crouched push), dragging forward speeds up more,
-  // dragging back brakes. Not holding drifts back to cruising speed.
+  // Holding and dragging down brakes, holding otherwise pushes a little. Otherwise the speed drifts back to cruising.
   updateSpeed(dt) {
     const s = this.sk;
-    if (s.charge) {
-      const d = this.hold?.dir;
-      const fwd = d && (d === 'right') === (s.dir > 0);
-      const accel = !d ? PHYS.HOLD_ACCEL : fwd ? PHYS.PUSH_ACCEL : -PHYS.BRAKE;
-      this.speed = this.clampSpeed(this.speed + accel * dt);
+    if (s.manual) {
+      // a manual keeps speeding up the longer it lasts (see updateManual)
+    } else if (s.charge && this.hold?.dir === 'down' && this.hold.dirT >= PHYS.BRAKE_DELAY) {
+      this.speed = this.clampSpeed(this.speed - PHYS.BRAKE * dt);
+    } else if (s.charge) {
+      this.speed = this.clampSpeed(this.speed + PHYS.HOLD_ACCEL * dt); // the crouched push
     } else {
       const diff = this.cruise - this.speed;
       this.speed += Math.sign(diff) * Math.min(Math.abs(diff), PHYS.SPEED_RETURN * dt);
@@ -296,12 +301,23 @@ export class Game {
   // UI knows not to treat the lift as a tap or swipe.
   setHold(on, dir = null) {
     if (on) {
-      if (this.hold) this.hold.dir = dir;
-      else this.hold = { dir, used: false };
+      if (!this.hold) this.hold = { dir, used: false, dirT: 0 };
+      else if (this.hold.dir !== dir) {
+        this.hold.dir = dir;
+        this.hold.dirT = 0;
+      }
       return false;
     }
-    const used = !!this.hold?.used;
+    let used = !!this.hold?.used;
     this.hold = null;
+    // Lifting in a manual pops an ollie out of it, the combo still running.
+    if (this.sk.manual) {
+      this.endManual();
+      if (this.phase === 'playing') {
+        this.ollie(1);
+        used = true;
+      }
+    }
     return used;
   }
 
@@ -418,6 +434,7 @@ export class Game {
   update(dt) {
     this.time += dt;
     this.phaseTime += dt;
+    if (this.hold) this.hold.dirT += dt;
     this.updateSeesaw(dt);
     const s = this.sk;
     const fromX = s.x;
@@ -434,7 +451,9 @@ export class Game {
       return;
     }
 
+    if (s.manual && s.mode !== 'roll') this.endManual(); // rolled off an edge
     if (s.mode === 'roll') {
+      if (s.manual) this.updateManual(dt);
       if (s.charge) s.charge.t += dt;
       this.updateSpeed(dt);
       s.x += s.vx * dt;
@@ -701,7 +720,57 @@ export class Game {
     s.primed = false;
     this.emit('land');
     this.checkGaps('land');
+    if (this.manualKey()) return this.startManual(this.manualKey());
     this.bankCombo();
+  }
+
+  // Which manual a landing right now rolls into (null = none): from an ollie,
+  // still holding a drag back (manual) or forward (nose manual).
+  manualKey() {
+    const h = this.hold;
+    const s = this.sk;
+    if (!h || (h.dir !== 'left' && h.dir !== 'right') || h.dirT < PHYS.MANUAL_DELAY) return null;
+    if (s.poppedAt === null || s.dir < 0) return null;
+    return (h.dir === 'right') === (s.dir > 0) ? 'nose' : 'manual';
+  }
+
+  startManual(key) {
+    const s = this.sk;
+    s.charge = null;
+    s.manual = { key, type: MANUALS[key], dist: 0, t: 0 };
+    this.emit('manual', { key });
+  }
+
+  updateManual(dt) {
+    const s = this.sk;
+    const m = s.manual;
+    m.t += dt;
+    this.speed = Math.min(this.cruise * PHYS.MANUAL_SPEED_MAX, this.speed + this.cruise * PHYS.MANUAL_ACCEL * dt);
+    s.vx = s.dir * this.speed;
+    m.dist += this.speed * dt;
+    const d = this.hold?.dir;
+    if (d === 'left' || d === 'right') m.key = this.manualKeyFor(d);
+    m.type = MANUALS[m.key];
+    // Drop the board after MANUAL_MAX: the combo banks, the chain ends.
+    if (m.t >= PHYS.MANUAL_MAX) {
+      this.endManual();
+      this.bankCombo();
+      if (this.hold) this.hold.dir = null;
+    }
+  }
+
+  manualKeyFor(d) {
+    return (d === 'right') === (this.sk.dir > 0) ? 'nose' : 'manual';
+  }
+
+  // Add the manual to the combo (it banks when the chain ends on a plain landing).
+  endManual() {
+    const s = this.sk;
+    const m = s.manual;
+    s.manual = null;
+    if (m) this.speed = this.cruise; // the speed resets when the manual ends
+    if (!m || m.dist < 20) return;
+    this.addTrick(m.type.name, m.type.base + Math.round(m.dist * m.type.perPx));
   }
 
   bankCombo() {
@@ -715,6 +784,10 @@ export class Game {
   }
 
   finish() {
+    if (this.sk.manual) {
+      this.endManual();
+      this.bankCombo();
+    }
     this.setPhase('complete');
     this.emit('complete', { score: this.score });
   }
@@ -731,6 +804,7 @@ export class Game {
     s.ramp = null;
     s.qpAir = null;
     s.charge = null;
+    s.manual = null;
     s.mode = 'bail';
     s.bail = {
       x: s.x,

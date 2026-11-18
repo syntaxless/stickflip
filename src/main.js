@@ -332,8 +332,9 @@ function press(clientX, clientY) {
 
 // On the ground a touch charges an ollie: the skater crouches while the
 // finger is down and pops when it lifts, higher the longer it was held (a
-// quick tap is a normal ollie). Holding also pushes (speeds up); drag forward
-// while holding to push harder, back to brake. Draw a trick shape before
+// quick tap is a normal ollie). Hold and drag down to brake. Still holding a
+// drag back (manual) or forward (nose manual) when you land from an ollie
+// lands you into a manual; lift to pop out of it. Draw a trick shape before
 // lifting (after resting the finger, if you were dragging) and the ollie pops
 // straight into that trick. Other taps act on touch-down for the lowest
 // latency. In the air, a touch is followed until the finger lifts so it can
@@ -349,7 +350,9 @@ function holdDir(points) {
   const a = points[0];
   const b = points[points.length - 1];
   const dx = b.x - a.x;
-  if (Math.abs(dx) < HOLD_DRAG || Math.abs(dx) < Math.abs(b.y - a.y)) return null;
+  const dy = b.y - a.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < HOLD_DRAG) return null;
+  if (Math.abs(dy) > Math.abs(dx)) return dy > 0 ? 'down' : null;
   return dx > 0 ? 'right' : 'left';
 }
 
@@ -381,10 +384,10 @@ function endStroke(e) {
   stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
   const { read, points, charge, t0 } = stroke;
   stroke = null;
-  const popped = charge && game.releaseCharge();
-  const grinded = game.setHold(false);
+  const popped = (charge && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
+  const grinded = game.setHold(false); // lifting in a manual pops an ollie out of it
   if (popped) {
-    // Dragged a trick shape while charging: the ollie pops straight into it.
+    // Dragged a trick shape while charging (or manualling): the ollie pops straight into it.
     const r = readChargeStroke(points);
     showStroke(points, r);
     if (r.key !== 'tap') game.swipe(r.key);
@@ -480,7 +483,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     audio.unlock();
     if (keyHold && game.hold) {
-      if (dir === 'left' || dir === 'right') game.setHold(true, dir);
+      if (dir !== 'up') game.setHold(true, dir);
     } else if (game.phase === 'complete') press();
     else game.swipe(ARROW_TRICK[dir]);
   }
@@ -516,7 +519,7 @@ window.addEventListener('keyup', (e) => {
     if (charge) game.releaseCharge();
     const grinded = game.setHold(false);
     if (read && !grinded && game.phase === 'playing' && game.sk.mode === 'air') game.tap();
-  } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && keyHold && game.hold) {
+  } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'ArrowDown') && keyHold && game.hold) {
     game.setHold(true, null);
   }
 });

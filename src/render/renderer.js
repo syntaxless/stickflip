@@ -98,6 +98,9 @@ export class Renderer {
         case 'grind':
           this.sparks(e.x, e.y, 10);
           break;
+        case 'manual':
+          this.popup('bank', e.key === 'nose' ? 'NOSE MANUAL' : 'MANUAL');
+          break;
         case 'bank':
           this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
           break;
@@ -487,6 +490,7 @@ export class Renderer {
     else if (s.mode === 'grind') target = 'grind';
     else if (s.mode === 'air') target = s.flip ? 'flip' : s.primed ? 'prime' : 'air';
     else if (s.mode === 'ramp') target = 'crouch';
+    else if (s.manual) target = 'prime';
     else if (s.charge) target = game.chargeLevel() > 0.5 ? 'charge' : 'crouch'; // crouch deeper the longer you hold
     else if (this.squash > 0) target = 'crouch';
     if (advance) this.pose.update(target, dt);
@@ -496,6 +500,7 @@ export class Renderer {
     // after a quarter pipe they ride back out fakie, still facing right.
     const face = s.face;
     let pitch = s.mode === 'air' ? boardPitch(s.vy) * face : s.mode === 'roll' ? Math.atan(s.slope) : 0;
+    if (s.manual) pitch += s.manual.type.pitch * face; // manual: nose up, nose manual: nose down
     if (s.mode === 'grind') {
       const r = s.grind.surface;
       if (r.y1 !== undefined || r.arc) pitch = Math.atan(slopeOf(r, s.x));
