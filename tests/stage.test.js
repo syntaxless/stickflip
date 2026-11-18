@@ -846,3 +846,11 @@ test('dumpster: the lid stays shut until a grind starts on it, and a plain ollie
   assert.equal(closed.openAt, null);
   assert.notEqual(ridePark('grind', 0.7).game.openAt, null);
 });
+
+test('dumpster: the lid draws at every point of the swing', () => {
+  const d = STAGES[1].obstacles.find((o) => o.type === 'dumpster');
+  let calls = 0;
+  const g = new Proxy({}, { get: () => () => calls++ });
+  for (const open of [null, 0, 0.05, 0.1, 0.2, 0.34, 0.5, 2]) d.draw(g, { time: 0, open });
+  assert.ok(calls > 100);
+});
