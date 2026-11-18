@@ -27,15 +27,21 @@ export const PHYS = Object.freeze({
   QP_RAMP_BOOST: 1.6, // most a quarter pipe's curve speeds up to keep the riding pace across the screen
   QP_AIR_TIME: 1.15, // seconds in the air off a quarter pipe: straight up and back down at riding speed
   BAIL_RETRY_DELAY: 0.7, // seconds before a tap restarts after a bail
-  // Speed control. The rider rolls on his own at ROLL_SPEED. Holding down
-  // crouches and pushes (faster), holding and dragging forward pushes harder,
-  // holding and dragging back brakes. Let go and the speed drifts back to cruising.
+  // Speed control. The rider rolls on his own at ROLL_SPEED. Holding on the
+  // ground charges an ollie (and the crouched push builds a little speed, so a
+  // charged ollie carries further); holding and dragging DOWN (for BRAKE_DELAY, so a
+  // quick down-flick that is a trick shape doesn't count) brakes. Let go and
+  // the speed drifts back to cruising. Dragging forward no longer pushes harder.
   SPEED_MIN: 0.7, // slowest and fastest, as shares of cruising speed
   SPEED_MAX: 1.4,
   HOLD_ACCEL: 120, // px/s^2 while holding (crouched push)
-  PUSH_ACCEL: 260, // px/s^2 while holding and dragging forward
-  BRAKE: 420, // px/s^2 while holding and dragging back
-  SPEED_RETURN: 60, // px/s^2 back toward cruising once you let go
+  BRAKE: 420, // px/s^2 while holding and dragging down
+  BRAKE_DELAY: 0.2, // s the finger must have been dragging down before it brakes
+  SPEED_RETURN: 90, // px/s^2 back toward cruising once you let go
+  // Manuals: still holding and dragging back (manual) or forward (nose manual)
+  // when you land from an ollie lands you into a manual. Lift to pop out of it.
+  MANUAL_DELAY: 0.1, // s the drag must have lasted before landing to count
+  MANUAL_MAX: 3, // s: the rider drops the board after this long
   // Ollie height follows speed a little (distance follows it a lot): up to
   // this share higher at top speed, lower at the slowest. The total, with the
   // charge, never goes over 1 + CHARGE_BOOST (no backflips on flat ground).
@@ -68,6 +74,15 @@ export const GRINDS = Object.freeze({
   '50-50': { name: '50-50 GRIND', base: 100, pitch: 0 },
   '5-0': { name: '5-0 GRIND', base: 150, pitch: -0.22 },
   nose: { name: 'NOSE GRIND', base: 200, pitch: 0.22 },
+});
+
+// Manuals. Landing from an ollie while holding a drag back (manual) or forward
+// (nose manual) rolls on two wheels. The points are added to the running combo
+// like a trick (so the multiplier keeps building), by distance rolled.
+//   pitch: board tilt (radians, + = nose down)
+export const MANUALS = Object.freeze({
+  manual: { name: 'MANUAL', base: 50, perPx: 0.4, pitch: -0.3 },
+  nose: { name: 'NOSE MANUAL', base: 75, perPx: 0.5, pitch: 0.3 },
 });
 
 // Air tricks. The key is what the stroke in the air reads as (see SHAPES in
