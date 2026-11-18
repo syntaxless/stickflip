@@ -43,24 +43,39 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
         g.line(l, t - 5, r, t - 5, LID_LIT);
         for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, t - 4, px, t - 2, INSIDE);
       } else {
-        // Open, tipped back: a trapezoid behind the rim, narrower at the top.
-        const lidH = Math.round(10 * amount);
+        // Open, tipped well back: the dark inside of the bin shows between
+        // the rim and the lid, with a lumpy pile of rubbish in it.
+        const rise = Math.round(7 * amount); // height of the opening above the rim
+        const lidH = Math.round(14 * amount);
+        const base = t - 2 - rise; // where the lid hinges (its lower edge)
+        g.fill(l + 1, base, r - l - 1, rise + 2, INSIDE);
+        g.line(l + 2, t - 2, r - 2, t - 2, ink);
+        g.line(l + 1, base, l + 1, t - 2, ink);
+        g.line(r - 1, base, r - 1, t - 2, ink);
+        if (amount === 1) {
+          const bags = [
+            [l + 4, 8, 4, [150, 70, 160]], [l + 11, 7, 6, [236, 220, 120]], [l + 19, 9, 3, [200, 50, 50]],
+            [l + 25, 6, 5, [210, 210, 218]], [l + 32, 8, 5, [90, 150, 200]], [l + 39, 7, 4, [236, 220, 120]],
+            [r - 9, 8, 6, [150, 70, 160]], [r - 16, 6, 5, [200, 50, 50]],
+          ];
+          for (const [px, bh, bw, c] of bags) {
+            const top = t - 2 - Math.min(bh, rise + 1);
+            g.fill(px, top, bw, t - 2 - top, c);
+            g.line(px, top, px + bw - 1, top, ink);
+            g.pset(px, top + 1, shine);
+          }
+        }
+        // the lid, standing up behind: a trapezoid narrower at the top
         for (let i = 0; i < lidH; i++) {
-          const y = t - 2 - i;
+          const y = base - 1 - i;
           const inset = 2 + Math.floor(i / 3);
           g.line(l + inset, y, r - inset, y, i === lidH - 1 ? LID_LIT : LID);
           g.pset(l + inset - 1, y, ink);
           g.pset(r - inset + 1, y, ink);
         }
-        g.line(l + 5, t - 2 - lidH, r - 5, t - 2 - lidH, ink);
-        if (amount === 1) for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, t - 2 - lidH + 2, px, t - 4, LID_LIT); // lid ribs
-        // dark inside of the bin between lid and rim, with rubbish peeking out
-        g.line(l + 2, t - 1, r - 2, t - 1, INSIDE);
-        g.line(l + 2, t - 2, r - 2, t - 2, ink);
-        if (amount === 1) {
-          const junk = [[l + 10, 2, [150, 70, 160]], [l + 19, 1, [236, 220, 120]], [r - 16, 2, [200, 50, 50]], [r - 26, 1, [236, 220, 120]]];
-          for (const [px, hh, c] of junk) g.fill(px, t - 1 - hh, 3, hh, c);
-        }
+        g.line(l + 2, base, r - 2, base, ink);
+        g.line(l + 5, base - 1 - lidH, r - 5, base - 1 - lidH, ink);
+        if (amount === 1) for (const px of [l + 12, Math.round((l + r) / 2), r - 12]) g.line(px, base - lidH + 1, px, base - 3, LID_LIT); // lid ribs
       }
 
       // Body: flat colour, lit rim (the grind line), ribs, shaded foot.
