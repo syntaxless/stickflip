@@ -10,8 +10,8 @@ export default {
   id: 'dumpster',
   name: 'Dumpster',
   obstacles: [
-    bank({ x: 320, run: 100, y1: G, y2: G - 50, material: 'wood' }),
-    groundBag({ x: 446 }), // scenery between the ramp and the dumpster
+    bank({ x: 280, run: 100, y1: G, y2: G - 50, material: 'wood' }),
+    groundBag({ x: 425 }), // scenery between the ramp and the dumpster
     dumpster({ x: 470 }),
   ],
 };
