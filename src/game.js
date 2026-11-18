@@ -94,8 +94,10 @@ export class Game {
     const cp = this.checkpoint;
     this.section = cp.index;
     this.score = cp.score;
-    this.combo = []; // tricks done since leaving the ground: { name, points }
+    this.combo = []; // tricks done since leaving the ground: { name, points, base, exempt }
+    this.recent = []; // names of the last SCORE.RUN_WINDOW banked tricks of the run (for the repeat decay)
     this.gapsDone = new Set(); // named gaps earned this attempt
+    this.openAt = null; // when a grind opened the dumpster lid (game time), or null
     this.boomAt = null; // when the cop car blew up (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
@@ -666,10 +668,21 @@ export class Game {
 
   // `kind` 'gap' is a named gap bonus. Gaps and any trick worth SPECIAL_POINTS
   // or more are "specials": the renderer banners them and the audio plays a jingle.
+  //
+  // Repeats are worth less (SCORE.REPEAT_*): the same trick again in this combo,
+  // or already in the recent tricks of the run. Specials and gaps are exempt.
   addTrick(name, points, kind = 'trick') {
-    this.combo.push({ name, points });
-    this.emit('trick', { name, points });
-    if (kind === 'gap' || points >= SPECIAL_POINTS) this.emit('special', { name, points, kind });
+    const exempt = kind === 'gap' || points >= SPECIAL_POINTS;
+    let value = points;
+    if (!exempt) {
+      const inCombo = this.combo.filter((t) => t.name === name && !t.exempt).length;
+      const inRun = this.recent.filter((n) => n === name).length;
+      const f = Math.max(SCORE.REPEAT_MIN, SCORE.REPEAT_COMBO ** inCombo * SCORE.REPEAT_RUN ** inRun);
+      value = Math.round(points * f);
+    }
+    this.combo.push({ name, points: value, base: points, exempt });
+    this.emit('trick', { name, points: value, base: points });
+    if (exempt) this.emit('special', { name, points, kind });
   }
 
   // A named gap (src/gaps.js): this take-off and this landing, once per attempt.
@@ -693,6 +706,7 @@ export class Game {
     s.y = surfaceY(surface, s.x);
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
+    if (surface.opens && this.openAt === null) this.openAt = this.time;
     this.emit('grind', { key });
     this.checkGaps('grind');
   }
@@ -737,7 +751,7 @@ export class Game {
   startManual(key) {
     const s = this.sk;
     s.charge = null;
-    s.manual = { key, type: MANUALS[key], dist: 0, t: 0 };
+    s.manual = { key, type: MANUALS[key], dist: 0, pts: 0, t: 0 };
     this.emit('manual', { key });
   }
 
@@ -748,6 +762,8 @@ export class Game {
     this.speed = Math.min(this.cruise * PHYS.MANUAL_SPEED_MAX, this.speed + this.cruise * PHYS.MANUAL_ACCEL * dt);
     s.vx = s.dir * this.speed;
     m.dist += this.speed * dt;
+    // The faster it gets the more each pixel pays (the risk is the reward).
+    m.pts += this.speed * dt * m.type.perPx * (this.speed / this.cruise);
     const d = this.hold?.dir;
     if (d === 'left' || d === 'right') m.key = this.manualKeyFor(d);
     m.type = MANUALS[m.key];
@@ -770,11 +786,12 @@ export class Game {
     s.manual = null;
     if (m) this.speed = this.cruise; // the speed resets when the manual ends
     if (!m || m.dist < 20) return;
-    this.addTrick(m.type.name, m.type.base + Math.round(m.dist * m.type.perPx));
+    this.addTrick(m.type.name, m.type.base + Math.round(m.pts));
   }
 
   bankCombo() {
     if (!this.combo.length) return;
+    this.recent = [...this.recent, ...this.combo.filter((t) => !t.exempt).map((t) => t.name)].slice(-SCORE.RUN_WINDOW);
     const sum = this.combo.reduce((a, t) => a + t.points, 0);
     const mult = this.combo.length;
     const total = sum * mult;

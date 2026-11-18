@@ -153,6 +153,7 @@ test('a manual keeps speeding up, and the speed resets when it ends', () => {
 });
 
 import { TRICKS } from '../src/config.js';
+import { LEVELS } from '../src/levels/index.js';
 
 // Land into a manual, hold it a moment, lift to pop out, then do the trick.
 test('every air trick can be done out of a manual, scoring in the same combo (x2)', () => {
@@ -188,4 +189,122 @@ test('every air trick can be done out of a manual, scoring in the same combo (x2
     assert.equal(bank.mult, 2, key);
     assert.ok(names.includes('MANUAL') && names.includes(TRICKS[key].name), `${key}: ${names}`);
   }
+});
+
+// ------------------------------------------------ tricks out of grinds
+
+const railLevel = LEVELS[2]; // First Rail
+for (const [name, dir, grind] of [['50-50', null, '50-50 GRIND'], ['5-0', 'left', '5-0 GRIND']]) {
+  test(`every air trick can be done popping off a ${name}, scoring in the same combo`, () => {
+    for (const key of Object.keys(TRICKS)) {
+      if (key === 'circle') continue; // needs big air
+      const g = new Game(railLevel);
+      g.tap();
+      let t = 0;
+      let grindT = null;
+      let swiped = false;
+      let bank = null;
+      const names = [];
+      while (t < 5 && g.phase === 'playing') {
+        if (Math.abs(t - 0.75) < STEP / 2) g.tap(); // ollie at the rail
+        if (Math.abs(t - 0.75) < STEP / 2) g.setHold(true, dir); // lock the grind by holding (50-50 or 5-0)
+        if (g.sk.mode === 'grind' && grindT === null) grindT = t;
+        if (grindT !== null && !swiped && t >= grindT + 0.2) {
+          g.setHold(false); // (a held grind ignores the lift) then a new touch pops
+          g.tap(); // the pop
+          g.swipe(key);
+          swiped = true;
+        }
+        g.update(STEP);
+        t += STEP;
+        for (const e of g.drainEvents()) {
+          if (e.type === 'trick') names.push(e.name);
+          if (e.type === 'bank') bank = e;
+        }
+      }
+      assert.ok(swiped, `${key}: never grinded`);
+      assert.equal(g.phase === 'bailed', false, `${key} out of ${name}: bailed (${g.bailReason})`);
+      assert.ok(names.includes(grind) && names.includes(TRICKS[key].name), `${key}: ${names}`);
+      assert.ok(bank && bank.mult >= 2, `${key}: banked ${bank?.mult}`);
+    }
+  });
+}
+
+// A slappy (riding into a low curb with the finger held) is a grind too: a new
+// touch pops off it and a trick goes straight into the combo.
+test('every air trick can be done popping off a slappy', async () => {
+  const { STAGES } = await import('../src/stages/index.js');
+  for (const key of Object.keys(TRICKS)) {
+    if (key === 'circle') continue;
+    const g = new Game(STAGES[1], null, { index: 0, score: 0 });
+    g.tap();
+    g.setHold(true);
+    let t = 0;
+    let slapT = null;
+    let swiped = false;
+    const names = [];
+    let bank = null;
+    while (t < 5 && g.phase === 'playing') {
+      if (g.sk.mode === 'grind' && slapT === null) slapT = t;
+      if (slapT !== null && !swiped && t >= slapT + 0.2) {
+        g.setHold(false);
+        g.tap();
+        g.swipe(key);
+        swiped = true;
+      }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) {
+        if (e.type === 'trick') names.push(e.name);
+        if (e.type === 'bank') bank = e;
+      }
+      if (bank) break; // (the stage rides on into the next obstacle)
+    }
+    assert.ok(swiped, `${key}: never slappied`);
+    assert.notEqual(g.phase, 'bailed', `${key} out of a slappy: bailed (${g.bailReason})`);
+    assert.ok(names.includes('SLAPPY 50-50 GRIND') && names.includes(TRICKS[key].name), `${key}: ${names}`);
+    assert.ok(bank && bank.mult >= 2, `${key}: banked ${bank?.mult}`);
+  }
+});
+
+test('the manual speed ramp is steep: about 1.8x after a second, 2.6x after two, capped at 3x', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  let t0 = null;
+  const at = {};
+  while (t < 3.2 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    g.update(STEP);
+    t += STEP;
+    if (g.sk.manual && t0 === null) t0 = t;
+    if (t0 !== null && g.sk.manual) for (const s of [1, 2]) if (!at[s] && t - t0 >= s) at[s] = g.speed / g.cruise;
+  }
+  assert.ok(at[1] > 1.75 && at[1] < 1.85, `1 s: ${at[1]}`);
+  assert.ok(at[2] > 2.55 && at[2] < 2.65, `2 s: ${at[2]}`);
+  assert.ok(g.speed / g.cruise <= PHYS.MANUAL_SPEED_MAX + 1e-6);
+});
+
+test('a faster manual pays more per pixel than the same distance at cruising speed', () => {
+  const g = new Game(level);
+  g.tap();
+  const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
+  let t = 0;
+  while (t < 2.5 && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k, d] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true, d || null);
+    }
+    g.update(STEP);
+    t += STEP;
+  }
+  const m = g.sk.manual;
+  assert.ok(m, 'in a manual');
+  assert.ok(m.pts > m.dist * m.type.perPx * 1.3, `${m.pts} vs flat ${m.dist * m.type.perPx}`);
 });

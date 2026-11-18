@@ -36,24 +36,51 @@ export function cone({ x, w = 30, h = 48, base = WORLD.GROUND }) {
   };
 }
 
-// A jersey barrier: a long, low concrete block with an orange band, grindable
-// like a curb.
+// A water-fillable plastic traffic barrier: orange, tapered body with vertical
+// molded ribs, a dark fill cap on top and notched feet. Grindable like a curb.
+const BARRIER = {
+  lit: [255, 184, 72],
+  body: [255, 118, 0],
+  dark: [204, 78, 0],
+  deep: [150, 50, 0],
+  cap: [40, 24, 16],
+};
+
 export function barrier({ x, w = 220, h = 36, base = WORLD.GROUND, landable = true, grindable = true }) {
   const solid = box({ x, w, h, landable, grindable, base });
   return {
     ...solid,
     type: 'barrier',
-    draw(g, fx) {
-      solid.draw(g, fx);
+    draw(g) {
       const [l, t, r, b] = [P(x), P(base - h), P(x + w) - 1, P(base) - 1];
-      const y1 = t + 3;
-      const y2 = Math.min(b - 2, t + 6);
-      for (let px = l + 2; px < r - 3; px += 8) {
-        g.fill(px, y1, 4, y2 - y1 + 1, orange);
-        g.fill(px + 4, y1, 4, y2 - y1 + 1, white);
+      const W = r - l + 1;
+      const foot = b - 1; // the two bottom rows are feet, with notches between them
+      const notch = (c) => (c >= 0.27 && c < 0.37) || (c >= 0.6 && c < 0.71);
+      const inside = (px, py) => {
+        if (px < l || px > r || py < t || py > b) return false;
+        if (py >= foot && notch((px - l) / W)) return false;
+        const inset = py === t ? 2 : py === t + 1 ? 1 : 0; // tapered ends
+        return px >= l + inset && px <= r - inset;
+      };
+      for (let py = t; py <= b; py++) {
+        for (let px = l; px <= r; px++) {
+          if (!inside(px, py)) continue;
+          const edge = !inside(px - 1, py) || !inside(px + 1, py) || !inside(px, py - 1) || !inside(px, py + 1);
+          let c = BARRIER.body;
+          if (py === t + 1) c = BARRIER.lit;
+          else if (py >= foot) c = BARRIER.deep;
+          else if (py >= foot - 2) c = BARRIER.dark;
+          const rib = (px - l - 6) % 15; // vertical molded ribs: a groove with a lit edge
+          if (py > t + 1 && py < foot - 2 && px > l + 3 && px < r - 3) {
+            if (rib === 0) c = BARRIER.dark;
+            else if (rib === 1) c = BARRIER.lit;
+          }
+          g.pset(px, py, edge ? ink : c);
+        }
       }
-      g.line(l + 1, y1 - 1, r - 1, y1 - 1, ink);
-      g.line(l + 1, y2 + 1, r - 1, y2 + 1, ink);
+      const mid = l + (W >> 1);
+      g.fill(mid - 1, t + 1, 4, 2, BARRIER.cap); // the dark fill cap
+      g.pset(mid - 1, t + 1, ink);
     },
   };
 }

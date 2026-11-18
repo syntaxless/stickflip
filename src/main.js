@@ -368,7 +368,13 @@ canvas.addEventListener('pointerdown', (e) => {
   // Riding up the quarter pipe: start drawing now, the trick goes on lift.
   else if (!screen && game.phase === 'playing' && game.sk.mode === 'ramp') stroke.read = true;
   // A tap that would lock a grind can't wait for the finger to lift.
-  else if (!inAir || game.grindHint() === 'ready') press(e.clientX, e.clientY);
+  else if (!inAir || game.grindHint() === 'ready') {
+    // Touching down on a rail pops off it right away; keep reading the stroke so
+    // a shape drawn from here goes into a trick (a plain tap is just the pop).
+    const onGrind = game.phase === 'playing' && game.sk.mode === 'grind';
+    press(e.clientX, e.clientY);
+    if (onGrind) stroke.read = stroke.grindPop = true;
+  }
   else stroke.read = true;
   if (game.phase === 'playing') game.setHold(true);
 });
@@ -382,7 +388,7 @@ canvas.addEventListener('pointermove', (e) => {
 function endStroke(e) {
   if (!stroke || e.pointerId !== stroke.id) return;
   stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
-  const { read, points, charge, t0 } = stroke;
+  const { read, points, charge, t0, grindPop } = stroke;
   stroke = null;
   const popped = (charge && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
   const grinded = game.setHold(false); // lifting in a manual pops an ollie out of it
@@ -398,6 +404,7 @@ function endStroke(e) {
   if (game.phase !== 'playing' || game.sk.mode !== 'air') return showStroke(points, { key: 'landed first' });
   const r = readStroke(points);
   showStroke(points, r);
+  if (grindPop && r.key === 'tap') return; // just the pop off the rail
   if (r.key === 'tap') game.tap();
   else game.swipe(r.key, (performance.now() - t0) / 1000);
 }
@@ -633,6 +640,7 @@ function setupTestMenu() {
     #tm h2{margin:0 0 8px;font:700 14px monospace;color:#e8730c;display:flex;justify-content:space-between;align-items:center}
     #tm .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
     #tm .st{width:100%;color:#9cf;font-size:12px}
+    #tm-btn,#tm button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     #tm button{font:700 12px monospace;color:#fff;background:#2a2a2a;border:2px solid #666;border-radius:4px;padding:9px 11px;min-height:40px;min-width:40px}
     #tm button.go{background:#e8730c;border-color:#fff}
     #tm .x{background:#600;border-color:#fff}`;
@@ -643,10 +651,33 @@ function setupTestMenu() {
   const panel = document.createElement('div');
   panel.id = 'tm';
   panel.hidden = true;
+  // A Home Screen app on iOS can swallow the click that follows a touch, so
+  // buttons act on touchend too (a tap, not a scroll drag), once per press.
+  const onTap = (el, fn) => {
+    let last = -1e9;
+    let from = null;
+    const run = (e) => {
+      const now = performance.now();
+      if (now - last < 700) return e.preventDefault?.(); // the click that follows a handled touch
+      last = now;
+      fn(e);
+    };
+    el.addEventListener('touchstart', (e) => (from = e.touches[0] && { x: e.touches[0].clientX, y: e.touches[0].clientY }), { passive: true });
+    el.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      if (!from || !t || Math.hypot(t.clientX - from.x, t.clientY - from.y) > 10) return; // a scroll, not a tap
+      e.preventDefault();
+      run(e);
+    });
+    el.addEventListener('click', run);
+  };
+  let status = null;
   const jump = (q) => {
+    if (status) status.textContent = `JUMPING TO ${q}...`;
     const u = new URL(location.href);
     u.searchParams.set('level', q);
-    location.href = u.toString();
+    u.searchParams.delete('v'); // the update check adds it back if the page is stale
+    location.assign(u.toString());
   };
   const add = (parent, tag, text, cls) => {
     const el = document.createElement(tag);
@@ -656,17 +687,18 @@ function setupTestMenu() {
     return el;
   };
   const head = add(panel, 'h2', 'JUMP TO (TEST SAVES ONLY)');
-  add(head, 'button', 'CLOSE', 'x').onclick = () => (panel.hidden = true);
+  onTap(add(head, 'button', 'CLOSE', 'x'), () => (panel.hidden = true));
+  status = add(panel, 'div', '', 'st');
   LEVELS.forEach((st, si) => {
     const row = add(panel, 'div', '', 'row');
     add(row, 'div', `STAGE ${si + 1}`, 'st');
     (st.sections || []).forEach((sec, ci) => {
-      add(row, 'button', `${ci + 1} ${sec.name}`.toUpperCase()).onclick = () => jump(si === 0 ? String(ci + 1) : `${si + 1}-${ci + 1}`);
+      onTap(add(row, 'button', `${ci + 1} ${sec.name}`.toUpperCase()), () => jump(si === 0 ? String(ci + 1) : `${si + 1}-${ci + 1}`));
     });
   });
   const row = add(panel, 'div', '', 'row');
-  add(row, 'button', 'MEGA RAMP (SECRET)', 'go').onclick = () => jump('secret');
-  btn.onclick = () => (panel.hidden = !panel.hidden);
+  onTap(add(row, 'button', 'MEGA RAMP (SECRET)', 'go'), () => jump('secret'));
+  onTap(btn, () => (panel.hidden = !panel.hidden));
   for (const el of [btn, panel]) el.addEventListener('pointerdown', (e) => e.stopPropagation());
   document.body.append(btn, panel);
 }

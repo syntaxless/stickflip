@@ -2,11 +2,11 @@ import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
 
-// A street trash can: a box to ollie over (its sides slam you, and the lid is
+// A street trash can, the same size as a fire hydrant (54 x 90): a box to ollie over (its sides slam you, and the lid is
 // no place to land). Drawn as chunky shaded pixel art: a black outline, a grey
 // body with a lighter panel lit from the left, dark slots with a glint beside
 // each, and a flat lid with a handle.
-export function trashCan({ x, w = 66, h = 102, base = WORLD.GROUND }) {
+export function trashCan({ x, w = 54, h = 90, base = WORLD.GROUND }) {
   const can = box({ x, w, h, base });
   return {
     ...can,

@@ -311,47 +311,89 @@ function drawCop(g, r, b, age) {
   }
 }
 
-// The cartoon blast: a white flash, a fireball that swells and shrinks, flying
-// scrap, then smoke rising for as long as the wreck sits there.
+// The cartoon blast, in chunky pixel-art: everything sits on a 3x3 grid of "big
+// pixels", the colours are hard flat steps (white, yellow, orange, red, smoke grey)
+// with a black outline, and it plays as a few separate frames, not a smooth tween.
+// No circles, no blur, no fades. Frames last 0.1 s; the whole fireball is over by 0.8 s.
+const CELL = 3;
+const FIRE = [[255, 255, 235], [255, 230, 80], [255, 140, 30], [255, 60, 40], [170, 30, 30]];
+const SMOKE = [[92, 92, 100], [140, 140, 150]];
+// fireball radius (in big pixels) for each 0.1 s frame; the blast swells and then collapses
+const FIREBALL = [3, 5, 7, 8, 7, 5, 4, 2];
+const LUMPS = [[0, 0, 1], [-0.6, -0.25, 0.7], [0.6, -0.3, 0.75], [-0.2, -0.65, 0.65], [0.3, 0.15, 0.6]];
+
+// draw a set of big-pixel cells (keys "i,j") with a black outline round it
+function cells(g, cx, cy, set, colourOf) {
+  const key = (i, j) => i + ',' + j;
+  for (const k of set) {
+    const [i, j] = k.split(',').map(Number);
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (!set.has(key(i + di, j + dj))) g.fill(cx + (i + di) * CELL, cy + (j + dj) * CELL, CELL, CELL, ink);
+    }
+  }
+  for (const k of set) {
+    const [i, j] = k.split(',').map(Number);
+    g.fill(cx + i * CELL, cy + j * CELL, CELL, CELL, colourOf(i, j));
+  }
+}
+
 function drawBlast(g, l, r, b, age, time) {
   const cx = (l + r) >> 1;
   const cy = b - 18;
+  const frame = Math.floor(age / 0.1);
   if (age < 0.12) {
-    // the flash: a small white star over the middle of the car, not a box
-    g.circle(cx, cy, 9, white, true);
-    g.fill(cx - 15, cy - 1, 31, 3, white);
-    g.fill(cx - 1, cy - 15, 3, 31, white);
-  }
-  if (age < 0.8) {
-    const grow = age < 0.45 ? Math.sin((Math.max(0, age - 0.05) / 0.4) * (Math.PI / 2)) : 1 - (age - 0.45) / 0.35;
-    const R = Math.round(6 + 24 * Math.max(0, grow));
-    const lumps = [[0, 0, 1], [-0.55, -0.2, 0.7], [0.55, -0.25, 0.75], [-0.2, -0.6, 0.65], [0.25, 0.1, 0.6]];
-    for (const [c, tint] of [[[255, 60, 40], 1], [[255, 140, 30], 0.82], [[255, 230, 80], 0.6], [[255, 255, 235], 0.32]]) {
-      for (const [dx, dy, sz] of lumps) g.circle(cx + Math.round(dx * R), cy + Math.round(dy * R), Math.max(1, Math.round(R * sz * tint)), c, true);
+    // the flash: a white square-pixel star
+    const set = new Set();
+    for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
+      const n = Math.abs(i) + Math.abs(j);
+      if ((i === 0 || j === 0) && n <= 5) set.add(i + ',' + j);
+      else if (n <= 2) set.add(i + ',' + j);
     }
+    cells(g, cx, cy, set, (i, j) => (Math.abs(i) + Math.abs(j) <= 1 ? FIRE[0] : FIRE[1]));
   }
-  // scrap thrown out of it: small dark, orange and white bits on arcs
+  if (frame < FIREBALL.length) {
+    const R = FIREBALL[frame];
+    const set = new Set();
+    for (const [dx, dy, sz] of LUMPS) {
+      const lr = Math.max(1, Math.round(R * sz));
+      const lx = Math.round(dx * R), ly = Math.round(dy * R);
+      for (let i = -lr; i <= lr; i++) for (let j = -lr; j <= lr; j++) {
+        // a blocky octagon rather than a round disc, with a few bites taken out per frame
+        if (Math.abs(i) + Math.abs(j) > lr * 1.5) continue;
+        if (lr > 3 && hash(i + lx + 20, j + ly + 20 + frame * 7) % 9 === 0 && Math.abs(i) + Math.abs(j) > lr) continue;
+        set.add((i + lx) + ',' + (j + ly));
+      }
+    }
+    const late = frame >= 5; // dying down: the white and yellow are gone
+    cells(g, cx, cy, set, (i, j) => {
+      const d = Math.hypot(i, j * 1.1) / Math.max(1, R);
+      const step = d < 0.3 ? 0 : d < 0.55 ? 1 : d < 0.8 ? 2 : 3;
+      return FIRE[Math.min(4, Math.max(step + (late ? 1 : 0), frame >= 7 ? 4 : 0))];
+    });
+  }
+  // scrap thrown out of it: square chunks in four colours, stepping along their arcs
   if (age < 1.2) {
+    const t = Math.floor(age / 0.1) * 0.1; // moves in steps
     for (let k = 0; k < 12; k++) {
       const ang = (hash(k, 7) % 628) / 100;
       const speed = 30 + (hash(k, 9) % 70);
-      const px = cx + Math.round(Math.cos(ang) * speed * age);
-      const py = cy - Math.abs(Math.round(Math.sin(ang) * speed * age)) - Math.round(14 * age) + Math.round(110 * age * age * 0.5);
-      const c = [[60, 58, 66], [255, 140, 30], white, [140, 140, 150]][k % 4];
+      const px = cx + Math.round((Math.cos(ang) * speed * t) / CELL) * CELL;
+      const py = cy - Math.abs(Math.round((Math.sin(ang) * speed * t) / CELL) * CELL) - Math.round((14 * t) / CELL) * CELL + Math.round((55 * t * t) / CELL) * CELL;
+      const c = [[60, 58, 66], FIRE[2], FIRE[0], SMOKE[1]][k % 4];
+      g.fill(px - 1, py - 1, 4, 4, ink);
       g.fill(px, py, 2, 2, c);
     }
   }
-  // smoke: grey puffs that rise and thin out, over and over
+  // smoke: flat grey squares that rise in steps, two shades, black outline, no fade
   if (age > 0.3) {
-    for (let i = 0; i < 6; i++) {
-      const phase = (time * 0.5 + i / 6) % 1;
-      const sx = cx + (i - 2.5) * 5 + Math.round(Math.sin(time * 1.3 + i * 2) * 3);
-      const sy = b - 28 - Math.round(phase * 38);
-      const size = 3 + Math.round(phase * 4);
-      const shade = 70 + Math.round(phase * 90);
-      for (let yy = 0; yy < size; yy++) {
-        for (let xx = 0; xx < size; xx++) if ((xx + yy + i) % (1 + Math.floor(phase * 2.5)) === 0) g.pset(sx + xx, sy + yy, [shade, shade, shade + 6]);
-      }
+    for (let i = 0; i < 4; i++) {
+      const step = Math.floor((time * 2.5 + i / 4 * 5) % 5); // 5 positions of the rise
+      const sx = cx + (i - 1.5) * 9 + (hash(i, step) % 2) * 3;
+      const sy = b - 30 - step * 6;
+      const n = step < 2 ? 1 : step < 4 ? 2 : 3; // grows as it rises
+      const set = new Set();
+      for (let a = 0; a < n; a++) for (let c = 0; c < n; c++) set.add(a + ',' + c);
+      cells(g, Math.round(sx / CELL) * CELL, Math.round(sy / CELL) * CELL, set, (a, c) => SMOKE[(a + c + i) % 2 && step > 1 ? 1 : 0]);
     }
   }
 }

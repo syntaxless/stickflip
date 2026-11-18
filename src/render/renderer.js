@@ -80,6 +80,7 @@ export class Renderer {
     this.popups = { bank: null };
     this.specials = []; // banners for gaps and big tricks: { text, kind, age }
     this.squash = 0;
+    this.pulse = 0; // the combo readout swells for a moment when a trick is added
     this.buttons = [];
     this.time = 0;
   }
@@ -102,7 +103,11 @@ export class Renderer {
           this.popup('bank', e.key === 'nose' ? 'NOSE MANUAL' : 'MANUAL');
           break;
         case 'bank':
-          this.popup('bank', e.mult > 1 ? `+${e.total} ${e.mult}X COMBO` : `+${e.total}`);
+          // big, and bigger for a bigger combo
+          this.popup('bank', `+${e.total}`, { scale: e.mult >= 3 ? 3 : 2, sub: e.mult > 1 ? `${e.mult}X COMBO` : null });
+          break;
+        case 'trick':
+          this.pulse = 0.25;
           break;
         case 'special':
           this.specials.push({ text: `${e.name} +${e.points}`, kind: e.kind, age: 0 });
@@ -146,8 +151,9 @@ export class Renderer {
     }
   }
 
-  popup(slot, text) {
-    this.popups[slot] = { text, life: 1.1 };
+  // opts: scale (text size, default 1) and sub (a smaller line under it)
+  popup(slot, text, opts = {}) {
+    this.popups[slot] = { text, life: opts.scale > 1 ? 1.5 : 1.1, scale: opts.scale || 1, sub: opts.sub || null };
   }
 
   // ----------------------------------------------------------- drawing
@@ -166,7 +172,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, open: game.openAt === null ? null : game.time - game.openAt });
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -181,6 +187,7 @@ export class Renderer {
 
   step(game, dt) {
     this.squash = Math.max(0, this.squash - dt);
+    this.pulse = Math.max(0, this.pulse - dt);
     if (game.sk.mode === 'grind' && Math.random() < 0.6) this.sparks(game.sk.x, game.sk.y, 1);
     for (const p of this.particles) {
       p.life -= dt;
@@ -227,7 +234,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, open: game.openAt === null ? null : game.time - game.openAt });
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -592,11 +599,18 @@ export class Renderer {
 
   // Centred under the HUD (which ends about y 33).
   drawPopups(inset = 0) {
-    const rows = [['bank', 42]];
-    for (const [slot, y] of rows) {
-      const p = this.popups[slot];
-      if (!p || (p.life < 0.3 && Math.floor(p.life * 20) % 2)) continue; // blink out
-      this.g.text(fit(this.g, p.text, RES.W - 2 * inset - 8), RES.W / 2, y, red, 1, 'center');
+    const g = this.g;
+    const room = RES.W - 2 * inset - 8;
+    const p = this.popups.bank;
+    if (!p || (p.life < 0.3 && Math.floor(p.life * 20) % 2)) return; // blink out
+    let sc = p.scale;
+    while (sc > 1 && g.textWidth(p.text, sc) > room) sc--;
+    const y = sc > 1 ? 34 : 42;
+    if (sc > 1) g.text(p.text, RES.W / 2 + 1, y + 1, ink, sc, 'center'); // a drop shadow so it reads on any sky
+    g.text(fit(g, p.text, room), RES.W / 2, y, red, sc, 'center');
+    if (p.sub) {
+      g.text(p.sub, RES.W / 2 + 1, y + sc * 7 + 4, ink, 1, 'center');
+      g.text(p.sub, RES.W / 2, y + sc * 7 + 3, red, 1, 'center');
     }
   }
 
@@ -622,14 +636,25 @@ export class Renderer {
     const total = opts.total ?? game.score;
     g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
     if (game.phase === 'playing') this.drawSpeed(game, R, 15);
-    if (game.combo.length && game.phase === 'playing') {
+    // A manual in progress counts as a trick in the combo already (it joins it for good when it ends).
+    const m = game.sk.manual;
+    const live = m ? [{ name: m.type.name, points: m.type.base + Math.round(m.pts), base: 0 }] : [];
+    const tricks = [...game.combo, ...live];
+    if (tricks.length && game.phase === 'playing') {
       // Under the level name, kept clear of the right-hand column: the oldest
       // tricks drop off the front when the list gets too long.
       const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(total)}`), 75) - 8;
-      const names = game.combo.map((t) => t.name);
+      // a repeated trick shows what it is worth now (e.g. KICKFLIP 75)
+      const names = tricks.map((t) => (t.points < t.base ? `${t.name} ${t.points}` : t.name));
       let text = names.join(' + ');
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
       g.text(fit(g, text, room), L, 15, red);
+      // The running combo value, big: it swells as each trick is added.
+      const comboTotal = tricks.reduce((a, t) => a + t.points, 0) * tricks.length;
+      const sc = this.pulse > 0 ? 3 : 2;
+      const readout = `+${comboTotal}${tricks.length > 1 ? ` ${tricks.length}X` : ''}`;
+      g.text(readout, L + 1, 25, ink, sc);
+      g.text(readout, L, 24, red, sc);
     }
   }
 
@@ -638,8 +663,8 @@ export class Renderer {
     const g = this.g;
     const cells = 10;
     const lo = game.cruise * PHYS.SPEED_MIN;
-    const hi = game.cruise * PHYS.SPEED_MAX;
-    const n = Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo));
+    const hi = game.cruise * (game.sk.manual ? PHYS.MANUAL_SPEED_MAX : PHYS.SPEED_MAX); // a manual's climb has its own top
+    const n = Math.max(1, Math.min(cells, Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo))));
     const bx = right - cells * 4 + 1;
     g.text('SPEED', bx - 4, y, red, 1, 'right');
     for (let i = 0; i < cells; i++) {

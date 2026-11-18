@@ -175,10 +175,9 @@ and a drop off the Euro Gap stairs.
 
 **Stage 2** (street): Curb (ollie over a long, low curb, or land on it and roll or
 grind along the top), Step Up (ollie up three steps onto a ledge, then drop off
-its end), Trash Can (a tall can: a well-timed ollie clears it) and Ring of Fire (a
-kicker, a gap, and a burning ring high up: only a charged ollie flies through it
-for the 600 bonus; a small jump passes under it with no modifier, and feet below
-or head above the ring is a bail).
+its end), Trash Can (a tall can: a well-timed ollie clears it) and Dumpster (a kicker and a
+dumpster: ollie over it for BIG LEAP, land on the lid and roll off, or hold a tap
+to grind the lid edge; too early or too late slams into its side).
 
 **Stage 3** (construction site): Rock (a tiny rock stops the board dead, so ollie
 it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long

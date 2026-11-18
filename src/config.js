@@ -42,8 +42,8 @@ export const PHYS = Object.freeze({
   // when you land from an ollie lands you into a manual. Lift to pop out of it.
   MANUAL_DELAY: 0.1, // s the drag must have lasted before landing to count
   MANUAL_MAX: 3, // s: the rider drops the board after this long
-  MANUAL_ACCEL: 0.18, // the speed keeps climbing in a manual: this share of cruising speed per second
-  MANUAL_SPEED_MAX: 1.6, // ...up to this share of cruising speed (reached after ~3.3 s, so MANUAL_MAX comes first)
+  MANUAL_ACCEL: 0.8, // the speed keeps climbing in a manual: this share of cruising speed per second (1.8x after 1 s, 2.6x after 2 s)
+  MANUAL_SPEED_MAX: 3, // ...up to this share of cruising speed (reached after 2.5 s)
   // Ollie height follows speed a little (distance follows it a lot): up to
   // this share higher at top speed, lower at the slowest. The total, with the
   // charge, never goes over 1 + CHARGE_BOOST (no backflips on flat ground).
@@ -66,6 +66,16 @@ export const SPECIAL_POINTS = 300;
 
 export const SCORE = Object.freeze({
   GRIND_PER_PX: 1, // grind points per pixel travelled on the rail
+  // Repeating a trick pays less, so variety wins. Each repeat of the same trick
+  // in one combo is worth REPEAT_COMBO times the last one (100%, 50%, 25%...);
+  // the same trick already banked in the last RUN_WINDOW tricks of the run is
+  // worth REPEAT_RUN times as much per earlier time (it recovers as other tricks
+  // push it out of the window). Never below REPEAT_MIN of its value. Specials
+  // (SPECIAL_POINTS or more) and named gap bonuses are exempt.
+  REPEAT_COMBO: 0.5,
+  REPEAT_RUN: 0.85,
+  REPEAT_MIN: 0.1,
+  RUN_WINDOW: 8,
 });
 
 // Grinds. A timed tap locks a 50-50. Holding the finger down as you reach the

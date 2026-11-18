@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../src/game.js';
 import { STAGES } from '../src/stages/index.js';
+import trashCanLevel from '../src/levels/trash-can.js';
+import rockLevel from '../src/levels/rock.js';
 
 const STEP = 1 / 120;
 const stage1 = STAGES[0];
@@ -117,10 +119,10 @@ function ride2(index, taps) {
   return { game, events };
 }
 
-test('stage 2 is Curb, Step Up, Trash Can and Ring of Fire', () => {
+test('stage 2 is Curb, Step Up, Trash Can and Dumpster', () => {
   assert.deepEqual(
     stage2.sections.map((s) => s.name),
-    ['Curb', 'Step Up', 'Trash Can', 'Ring of Fire'],
+    ['Curb', 'Step Up', 'Trash Can', 'Dumpster'],
   );
 });
 
@@ -144,40 +146,81 @@ test('trash can: no ollie slams, and the lid is no place to land', () => {
   assert.equal(late.phase, 'bailed');
 });
 
-function chargedRing(t) {
-  const game = new Game(STAGES[1], null, { index: 3, score: 0 });
-  game.tap();
-  game.setHold(true);
-  game.startCharge();
-  const tricks = new Set();
-  let up = false;
-  for (let now = 0; now < 10 && game.phase === 'playing'; now += STEP) {
-    if (!up && now >= t) {
-      up = true;
-      game.setHold(false);
-      game.releaseCharge();
-    }
-    game.update(STEP);
-    for (const e of game.drainEvents()) if (e.type === 'trick') tricks.add(e.name);
+test('trash can: the same size as the fire hydrant, and a plain ollie clears it in a wide window', () => {
+  const can = trashCanLevel.obstacles.find((o) => o.type === 'trash-can');
+  const hydrant = rockLevel.obstacles.find((o) => o.type === 'hydrant');
+  assert.equal(can.solids[0].w, hydrant.solids[0].w);
+  assert.equal(can.solids[0].h, hydrant.solids[0].h);
+  // Tap times (seconds from the checkpoint) that clear it, bail short, or slam late.
+  for (const t of [0.7, 0.8, 0.9, 0.96]) {
+    const { game } = ride2(2, [t]);
+    assert.equal(game.phase, 'playing', `tap at ${t}: ${game.bailReason}`);
   }
-  return { game, tricks };
-}
-
-test('ring of fire: a normal ollie passes under it with no bonus, none drops in the gap', () => {
-  for (let t = 0.76; t <= 0.98; t += 0.02) {
-    const { game, events } = ride2(3, [t]);
-    assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
-    assert.ok(!events.some((e) => e.type === 'trick' && e.name === 'RING OF FIRE'), `no bonus at ${t}`);
-  }
-  assert.equal(ride2(3, [0.5]).game.bailReason, 'gap', 'too early comes up short');
-  assert.equal(ride2(3, []).game.phase, 'bailed', 'no ollie drops in the gap');
+  assert.equal(ride2(2, [0.6]).game.phase, 'bailed', 'too early clips the lid');
+  assert.equal(ride2(2, [1.02]).game.bailReason, 'slam', 'too late slams the side');
 });
 
-test('ring of fire: only a charged ollie gets through it, for the bonus', () => {
-  for (const t of [0.66, 0.7, 0.72]) {
-    const { game, tricks } = chargedRing(t);
+// Section 4 (the dumpster), ridden from its start. `mode`: 'tap' (a plain ollie),
+// 'grind' (a tap with the finger held, to lock a grind) or 'charge' (a charged
+// ollie released at t). Returns the game and the names of every trick and gap.
+function ridePark(mode, t0) {
+  const game = new Game(STAGES[1], null, { index: 3, score: 0 });
+  game.tap();
+  if (mode === 'charge') {
+    game.setHold(true);
+    game.startCharge();
+  }
+  const names = new Set();
+  let done = false;
+  for (let t = 0; t < 6 && game.phase === 'playing'; t += STEP) {
+    if (!done && t >= t0) {
+      done = true;
+      if (mode === 'charge') {
+        game.setHold(false);
+        game.releaseCharge();
+      } else {
+        game.tap();
+        if (mode === 'grind') game.setHold(true);
+      }
+    }
+    game.update(STEP);
+    for (const e of game.drainEvents()) if (e.type === 'trick' || e.type === 'gap') names.add(e.name);
+  }
+  return { game, names };
+}
+
+test('dumpster: rolling into it, or an ollie off the kicker too early, slams', () => {
+  assert.equal(ride2(3, []).game.bailReason, 'slam');
+  for (const t of [0.4, 0.46, 0.5]) assert.equal(ridePark('tap', t).game.bailReason, 'slam', `tap at ${t}`);
+});
+
+test('dumpster: a normal ollie lands on the lid and rolls off (0.56 to 0.82 s), or clears it for BIG LEAP (0.86 to 1.0 s)', () => {
+  for (const t of [0.58, 0.7, 0.8]) {
+    const { game, names } = ridePark('tap', t);
+    assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
+    assert.ok(!names.has('BIG LEAP'), `no leap at ${t}`);
+  }
+  for (const t of [0.86, 0.94, 1.0]) {
+    const { game, names } = ridePark('tap', t);
+    assert.equal(game.phase, 'complete', `tap at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('BIG LEAP'), `leap at ${t}: ${[...names]}`);
+  }
+  assert.equal(ridePark('tap', 1.1).game.bailReason, 'slam', 'too late slams into the side');
+});
+
+test('dumpster: a tap with the finger held locks a grind on the lid edge', () => {
+  for (const t of [0.58, 0.7, 0.8]) {
+    const { game, names } = ridePark('grind', t);
+    assert.equal(game.phase, 'complete', `grind at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('50-50 GRIND'), `grind at ${t}: ${[...names]}`);
+  }
+});
+
+test('dumpster: a charged ollie also clears it for BIG LEAP (0.68 to 0.86 s)', () => {
+  for (const t of [0.68, 0.76, 0.84]) {
+    const { game, names } = ridePark('charge', t);
     assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
-    assert.ok(tricks.has('RING OF FIRE'), `charged at ${t}: ${[...tricks]}`);
+    assert.ok(names.has('BIG LEAP'), `charged at ${t}: ${[...names]}`);
   }
 });
 
@@ -776,9 +819,11 @@ test('stage 5: the cop sits at the wheel (the driver side, on the right as you l
   assert.ok(Math.min(...cops(1.4).map(([cx]) => cx)) > r + 30, 'well clear of the wreck');
 });
 
-test('stage 2: the Oslo City Limits sign is background decor only, and Step Up still clears', () => {
-  const sign = stage2.obstacles.find((o) => o.type === 'city-sign');
-  assert.ok(sign, 'the sign is in 2-2');
+test('stage 1: the Oslo City Limits sign sits just past the rock as decor only, and is gone from 2-2', () => {
+  const stage1 = STAGES.find((s) => s.id === 'stage-1');
+  assert.ok(!stage2.obstacles.some((o) => o.type === 'city-sign'), 'no sign left in stage 2');
+  assert.equal(stage1.obstacles.filter((o) => o.type === 'city-sign').length, 1);
+  const sign = stage1.obstacles.find((o) => o.type === 'city-sign');
   assert.equal(sign.surfaces.length + sign.solids.length + (sign.ground || []).length, 0);
   const g = { fill() {}, rect() {}, line() {}, pset() {}, circle() {}, text(s) { texts.push(s); } };
   const texts = [];
@@ -794,4 +839,10 @@ test('cop sprites: every row is the same width and every letter is in the palett
   }
   assert.equal(CAR_SPRITE.length, 32);
   assert.equal(CAR_SPRITE[0].length, 44);
+});
+
+test('dumpster: the lid stays shut until a grind starts on it, and a plain ollie never opens it', () => {
+  const closed = ridePark('tap', 0.7).game;
+  assert.equal(closed.openAt, null);
+  assert.notEqual(ridePark('grind', 0.7).game.openAt, null);
 });
