@@ -162,7 +162,9 @@ export class Game {
   // Holding and dragging down brakes, holding otherwise pushes a little. Otherwise the speed drifts back to cruising.
   updateSpeed(dt) {
     const s = this.sk;
-    if (s.charge && this.hold?.dir === 'down' && this.hold.dirT >= PHYS.BRAKE_DELAY) {
+    if (s.manual) {
+      // a manual keeps speeding up the longer it lasts (see updateManual)
+    } else if (s.charge && this.hold?.dir === 'down' && this.hold.dirT >= PHYS.BRAKE_DELAY) {
       this.speed = this.clampSpeed(this.speed - PHYS.BRAKE * dt);
     } else if (s.charge) {
       this.speed = this.clampSpeed(this.speed + PHYS.HOLD_ACCEL * dt); // the crouched push
@@ -740,8 +742,11 @@ export class Game {
   }
 
   updateManual(dt) {
-    const m = this.sk.manual;
+    const s = this.sk;
+    const m = s.manual;
     m.t += dt;
+    this.speed = Math.min(this.cruise * PHYS.MANUAL_SPEED_MAX, this.speed + this.cruise * PHYS.MANUAL_ACCEL * dt);
+    s.vx = s.dir * this.speed;
     m.dist += this.speed * dt;
     const d = this.hold?.dir;
     if (d === 'left' || d === 'right') m.key = this.manualKeyFor(d);
@@ -763,6 +768,7 @@ export class Game {
     const s = this.sk;
     const m = s.manual;
     s.manual = null;
+    if (m) this.speed = this.cruise; // the speed resets when the manual ends
     if (!m || m.dist < 20) return;
     this.addTrick(m.type.name, m.type.base + Math.round(m.dist * m.type.perPx));
   }
