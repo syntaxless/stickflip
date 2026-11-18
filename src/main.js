@@ -143,7 +143,7 @@ async function finishRun() {
   }
 }
 
-// `back`: opened from the bail screen, so it can be closed again.
+// `back`: opened from a stage's own start/bail screen, so it can be closed again.
 const selectScreen = (back = false) => ({ type: 'select', stages: LEVELS, unlocked, back, t: 0 });
 
 function scoresScreen(stageIndex, score, bonus, highlight) {
@@ -319,8 +319,8 @@ function press(clientX, clientY) {
       return;
     }
   }
-  // The STAGES button on the bail screen opens the stage list.
-  if (game.phase === 'bailed' && clientX != null && stagesAvailable()) {
+  // The STAGES button on a stage's start and bail screens opens the stage list.
+  if ((game.phase === 'ready' || game.phase === 'bailed') && clientX != null && stagesAvailable()) {
     const p = toWorld(clientX, clientY);
     if (renderer.hitButton(p.x, p.y) === 'stages') {
       screen = selectScreen(true);
@@ -574,7 +574,7 @@ function frame(now) {
     highScores,
     gameCenter: gameCenterReady(),
     attract: levelIndex !== SECRET_INDEX && game.section === 0,
-    stagesButton: stagesAvailable(),
+    stagesButton: stagesAvailable() && (game.phase === 'bailed' || game.section === 0),
   });
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
