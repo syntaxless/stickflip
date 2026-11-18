@@ -4,7 +4,7 @@ import { Game } from '../src/game.js';
 import { STAGES } from '../src/stages/index.js';
 import { PHYS } from '../src/config.js';
 import { RES } from '../src/render/pixel.js';
-import { drawSticker } from '../src/render/sticker.js';
+import { drawSticker, loserSpot, SUCKS_TEXT } from '../src/render/sticker.js';
 import { RAG_SIZE } from '../src/ragdoll.js';
 import { POSES } from '../src/render/stickman.js';
 
@@ -123,34 +123,46 @@ test('the camera keeps following the fallen rider (hip, lowered to the old body 
 
 // --- the LOSER sticker
 
+const CX = RES.W / 2;
 function paint(opts) {
   const px = new Map();
   const g = { pset: (x, y, c) => px.set(`${x},${y}`, c.join(',')) };
-  drawSticker(g, RES.W - 56, 40, 'LOSER', opts);
+  const spot = loserSpot(CX);
+  drawSticker(g, spot.x, spot.y, 'LOSER', { ...spot.opts, ...opts });
   return px;
 }
+const bounds = (px) => {
+  const xs = [...px.keys()].map((k) => k.split(',').map(Number));
+  return { x1: Math.min(...xs.map((p) => p[0])), x2: Math.max(...xs.map((p) => p[0])), y1: Math.min(...xs.map((p) => p[1])), y2: Math.max(...xs.map((p) => p[1])) };
+};
 
 test('the LOSER sticker is black with white lettering and a white border, tilted', () => {
   const px = paint();
   const colours = new Set(px.values());
   assert.ok(colours.has('0,0,0') && colours.has('255,255,255'), 'black and white');
-  const xs = [...px.keys()].map((k) => k.split(',').map(Number));
-  const w = Math.max(...xs.map((p) => p[0])) - Math.min(...xs.map((p) => p[0]));
-  const h = Math.max(...xs.map((p) => p[1])) - Math.min(...xs.map((p) => p[1]));
-  const flat = paint({ ang: 0 });
-  const fx = [...flat.keys()].map((k) => k.split(',').map(Number));
-  const fh = Math.max(...fx.map((p) => p[1])) - Math.min(...fx.map((p) => p[1]));
-  assert.ok(h > fh + 6, 'tilted, so taller than the flat sticker');
-  assert.ok(w > 60);
+  const t = bounds(px);
+  const f = bounds(paint({ ang: 0 }));
+  assert.ok(t.y2 - t.y1 > f.y2 - f.y1 + 3, 'tilted, so taller than the flat sticker');
+  assert.ok(t.x2 - t.x1 < 50, 'a small sticker, not a banner');
   assert.deepEqual([...paint()], [...paint()], 'the same every time');
 });
 
-test('the sticker has a peeled corner and stays in the top corner, clear of the BAIL text and the rider row', () => {
+test('the sticker is stuck on the bottom-right end of SUCKS TO SUCK, overlapping its corner', () => {
   const px = paint();
-  const xs = [...px.keys()].map((k) => k.split(',').map(Number));
-  assert.ok(px.size > 0 && [...px.values()].some((c) => c === '200,200,200'), 'a corner peel');
-  for (const [x, y] of xs) {
-    assert.ok(x >= 0 && x < RES.W && y >= 0 && y < 70, `(${x},${y}) is on screen, above the ground`);
-    assert.ok(x > RES.W / 2 + 45, 'right of the BAIL! and SUCKS TO SUCK text');
-  }
+  const b = bounds(px);
+  const textRight = CX + SUCKS_TEXT.width / 2;
+  const textBottom = SUCKS_TEXT.y + 7;
+  assert.ok(b.x1 < textRight + 4 && b.x2 > textRight, 'butts up against the end of the line');
+  assert.ok(b.y1 < textBottom && b.y2 > textBottom, 'overlaps its bottom edge');
+  assert.ok(b.x1 > CX, 'only touches the end of the line, not the middle');
+  assert.ok([...px.values()].some((c) => c === '200,200,200'), 'a corner peel');
+});
+
+test('the sticker stays clear of the BAIL! heading, the TAP TO TRY AGAIN line and the restart button', () => {
+  const b = bounds(paint());
+  assert.ok(b.y1 > 45, 'below BAIL!');
+  const tapLeft = CX - (16 * 6 - 1) / 2;
+  const tapRight = CX + (16 * 6 - 1) / 2;
+  assert.ok(b.y2 < 82 || b.x1 > tapRight || b.x2 < tapLeft, 'above the TAP TO TRY AGAIN line');
+  assert.ok(b.y2 < 96 && b.x2 < RES.W, 'above the restart button, on screen');
 });

@@ -43,3 +43,14 @@ export function drawSticker(g, cx, cy, text, { w = 76, h = 28, ang = -0.2, scale
     }
   }
 }
+
+// Where the LOSER sticker goes: stuck on the end of the SUCKS TO SUCK line, overlapping its
+// bottom-right corner, as if someone had added it to the sentence. `cx` is the screen centre.
+export const SUCKS_TEXT = { y: 64, width: 77 }; // the line's top and width (13 characters at scale 1)
+export function loserSpot(cx) {
+  return {
+    x: Math.round(cx + SUCKS_TEXT.width / 2 + 22),
+    y: SUCKS_TEXT.y + 5,
+    opts: { w: 44, h: 17, ang: -0.14, scale: 1, peel: 5 },
+  };
+}
