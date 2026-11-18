@@ -136,7 +136,7 @@ const bounds = (px) => {
   return { x1: Math.min(...xs.map((p) => p[0])), x2: Math.max(...xs.map((p) => p[0])), y1: Math.min(...xs.map((p) => p[1])), y2: Math.max(...xs.map((p) => p[1])) };
 };
 
-test('the LOSER sticker is black with white lettering and a white border, tilted', () => {
+test('the LOSER sticker is black with white lettering, tilted', () => {
   const px = paint();
   const colours = new Set(px.values());
   assert.ok(colours.has('0,0,0') && colours.has('255,255,255'), 'black and white');
