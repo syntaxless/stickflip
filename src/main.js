@@ -390,7 +390,7 @@ function endStroke(e) {
   stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
   const { read, points, charge, t0, grindPop } = stroke;
   stroke = null;
-  const popped = (charge && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
+  const popped = ((charge || game.sk.charge) && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
   const grinded = game.setHold(false); // lifting in a manual pops an ollie out of it
   if (popped) {
     // Dragged a trick shape while charging (or manualling): the ollie pops straight into it.
@@ -523,7 +523,7 @@ window.addEventListener('keyup', (e) => {
   if ((e.code === 'Space' || e.code === 'Enter') && keyHold) {
     const { read, charge } = keyHold;
     keyHold = null;
-    if (charge) game.releaseCharge();
+    if (charge || game.sk.charge) game.releaseCharge(); // (a hold kept through the retry wait crouches when the rider rolls off)
     const grinded = game.setHold(false);
     if (read && !grinded && game.phase === 'playing' && game.sk.mode === 'air') game.tap();
   } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'ArrowDown') && keyHold && game.hold) {

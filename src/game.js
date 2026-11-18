@@ -92,6 +92,7 @@ export class Game {
     this.phase = 'ready';
     this.phaseTime = 0;
     this.time = 0;
+    this.wait = 0; // seconds the rider still stands ready after a restart tap, before rolling off
     const cp = this.checkpoint;
     this.section = cp.index;
     this.score = cp.score;
@@ -145,7 +146,7 @@ export class Game {
   restartStage() {
     this.checkpoint = { index: 0, score: 0 };
     this.reset();
-    this.start();
+    this.start(true);
   }
 
   // Riding into the next section makes it the checkpoint.
@@ -219,18 +220,32 @@ export class Game {
       case 'bailed':
         if (this.phaseTime >= PHYS.BAIL_RETRY_DELAY) {
           this.reset();
-          this.start();
+          this.start(true);
         }
         break;
       // 'complete' taps are handled by the UI buttons.
     }
   }
 
-  start() {
+  // `retry`: a restart after a bail. The rider stands ready for RESTART_DELAY
+  // first, so the player can lift the finger that restarted and tap again, or
+  // keep it down to crouch, before anything is in reach.
+  start(retry = false) {
     this.setPhase('playing');
+    if (retry && PHYS.RESTART_DELAY > 0) {
+      this.wait = PHYS.RESTART_DELAY;
+      return;
+    }
+    this.go();
+  }
+
+  // The rider rolls off. A finger still down becomes the crouch (charge).
+  go() {
+    this.wait = 0;
     this.sk.mode = 'roll';
     this.sk.vx = this.speed;
     this.emit('push');
+    if (this.hold) this.startCharge();
   }
 
   skaterTap() {
@@ -443,6 +458,11 @@ export class Game {
 
     if (this.phase === 'ready') return;
     if (this.phase === 'bailed') return this.updateBail(dt);
+    if (this.wait > 0) {
+      this.wait -= dt;
+      if (this.wait <= 1e-9) this.go();
+      return;
+    }
     if (this.phase === 'complete') {
       if (!this.level.sections) {
         // A level that ends on its quarter pipe: the rider coasts to a stop at the foot

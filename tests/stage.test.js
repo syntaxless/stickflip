@@ -265,7 +265,7 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 });
 
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
-  const clears = [[0.85, 1.8], [0.8], [0.5, 1.45], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
+  const clears = [[0.85, 1.8], [0.8], [0.62, 1.57], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
   clears.forEach((taps, i) => {
     const game = ride3(i, taps);
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
@@ -386,7 +386,7 @@ test('stage 5 is the skate park: seven checkpoints', () => {
 });
 
 test('stage 5: a timed ollie clears every checkpoint', () => {
-  const clears = [[0.3, 1.3], [0.35, 0.9], [0.8], [], [0.8], [0.8], [0.85]];
+  const clears = [[0.48, 1.48], [0.35, 0.9], [0.8], [], [0.8], [0.8], [0.85]];
   clears.forEach((taps, i) => {
     const game = ride5(i, taps, i === 4); // the long fun box rail is a grind: hold to lock it
     assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage5.sections[i].name} bailed: ${game.bailReason}`);
