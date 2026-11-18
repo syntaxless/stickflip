@@ -1,4 +1,5 @@
 import { GAPS } from './gaps.js';
+import { createRagdoll, stepRagdoll } from './ragdoll.js';
 import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS, MANUALS } from './config.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
@@ -821,41 +822,41 @@ export class Game {
     s.charge = null;
     s.manual = null;
     s.mode = 'bail';
+    const slam = reason === 'slam' || reason === 'wall';
+    const vx = slam ? -s.dir * 110 : s.vx * 0.7;
+    const vy = Math.min(s.vy, 0) - 640;
     s.bail = {
       x: s.x,
       y: s.y,
-      vx: reason === 'slam' || reason === 'wall' ? -s.dir * 60 : s.vx * 0.55,
-      vy: Math.min(s.vy, 0) - 380,
-      ang: 0,
-      angV: (reason === 'slam' ? -9 : 8) * s.dir,
+      vx,
+      vy,
+      rag: createRagdoll(s.x, s.y, s.dir || 1, vx, vy, (slam ? -16 : 14) * s.dir),
       bx: s.x,
       by: s.y,
-      bvx: reason === 'slam' ? -s.dir * 140 : s.vx * 1.15,
-      bvy: -260,
+      bvx: slam ? -s.dir * 170 : s.vx * 1.15,
+      bvy: -460,
       bang: 0,
-      bangV: 14,
+      bangV: 20 * s.dir,
     };
+    this.syncBail();
     this.setPhase('bailed');
     this.emit('bail', { reason });
+  }
+
+  // The body is the ragdoll; b.x/b.y (hip, lowered to the old body height) is what the camera follows.
+  syncBail() {
+    const b = this.sk.bail;
+    const hip = b.rag.pts.hip;
+    b.x = hip.x;
+    b.y = hip.y + 12;
   }
 
   updateBail(dt) {
     const b = this.sk.bail;
     const g = PHYS.GRAVITY;
-    // body
-    b.vy += g * dt;
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    b.ang += b.angV * dt;
-    const floor = this.groundAt(b.x).y;
-    if (b.y >= floor) {
-      b.y = floor;
-      b.vy *= -0.25;
-      b.vx *= 0.6;
-      b.angV *= 0.4;
-      if (Math.abs(b.vy) < 40) b.vy = 0;
-    }
-    // board
+    stepRagdoll(b.rag, dt, (x) => this.groundAt(x).y);
+    this.syncBail();
+    // the board tumbles on its own: it bounces higher and keeps spinning until it settles flat
     b.bvy += g * dt;
     b.bx += b.bvx * dt;
     b.by += b.bvy * dt;
@@ -863,13 +864,16 @@ export class Game {
     const bfloor = this.groundAt(b.bx).y;
     if (b.by >= bfloor) {
       b.by = bfloor;
-      b.bvy *= -0.35;
-      b.bvx *= 0.75;
-      b.bangV *= 0.3;
-      if (Math.abs(b.bvy) < 40) {
+      b.bvy *= -0.5;
+      b.bvx *= 0.82;
+      b.bangV *= 0.7;
+      if (Math.abs(b.bvy) < 50) {
         b.bvy = 0;
-        b.bang = Math.round(b.bang / Math.PI) * Math.PI; // settle flat
-        b.bangV = 0;
+        if (Math.abs(b.bangV) < 3) {
+          b.bang = Math.round(b.bang / Math.PI) * Math.PI; // settle flat
+          b.bangV = 0;
+          b.bvx *= 0.9;
+        }
       }
     }
   }

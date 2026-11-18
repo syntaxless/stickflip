@@ -64,7 +64,14 @@ function poly(g, tf, pts, color) {
 
 // Draws the stick figure (no board) as a black silhouette: 1-pixel limbs,
 // a solid round head and a cap.
-export function drawFigure(g, tf, p) {
+// `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
+// (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
+export function drawFigure(g, tf, p, opts = {}) {
+  const { k = 1, face = 1, tilt = 0 } = opts;
+  const ct = Math.cos(tilt);
+  const st = Math.sin(tilt);
+  // a point on the cap, offset (ox, oy) from the head in pose units
+  const cap = (ox, oy) => pt(p.head.x + (ct * ox * face - st * oy) * k, p.head.y + (st * ox * face + ct * oy) * k);
   const W = PAL.ink;
   poly(g, tf, [p.footB, p.kneeB, p.hip], W);
   poly(g, tf, [p.footF, p.kneeF, p.hip], W);
@@ -75,9 +82,9 @@ export function drawFigure(g, tf, p) {
   // a slightly bigger head: two r=3 discs offset by one pixel make an 8x8 blob (7px before)
   for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, W, true);
   // cap: crown + peak, following the body's rotation
-  poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
-  poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);
-  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17 + PX, p.head.y - 4)], PAL.ink); // the peak, one pixel longer
+  poly(g, tf, [cap(-9, -7), cap(9, -7)], PAL.ink);
+  poly(g, tf, [cap(-7, -10), cap(7, -10)], PAL.ink);
+  poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle

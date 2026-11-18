@@ -118,6 +118,9 @@ const FONT = {
   '=': b('0', '0', '11111', '0', '11111', '0', '0'),
 };
 
+// The 5x7 bitmap of a character, rows as bit masks (for text that is drawn turned).
+export const glyph = (ch) => FONT[ch] || FONT['?'];
+
 export class Pix {
   constructor(ctx, w = RES.W, h = RES.H) {
     this.ctx = ctx;
