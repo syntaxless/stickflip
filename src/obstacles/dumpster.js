@@ -66,10 +66,11 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       g.fill(l + 1, t - 4, span - 1, 4, INSIDE);
       g.line(l + 1, t - 4, r - 1, t - 4, ink);
       g.line(l + 2, t - 3, r - 2, t - 3, BODY_DARK); // the back rim, just visible
-      // [centre x from the left, width, height above the rim, bag]
-      for (const [bx, bw, bh, bag] of [
-        [5, 11, 11, BLACK], [13, 10, 14, WHITE], [22, 12, 10, BLUE], [30, 10, 15, BLACK], [38, 12, 11, WHITE], [45, 10, 13, BLUE],
-      ]) trashBag(g, l + bx, t + 1, bw, bh + 1, bag);
+      // Four chunky bags, piled up high on the left and sloping down to the right:
+      // [centre x from the left, bottom above the rim, width, height, bag]
+      for (const [bx, lift, bw, bh, bag] of [
+        [9, 0, 15, 13, BLACK], [23, 0, 15, 12, BLUE], [38, 0, 14, 9, WHITE], [14, 9, 13, 11, WHITE],
+      ]) trashBag(g, l + bx, t + 1 - lift, bw, bh + 1, bag);
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
       g.fill(l, t, span + 1, bodyBottom - t + 1, BODY);
@@ -128,6 +129,19 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
         g.pset(wx + 1, wheelTop + 1, steel);
         g.pset(wx + 2, wheelTop, white);
       }
+    },
+  };
+}
+
+// A bin bag dumped on the street: scenery only, with no surfaces or solids, so it
+// can never slam you or change a jump (you roll and ollie straight over it).
+export function groundBag({ x, base = WORLD.GROUND }) {
+  return {
+    type: 'ground-bag',
+    surfaces: [],
+    solids: [],
+    draw(g) {
+      trashBag(g, P(x), P(base) - 1, 12, 9, BLUE);
     },
   };
 }

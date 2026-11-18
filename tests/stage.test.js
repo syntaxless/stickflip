@@ -840,3 +840,9 @@ test('cop sprites: every row is the same width and every letter is in the palett
   assert.equal(CAR_SPRITE.length, 32);
   assert.equal(CAR_SPRITE[0].length, 44);
 });
+
+test('dumpster: the bag on the street is scenery, with no surface or solid to hit', () => {
+  const bag = STAGES[1].obstacles.find((o) => o.type === 'ground-bag');
+  assert.ok(bag);
+  assert.deepEqual([bag.surfaces.length, bag.solids.length], [0, 0]);
+});
