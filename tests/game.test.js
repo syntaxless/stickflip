@@ -69,7 +69,7 @@ test('kickflip into the grind scores a 2x combo', () => {
 test('kickflip in, grind, pop and kickflip out scores big', () => {
   const { game } = play(level1, [0.75, 0.77, 1.32, 1.8, 1.82]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.ok(game.score >= 1400, `score ${game.score}`);
+  assert.ok(game.score >= 1150, `score ${game.score}`); // (the second kickflip in the combo is a repeat: half value)
 });
 
 test('a tap during a flip is ignored, so the rail is clipped', () => {
@@ -282,7 +282,7 @@ test('stairs: a timed tap grinds the handrail down', () => {
 test('stairs: kickflip in, grind, pop and kickflip out scores big', () => {
   const { game } = playInputs(stairsLevel, [[0.6, 'tap'], [0.62, 'tap'], [1.16, 'tap'], [1.4, 'tap'], [1.42, 'tap']]);
   assert.equal(game.phase, 'complete', `bailed: ${game.bailReason}`);
-  assert.ok(game.score >= 1100, `score ${game.score}`);
+  assert.ok(game.score >= 875, `score ${game.score}`); // (the second kickflip in the combo is a repeat: half value)
 });
 
 // ---------------------------------------------------------------- levels 4-6 + secret

@@ -626,7 +626,8 @@ export class Renderer {
       // Under the level name, kept clear of the right-hand column: the oldest
       // tricks drop off the front when the list gets too long.
       const room = R - L - Math.max(g.textWidth(`TOTAL ${pad(total)}`), 75) - 8;
-      const names = game.combo.map((t) => t.name);
+      // a repeated trick shows what it is worth now (e.g. KICKFLIP 75)
+      const names = game.combo.map((t) => (t.points < t.base ? `${t.name} ${t.points}` : t.name));
       let text = names.join(' + ');
       for (let i = 1; i < names.length && g.textWidth(text) > room; i++) text = `...${names.slice(i).join(' + ')}`;
       g.text(fit(g, text, room), L, 15, red);
