@@ -93,7 +93,7 @@ const refreshScores = (stageIndex = runStage) =>
 // that one run (before the no-bail bonus) and you're taken there. It counts
 // toward the run total like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_SCORE = 8000;
+const SECRET_SCORE = 15000;
 
 // A run is one stage, plus the Mega Ramp when it's earned: two slots.
 const RUN_SLOTS = 2;
