@@ -173,7 +173,6 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
-    this.drawSpeedLines(game);
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -553,23 +552,6 @@ export class Renderer {
     }
     drawBoard(g, squashX(base, boardSx), spin, lift);
     drawFigure(g, squashX(base, bodySx), this.pose.pose);
-  }
-
-  // Streaks trailing the rider when he is well over cruising speed, as in a
-  // manual that keeps speeding up: more, longer and faster the quicker he goes.
-  drawSpeedLines(game) {
-    const s = game.sk;
-    const r = game.speed / game.cruise - 1;
-    if (game.phase !== 'playing' || s.mode !== 'roll' || r < 0.15) return;
-    const n = Math.min(14, Math.round(4 + r * 8));
-    const len = Math.round(6 + r * 14); // game pixels
-    for (let i = 0; i < n; i++) {
-      const lane = ((i * 37) % 11) / 11; // 0..1, fixed per streak
-      const y = P(s.y) - 4 - Math.round(lane * 38);
-      const run = (((this.time * (60 + r * 120) + i * 53) % 90) + 90) % 90;
-      const x = P(s.x) - 14 - Math.round(run);
-      this.g.fill(x - len, y, len, 1, i % 3 === 0 ? red : ink);
-    }
   }
 
   drawParticles() {
