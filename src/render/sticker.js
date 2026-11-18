@@ -9,7 +9,7 @@ const hash = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0) % 997;
 const FLAP = [200, 200, 200];
 const FLAP_EDGE = [96, 96, 96];
 
-export function drawSticker(g, cx, cy, text, { w = 76, h = 28, ang = -0.2, scale = 2, peel = 9 } = {}) {
+export function drawSticker(g, cx, cy, text, { w = 76, h = 28, ang = -0.2, scale = 2, peel = 9, inset = 2 } = {}) {
   const co = Math.cos(ang);
   const si = Math.sin(ang);
   const tw = text.length * 6 * scale - scale;
@@ -29,7 +29,7 @@ export function drawSticker(g, cx, cy, text, { w = 76, h = 28, ang = -0.2, scale
       if (du > 0 && dv > 0 && du + dv > peel) continue; // the peeled corner has come away
       if (edge < 1.2 && hash(px, py) % 4 === 0) continue; // rough, nicked edge
       let c = PAL.ink;
-      if (edge >= 2 && edge < 3.2) c = [255, 255, 255]; // the white inner border
+      if (edge >= inset && edge < inset + 1.2) c = [255, 255, 255]; // the white inner border
       const tx = Math.floor((u + tw / 2) / scale);
       const ty = Math.floor((v + th / 2) / scale);
       if (tx >= 0 && ty >= 0 && tx < text.length * 6 - 1 && ty < 7) {
@@ -49,8 +49,8 @@ export function drawSticker(g, cx, cy, text, { w = 76, h = 28, ang = -0.2, scale
 export const SUCKS_TEXT = { y: 64, width: 77 }; // the line's top and width (13 characters at scale 1)
 export function loserSpot(cx) {
   return {
-    x: Math.round(cx + SUCKS_TEXT.width / 2 + 22),
-    y: SUCKS_TEXT.y + 5,
-    opts: { w: 44, h: 17, ang: -0.14, scale: 1, peel: 5 },
+    x: Math.round(cx + SUCKS_TEXT.width / 2 + 19),
+    y: SUCKS_TEXT.y + 6,
+    opts: { w: 37, h: 15, ang: -0.14, scale: 1, peel: 4, inset: 1.5 },
   };
 }
