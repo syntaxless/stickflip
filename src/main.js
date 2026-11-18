@@ -384,10 +384,10 @@ function endStroke(e) {
   stroke.points.push({ x: e.clientX, y: e.clientY, t: e.timeStamp / 1000 });
   const { read, points, charge, t0 } = stroke;
   stroke = null;
-  const popped = charge && game.releaseCharge();
-  const grinded = game.setHold(false);
+  const popped = (charge && game.releaseCharge()) || (game.sk.manual && game.phase === 'playing');
+  const grinded = game.setHold(false); // lifting in a manual pops an ollie out of it
   if (popped) {
-    // Dragged a trick shape while charging: the ollie pops straight into it.
+    // Dragged a trick shape while charging (or manualling): the ollie pops straight into it.
     const r = readChargeStroke(points);
     showStroke(points, r);
     if (r.key !== 'tap') game.swipe(r.key);

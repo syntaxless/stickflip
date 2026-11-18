@@ -90,3 +90,16 @@ test('charging: only the shape drawn after the finger rests counts, and a long s
   // A quick flick forward is still an FS 360
   assert.equal(readChargeStroke(at([[0, 100], [40, 100], [80, 100], [120, 100]], 0, 0.03)).key, 'fs360');
 });
+
+test('manual: drag back, rest, then draw any flip shape: it reads as that trick', async () => {
+  const { readChargeStroke, SHAPES: S } = await import('../src/gesture.js');
+  const SIMPLE = { ollie: 'kickflip', down: 'heelflip', up: 'shove' };
+  for (const key of Object.keys(S)) {
+    // the drag back that held the manual (0.5 s), a rest, then the shape drawn quickly
+    const drag = Array.from({ length: 10 }, (_, i) => ({ x: 300 - i * 6, y: 300, t: i * 0.05 }));
+    const rest = [{ x: 246, y: 300, t: 0.75 }];
+    const shape = draw(S[key], { scale: 70, at: [246, 300], wobble: 2 }).map((p, i) => ({ ...p, t: 0.8 + i * 0.015 }));
+    const r = readChargeStroke([...drag, ...rest, ...shape]);
+    assert.equal(r.key, SIMPLE[key] || key, key);
+  }
+});

@@ -151,3 +151,41 @@ test('a manual keeps speeding up, and the speed resets when it ends', () => {
   g.setHold(false); // pop out
   assert.equal(g.speed, g.cruise);
 });
+
+import { TRICKS } from '../src/config.js';
+
+// Land into a manual, hold it a moment, lift to pop out, then do the trick.
+test('every air trick can be done out of a manual, scoring in the same combo (x2)', () => {
+  for (const key of Object.keys(TRICKS)) {
+    if (key === 'circle') continue; // the backflip needs big air (not from a flat ollie, manual or not)
+    const g = new Game(level);
+    g.tap();
+    const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left'], [1.1, 'release']];
+    let t = 0;
+    let bank = null;
+    const names = [];
+    let swiped = false;
+    while (t < 3.5 && g.phase === 'playing') {
+      while (q.length && q[0][0] <= t + 1e-9) {
+        const [, k, d] = q.shift();
+        if (k === 'tap') g.tap();
+        else if (k === 'hold') g.setHold(true, d || null);
+        else g.setHold(false);
+      }
+      if (t >= 1.1 && !swiped && g.sk.mode === 'air') {
+        g.swipe(key);
+        swiped = true;
+      }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) {
+        if (e.type === 'trick') names.push(e.name);
+        if (e.type === 'bank') bank = e;
+      }
+    }
+    assert.equal(g.phase, 'playing', `${key}: bailed (${g.bailReason})`);
+    assert.ok(bank, `${key}: banks on landing`);
+    assert.equal(bank.mult, 2, key);
+    assert.ok(names.includes('MANUAL') && names.includes(TRICKS[key].name), `${key}: ${names}`);
+  }
+});
