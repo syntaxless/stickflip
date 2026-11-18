@@ -10,7 +10,7 @@ export default {
   id: 'dumpster',
   name: 'Dumpster',
   obstacles: [
-    bank({ x: 320, run: 100, y1: G, y2: G - 50 }),
+    bank({ x: 320, run: 100, y1: G, y2: G - 50, material: 'wood' }),
     dumpster({ x: 470 }),
   ],
 };
