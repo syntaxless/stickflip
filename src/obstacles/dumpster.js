@@ -84,10 +84,10 @@ export function dumpster({ x, w = 150, h = 96, base = WORLD.GROUND }) {
       g.fill(l + 1, t - 4, span - 1, 4, INSIDE);
       g.line(l + 1, t - 4, r - 1, t - 4, ink);
       g.line(l + 2, t - 3, r - 2, t - 3, BODY_DARK); // the back rim, just visible
-      // Four chunky bags dumped in a heap, overlapping at different heights and angles:
+      // Three chunky bags dumped in a heap, overlapping at different heights and angles:
       // [centre x from the left, bottom above the rim, width, height, lean, bag], back to front.
       for (const [bx, lift, bw, bh, lean, bag] of [
-        [10, 0, 16, 15, -2, BLACK], [28, 0, 15, 16, 2, BLUE], [41, 1, 13, 12, -3, BLACK], [19, 9, 15, 14, 3, WHITE],
+        [10, 0, 16, 15, -2, BLACK], [28, 0, 15, 16, 2, BLUE], [41, 1, 13, 12, -3, BLACK],
       ]) trashBag(g, l + bx, t + 1 - lift, bw, bh, bag, lean);
 
       // ---- Body: flat colour with a lit left edge, a shaded right edge and a shaded foot.
