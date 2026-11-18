@@ -13,7 +13,7 @@ const stage1 = STAGES[0];
 const CLEARS = [
   [[0.95, 'tap']], // First Rock
   [[1.0, 'tap']], // First Gap
-  [[0.75, 'tap'], [1.32, 'tap']], // First Rail: ollie, lock a 50-50
+  [[0.45, 'tap'], [1.02, 'tap']], // First Rail: ollie, lock a 50-50
   [[0.95, 'tap']], // Five Stair: ollie the set
   [[0.9, 'tap']], // Bank to Bank
   [[1.1, 'tap']], // Euro Gap
