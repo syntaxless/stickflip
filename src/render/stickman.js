@@ -72,11 +72,12 @@ export function drawFigure(g, tf, p) {
   poly(g, tf, [p.neck, p.elbowB, p.handB], W);
   poly(g, tf, [p.neck, p.elbowF, p.handF], W);
   const h = tf(p.head);
-  g.circle(h.x, h.y, 3, W, true);
-  // cap: crown + peak, following the body's rotation
-  poly(g, tf, [pt(p.head.x - 9, p.head.y - 7), pt(p.head.x + 9, p.head.y - 7)], PAL.ink);
-  poly(g, tf, [pt(p.head.x - 7, p.head.y - 10), pt(p.head.x + 7, p.head.y - 10)], PAL.ink);
-  poly(g, tf, [pt(p.head.x + 6, p.head.y - 4), pt(p.head.x + 17 + PX, p.head.y - 4)], PAL.ink); // the peak, one pixel longer
+  g.circle(h.x, h.y, 4, W, true);
+  // cap: crown + peak, following the body's rotation (scaled up with the head)
+  const K = 4 / 3;
+  poly(g, tf, [pt(p.head.x - 9 * K, p.head.y - 7 * K), pt(p.head.x + 9 * K, p.head.y - 7 * K)], PAL.ink);
+  poly(g, tf, [pt(p.head.x - 7 * K, p.head.y - 10 * K), pt(p.head.x + 7 * K, p.head.y - 10 * K)], PAL.ink);
+  poly(g, tf, [pt(p.head.x + 6 * K, p.head.y - 4 * K), pt(p.head.x + 17 * K + PX, p.head.y - 4 * K)], PAL.ink); // the peak, one pixel longer
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle
