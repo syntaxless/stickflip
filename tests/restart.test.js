@@ -32,9 +32,9 @@ function nextObstacleX(game, x) {
   return xs.length ? Math.min(...xs) : Infinity;
 }
 
-test('there are 5 stages (7 checkpoints each, 4 in stage 2) and the Mega Ramp', () => {
+test('there are 5 stages (7 checkpoints each) and the Mega Ramp', () => {
   assert.equal(STAGES.length, 5);
-  STAGES.forEach((st, n) => assert.equal(st.sections.length, n === 1 ? 4 : 7, st.id));
+  STAGES.forEach((st, n) => assert.equal(st.sections.length, 7, st.id));
   assert.ok(SECRET);
 });
 
