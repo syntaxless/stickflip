@@ -635,8 +635,6 @@ function drawTouchPad() {
   const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
   if (w < 40 * dpr || h < 40 * dpr) return;
   ctx.save();
-  ctx.fillStyle = '#16161c'; // slightly lifted from black so the dark grey reads
-  ctx.fillRect(0, frameBottom, canvas.width, canvas.height - frameBottom);
   ctx.strokeStyle = '#3c3c46';
   ctx.lineWidth = 3 * dpr;
   ctx.setLineDash([12 * dpr, 8 * dpr]);
