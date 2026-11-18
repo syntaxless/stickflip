@@ -3,7 +3,7 @@ import { slopeOf } from '../game.js';
 import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
-import { drawSticker } from './sticker.js';
+import { drawSticker, loserSpot } from './sticker.js';
 import { squashOf, RAG_SIZE } from '../ragdoll.js';
 
 // Pixel-art renderer. The game world is 960x540 units; it is drawn into a
@@ -801,12 +801,13 @@ export class Renderer {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
       g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
-      // a sticker slapped up in the corner: clear of the rider, the text and the buttons
-      drawSticker(g, RES.W - 56, 40, 'LOSER');
+      // a sticker stuck on the end of the sentence
+      const spot = loserSpot(cx);
+      drawSticker(g, spot.x, spot.y, 'LOSER', spot.opts);
       const ready = game.phaseTime >= PHYS.BAIL_RETRY_DELAY;
-      if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 78, red, 1, 'center');
+      if (ready && this.blink()) g.text('TAP TO TRY AGAIN', cx, 82, red, 1, 'center');
       // Past the first checkpoint, the whole stage can be started over.
-      if (ready && game.checkpoint.index > 0) this.button('restart', 'RESTART STAGE', cx - 45, 92, 90, true);
+      if (ready && game.checkpoint.index > 0) this.button('restart', 'RESTART STAGE', cx - 45, 96, 90, true);
     }
   }
 
