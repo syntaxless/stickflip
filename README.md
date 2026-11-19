@@ -214,9 +214,9 @@ Finish with a big air out of a tall quarter pipe; riding back down ends it. Fini
 any stage with at least 25,000 points in that run (`SECRET_SCORE` in `src/main.js`,
 before the no-bail bonus) and you're taken there; its score counts toward the run
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
-leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a morning
-sky with a low sun and gold haze, a forest of pines and round trees (two parallax layers), an all-wood plank ground and a
-wooden-sign banner.
+leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a moon
+look: a navy sky with white stars, a pixel Earth and two layers of far mountains, grey cratered rock for the
+ground, ramps and quarter pipe, and a riveted rock-plate sign banner.
 
 Bails explain what went wrong: slammed or clipped the rail, landed mid-flip, came
 up short, landed on the stairs or a step, rolled off an edge, or hit the quarter
