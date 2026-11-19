@@ -624,7 +624,7 @@ function frame(now) {
 
 // Portrait touch-area hint: a dark dashed rectangle filling the area below the
 // game frame (20px margin all round) with a stacked Tap / Hold / Swipe label centred in it.
-// Always visible, in dark grey.
+// Always visible, in dark grey at 40% opacity.
 const PAD_MARGIN = 20; // CSS px
 const padHint = { cv: document.createElement('canvas'), pix: null };
 const IS_TOUCH = !!window.matchMedia?.('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia?.('(pointer: fine)').matches;
@@ -637,6 +637,7 @@ function drawTouchPad() {
   const w = canvas.width - 2 * m, h = canvas.height - frameBottom - 2 * m;
   if (w < 40 * dpr || h < 40 * dpr) return;
   ctx.save();
+  ctx.globalAlpha = 0.4; // hint drawn at 40% opacity
   ctx.strokeStyle = '#3c3c46';
   ctx.lineWidth = 3 * dpr;
   ctx.setLineDash([12 * dpr, 8 * dpr]);
@@ -657,6 +658,7 @@ function drawTouchPad() {
     g.flush();
   }
   ctx.save();
+  ctx.globalAlpha = 0.4;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(padHint.cv, 0, 0, W, H, Math.round(x + (w - W * k) / 2), Math.round(y + (h - H * k) / 2), W * k, H * k);
   ctx.restore();
