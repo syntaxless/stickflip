@@ -8,6 +8,6 @@ import { brokenGap, brokenSlab, dumpTruck, sign } from '../obstacles/index.js';
 
 export default {
   id: 'big-gap',
-  name: 'Big Gap',
+  name: 'Dumper',
   obstacles: [sign({ x: 180 }), brokenSlab({ x: 280, run: 120, rise: 60 }), brokenGap({ x: 400, width: 240 }), dumpTruck({ x: 680 })],
 };

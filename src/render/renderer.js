@@ -534,10 +534,14 @@ export class Renderer {
         g.fill(x, top, 1, bottom - top, ink);
         // raised ground (ramps, banks, stair platforms) is solid earth down to where the street's own dirt ends
         this.drawGround(g, x, top, bottom, !!game.level.sidewalk, ASPHALT_H, GRASS_H, G + ASPHALT_H + GRASS_H + DIRT_H);
-      } else if (patches.length) {
+      } else {
+        // no ground here (a pit, pool, moat or chasm): plain black from the street down, so the sky never shows
+        // through under the water, balls or lava and bleeds into the touch area below the level. The pit's own
+        // drawing goes over this.
+        if (top >= bottom) g.fill(x, Math.min(G, bottom), 1, bottom - Math.min(G, bottom), ink);
         // a dirt-filled gap: a strip sunk a little below the street, no asphalt or grass
         const wx = x * S + S / 2;
-        if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
+        if (patches.length && patches.some((p) => wx >= p.x1 && wx < p.x2)) {
           g.fill(x, G + 2, 1, bottom - G - 2, ink);
           const kind = patches.find((p) => wx >= p.x1 && wx < p.x2)?.kind;
           if (kind === 'gravel') this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
