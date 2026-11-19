@@ -44,9 +44,9 @@ export const PHYS = Object.freeze({
   // when you land from an ollie lands you into a manual. Lift to pop out of it.
   MANUAL_DELAY: 0.1, // s the drag must have lasted before landing to count
   MANUAL_MAX: 3, // s: the rider drops the board after this long
-  MANUAL_ENTRY_BOOST: 1.4, // landing into a manual jumps the speed to this share of what it was
-  MANUAL_ACCEL: 1.2, // the speed keeps climbing in a manual: this share of cruising speed per second (2.6x after 1 s, 3.8x after 2 s)
-  MANUAL_SPEED_MAX: 4, // ...up to this share of cruising speed (reached after 2.2 s)
+  MANUAL_ENTRY_BOOST: 1.15, // landing into a manual jumps the speed to this share of what it was
+  MANUAL_ACCEL: 0.6, // the speed keeps climbing in a manual: this share of cruising speed per second (1.75x after 1 s)
+  MANUAL_SPEED_MAX: 1.8, // ...up to this share of cruising speed (reached after about 1.1 s)
   MANUAL_MULT_EVERY: 1, // a manual adds one to the combo multiplier for every this many seconds held (the first one counts at once)
   // Ollie height follows speed a little (distance follows it a lot): up to
   // this share higher at top speed, lower at the slowest. The total, with the
@@ -97,8 +97,8 @@ export const GRINDS = Object.freeze({
 // like a trick (so the multiplier keeps building), by distance rolled.
 //   pitch: board tilt (radians, + = nose down)
 export const MANUALS = Object.freeze({
-  manual: { name: 'MANUAL', base: 50, perPx: 0.2, pitch: -0.3 },
-  nose: { name: 'NOSE MANUAL', base: 75, perPx: 0.25, pitch: 0.3 },
+  manual: { name: 'MANUAL', base: 50, perPx: 0.4, pitch: -0.3 },
+  nose: { name: 'NOSE MANUAL', base: 75, perPx: 0.5, pitch: 0.3 },
 });
 
 // Air tricks. The key is what the stroke in the air reads as (see SHAPES in

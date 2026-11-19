@@ -461,11 +461,10 @@ test('stage 5: an ollie off the wooden ramp can land on the cop car\'s light bar
   assert.equal(ride5(6, []).bailReason, 'slam', 'rolling into the car slams');
 });
 
-test('the Mega Ramp is an all-wood morning level in a forest', async () => {
+test('the Mega Ramp is a moon level', async () => {
   const { default: secret } = await import('../src/levels/secret.js');
-  assert.equal(secret.wood, true);
-  assert.equal(secret.morning, true);
-  assert.equal(secret.forest, true);
+  assert.equal(secret.moon, true);
+  assert.ok(!secret.wood && !secret.forest && !secret.morning);
 });
 
 test('stage 1: a Quarter Pipe replay has at least 0.6 s of runway to the rail, and the same inputs still clear it', () => {
@@ -777,7 +776,7 @@ test('backgrounds: sky layers in the wide frame behind the bars line up with the
   const { Renderer } = await import('../src/render/renderer.js');
   const rd = new Renderer(gridFb(320, 180));
   rd.time = 4.2;
-  for (const lvl of [{ clouds: true }, { skyline: true }, { skyline: true, morning: true }, { forest: true, morning: true }]) {
+  for (const lvl of [{ clouds: true }, { skyline: true }, { moon: true }]) {
     for (const camX of [0, 977, 2400]) {
       const game = { level: lvl };
       const main = gridFb(320, 180);
