@@ -117,6 +117,7 @@ export class Game {
     this.recent = []; // names of the last SCORE.RUN_WINDOW banked tricks of the run (for the repeat decay)
     this.gapsDone = new Set(); // named gaps earned this attempt
     this.boomAt = null; // when the cop car blew up (game time), or null
+    this.dumpAt = null; // when the dump truck's bed was grounded and began to dump (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
     this.hold = null; // { dir, used, dirT } while the finger (or Space) is held down
@@ -789,6 +790,11 @@ export class Game {
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
     this.emit('grind', { key });
+    // a surface that dumps (the dump truck's bed) starts to tip the moment you lock on
+    if (surface.dumps && this.dumpAt === null) {
+      this.dumpAt = this.time;
+      this.emit('dump');
+    }
     this.boost(BOOST.GRIND);
     this.checkGaps('grind');
   }

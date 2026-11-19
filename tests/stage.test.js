@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { Game } from '../src/game.js';
+import { Pix } from '../src/render/pixel.js';
 import { STAGES } from '../src/stages/index.js';
 import trashCanLevel from '../src/levels/trash-can.js';
 import rockLevel from '../src/levels/rock.js';
@@ -267,8 +269,11 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
   const clears = [[0.85, 1.8], [0.8], [0.62, 1.57], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
   clears.forEach((taps, i) => {
-    const game = ride3(i, taps);
-    assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
+    // Big Gap (the last) is the slab, the gap and then the dump truck: two moves, see the truck tests below
+    if (i < 6) {
+      const game = ride3(i, taps);
+      assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
+    }
     assert.equal(ride3(i, []).phase, 'bailed', `${stage3.sections[i].name} with no ollie`);
   });
 });
@@ -931,4 +936,166 @@ test('dumpster: the flames animate without throwing, over several seconds of fra
   const g = new Proxy({}, { get: () => () => calls++ });
   for (let time = 0; time < 3; time += 0.05) d.draw(g, { time });
   assert.ok(calls > 1000);
+});
+
+// ------------------------------------------------------ the dump truck (3-7)
+
+const truck = stage3.obstacles.find((o) => o.type === 'dump-truck');
+const TRUCK_X = stage3.sections[6].x + 940; // where it stands in the strip
+
+// Rides 3-7 from a spot on the street between the gap and the truck (`from`, measured from the
+// section's left edge). `mode`: 'tap' (a plain ollie at t0), 'grind' (an ollie with the finger held) or 'charge'
+// (a charged ollie let go at t0). Returns the game and the names of the tricks and gaps.
+function rideTruck(mode, t0, from = 700) {
+  const sec = stage3.sections[6];
+  const saved = sec.start;
+  sec.start = from;
+  const game = new Game(stage3, null, { index: 6, score: 0 });
+  sec.start = saved;
+  game.tap();
+  if (mode === 'charge') {
+    game.setHold(true);
+    game.startCharge();
+  }
+  const names = new Set();
+  const events = [];
+  let done = false;
+  for (let t = 0; t < 7 && game.phase === 'playing'; t += STEP) {
+    if (!done && t >= t0) {
+      done = true;
+      if (mode === 'charge') {
+        game.setHold(false);
+        game.releaseCharge();
+      } else {
+        game.tap();
+        if (mode === 'grind') game.setHold(true);
+      }
+    }
+    game.update(STEP);
+    for (const e of game.drainEvents()) {
+      events.push(e);
+      if (e.type === 'trick' || e.type === 'gap') names.add(e.name);
+    }
+  }
+  return { game, names, events };
+}
+
+test('3-7: a dump truck stands after the gap, facing right: a tall grindable bed and a lower cab you can land on', () => {
+  assert.ok(truck, 'there is a truck');
+  const [bed, roof] = truck.surfaces;
+  assert.equal(bed.grindable, true);
+  assert.equal(bed.landable, false);
+  assert.equal(bed.dumps, true);
+  assert.equal(roof.landable, true);
+  assert.equal(roof.grindable, false);
+  assert.ok(roof.x1 === bed.x2, 'the cab is at the front (right), after the bed');
+  assert.ok(roof.y > bed.y, 'the cab roof is lower than the bed rim (y grows down)');
+  const gap = stage3.obstacles.find((o) => o.type === 'broken-gap');
+  assert.ok(truck.surfaces[0].x1 > gap.dirt.x2 + 150, 'a good run of street between the gap and the truck');
+  assert.ok(stage3.width > 7 * 960, 'the stage runs on past the last screen to make room');
+});
+
+test('3-7: the stage ends with room to roll out after the truck', () => {
+  const roof = truck.surfaces[1];
+  assert.ok(stage3.width + 40 - roof.x2 >= 250, 'a stretch of street after the cab before the finish');
+});
+
+test('3-7 dump truck: rolling into it, or a plain ollie too early, or too late, slams', () => {
+  assert.equal(rideTruck('tap', 99).game.bailReason, 'slam');
+  assert.equal(rideTruck('tap', 0.05).game.bailReason, 'slam', 'a hop right at the start hits the side');
+  assert.equal(rideTruck('tap', 0.7).game.bailReason, 'slam', 'too late slams the cab or the bed');
+});
+
+test('3-7 dump truck: a plain ollie lands on the cab roof and rides on (0.45 to 0.55 s), or clips the bed rim without a grind', () => {
+  for (const t of [0.46, 0.5, 0.54]) {
+    const { game, names } = rideTruck('tap', t);
+    assert.equal(game.phase, 'complete', `ollie at ${t}: ${game.bailReason}`);
+    assert.equal(game.dumpAt, null, 'no dump without a grind');
+    assert.ok(!names.has('GRAVEL DUMP'));
+  }
+  for (const t of [0.2, 0.3, 0.4]) assert.equal(rideTruck('tap', t).game.bailReason, 'clipped', `landing on the rim at ${t} without a grind clips`);
+});
+
+test('3-7 dump truck: an ollie with the finger held locks a grind on the bed rim and dumps the gravel (0.13 to 0.44 s)', () => {
+  for (const t of [0.16, 0.3, 0.42]) {
+    const { game, names, events } = rideTruck('grind', t);
+    assert.equal(game.phase, 'complete', `grind at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('50-50 GRIND'), `grind at ${t}: ${[...names]}`);
+    assert.ok(names.has('GRAVEL DUMP'), `the gap bonus at ${t}`);
+    assert.ok(game.dumpAt !== null, 'the bed started to dump');
+    assert.equal(events.filter((e) => e.type === 'dump').length, 1, 'the dump goes off once');
+  }
+});
+
+test('3-7 dump truck: the dump starts the moment the grind locks, and stays off if you ollie over', () => {
+  const { game, events } = rideTruck('grind', 0.3);
+  const lock = events.findIndex((e) => e.type === 'grind');
+  const dump = events.findIndex((e) => e.type === 'dump');
+  assert.ok(lock >= 0 && dump === lock + 1, 'the dump follows the grind event');
+  const leap = rideTruck('charge', 0.46);
+  assert.equal(leap.game.dumpAt, null, 'clearing it with a charged ollie leaves the gravel in the bed');
+});
+
+test('3-7 dump truck: a charged ollie clears the whole truck for TRUCK LEAP (0.41 to 0.5 s); a bit early lands on the cab', () => {
+  for (const t of [0.42, 0.46, 0.49]) {
+    const { game, names } = rideTruck('charge', t);
+    assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('TRUCK LEAP'), `charged at ${t}: ${[...names]}`);
+  }
+  const early = rideTruck('charge', 0.34);
+  assert.equal(early.game.phase, 'complete', 'a charge a little early lands on the cab and rolls on');
+  assert.ok(!early.names.has('TRUCK LEAP'));
+  assert.equal(rideTruck('charge', 0.2).game.phase, 'bailed', 'far too early clips the bed');
+  assert.equal(rideTruck('charge', 0.6).game.bailReason, 'slam', 'too late slams the side');
+});
+
+test('3-7 dump truck: the dump is only a drawing: the grind runs the same length and speed as a rail of that size', () => {
+  const { game } = rideTruck('grind', 0.3);
+  const bed = truck.surfaces[0];
+  assert.ok(bed.y === truck.surfaces[0].y && bed.x2 - bed.x1 > 100, 'the rim never moves in the physics');
+  assert.ok(game.score > 300, `banked ${game.score}`);
+});
+
+test('3-7 dump truck: it draws whole, tipping and emptied without error, the gravel pile grows and the bed heap shrinks', () => {
+  const grid = () => {
+    const cells = new Map();
+    const g = new Pix({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) }, 330, 200);
+    const set = g.pset.bind(g);
+    g.pset = (x, y, c) => { set(x, y, c); cells.set(`${Math.round(x)},${Math.round(y)}`, c.join()); };
+    return { g, cells };
+  };
+  const counts = [];
+  for (const dump of [null, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.4, 5]) {
+    const { g, cells } = grid();
+    truck.draw(g, { time: 1, dump });
+    assert.ok(cells.size > 600, `age ${dump} drew ${cells.size} pixels`);
+    counts.push(cells.size);
+  }
+  // pile pixels: the grey gravel behind (left of) the truck's rear, on the street
+  const behind = (dump) => {
+    const { g, cells } = grid();
+    truck.draw(g, { time: 1, dump });
+    const rear = Math.round((TRUCK_X - stage3.sections[6].x) / 3);
+    let n = 0;
+    for (const k of cells.keys()) {
+      const [x, y] = k.split(',').map(Number);
+      if (x < rear - 4 && y > 135) n++;
+    }
+    return n;
+  };
+  assert.equal(behind(null), 0, 'nothing behind a full truck');
+  assert.ok(behind(0.5) > behind(0.2), 'the pile grows');
+  assert.ok(behind(2) > behind(0.5), 'and keeps growing to its full size');
+  assert.equal(behind(2), behind(9), 'then it stays put');
+});
+
+test('3-7 dump truck: the dump is the same picture every time for the same age (nothing random)', () => {
+  const pixels = (dump) => {
+    const g = new Pix({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) }, 330, 200);
+    g.ox = 20 - Math.round(TRUCK_X / 3); // bring the truck onto the little screen
+    truck.draw(g, { time: 1, dump });
+    return createHash('sha1').update(g.data).digest('hex');
+  };
+  for (const age of [0.2, 0.5, 0.8]) assert.equal(pixels(age), pixels(age));
+  assert.notEqual(pixels(0.2), pixels(0.8));
 });

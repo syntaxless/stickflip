@@ -28,7 +28,9 @@ export const GAPS = [
   // ---- Stage 3
   { id: 'barrier-to-gap', stage: 'stage-3', section: 2, name: 'BARRIER TO GAP', points: 500, from: [300, 620], to: [780, 960], on: 'land' },
   { id: 'barrel-drop', stage: 'stage-3', section: 5, name: 'BARREL DROP', points: 600, from: [0, 550], to: [850, 960], on: 'land' },
-  { id: 'broken-walk', stage: 'stage-3', section: 6, name: 'BROKEN WALK', points: 400, from: [150, 400], to: [640, 960], on: 'land' },
+  { id: 'broken-walk', stage: 'stage-3', section: 6, name: 'BROKEN WALK', points: 400, from: [150, 400], to: [640, 940], on: 'land' },
+  { id: 'gravel-dump', stage: 'stage-3', section: 6, name: 'GRAVEL DUMP', points: 350, from: null, to: [946, 1060], on: 'grind' },
+  { id: 'truck-leap', stage: 'stage-3', section: 6, name: 'TRUCK LEAP', points: 500, from: [700, 940], to: [1117, 1500], on: 'land' },
   // ---- Stage 4
   { id: 'sandbox-leap', stage: 'stage-4', section: 2, name: 'SANDBOX LEAP', points: 250, from: [250, 440], to: [710, 960], on: 'land' },
   { id: 'seesaw-launch', stage: 'stage-4', section: 3, name: 'SEESAW LAUNCH', points: 300, from: [400, 680], to: [680, 960], on: 'land' },

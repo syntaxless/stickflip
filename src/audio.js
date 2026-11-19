@@ -76,6 +76,8 @@ const SOUNDS = {
   grind: () => beep(1320, 0.03),
   land: () => beep(160, 0.05),
   bank: () => [523, 659, 784].forEach((f, i) => beep(f, 0.05, { at: i * 0.06 })),
+  // gravel pouring out: a quick rattle of low beeps sliding down
+  dump: () => [0, 1, 2, 3, 4, 5, 6, 7].forEach((i) => beep(190 - i * 12, 0.035, { to: 150 - i * 12, at: i * 0.055 })),
   bail: () => beep(440, 0.45, { to: 60 }),
   complete: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => beep(f, 0.08, { at: i * 0.09 })),
 };

@@ -60,6 +60,10 @@ const SCRIPTS = {
   'barrier-to-gap': [[0.22, 'tap'], [1.57, 'tap']],
   'barrel-drop': [[0, 'cs'], [1.3, 'cr']],
   'broken-walk': [[0, 'cs'], [0.75, 'cr']],
+  // a charged ollie off the slab, a short roll, then a charged ollie off the street over the whole truck (a plain ollie lands on the cab)
+  'truck-leap': [[0, 'cs'], [0.75, 'cr'], [1.84, 'cs'], [1.94, 'cr']],
+  // an ollie off the slab, then another with the finger held to lock the bed rim
+  'gravel-dump': [[0.85, 'tap'], [2.05, 'tap'], [2.05, 'hold']],
   'sandbox-leap': [[0, 'cs'], [0.85, 'cr']],
   'seesaw-launch': [[0.3, 'tap'], [0.3, 'hold'], [1.2, 'tap']],
   'monkey-business': [[0.27, 'tap'], [0.27, 'hold'], [1.52, 'tap']],
