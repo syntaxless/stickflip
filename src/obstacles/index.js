@@ -18,3 +18,4 @@ export { hubba, curbCut, concreteSet, funBox, woodRamp, copCar } from './skatepa
 export { toyBlocks, playSlide, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
 export { lavaPit, fireRing, barricade, finishArch, bridgeRail } from './hell.js';
 export { snowman, iceBlock, icePond, skiGate, cabin, snowRail, summitFlag } from './frost.js';
+export { sandDune, sandcastle, boardRail, seaGap, ropeRail, beachCart, deckChair, beachBall, surfRack, bunting, lifeguardTower, pierSign } from './boardwalk.js';

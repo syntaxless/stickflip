@@ -95,6 +95,12 @@ const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 // Frostbite (Stage 7): a pale winter sky (top to horizon), snow-capped mountains and a row of dark pines.
 const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
 const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
+// The stages with a sky of their own (a level flag each; the picture is drawXSky).
+const THEMED_SKIES = ['hell', 'frost', 'beach'];
+// Boardwalk (Stage 8): a bright seaside sky, a strip of sea on the horizon, a pier with a Ferris wheel,
+// a row of palms, gulls and a few puffs of cloud.
+const BEACH_BANDS = [[70, 160, 250], [96, 180, 255], [126, 200, 255], [158, 218, 255], [190, 232, 255], [220, 244, 255]];
+const BEACH = { sea: [34, 130, 214], seaLit: [120, 200, 250], seaFar: [70, 156, 230], wheel: [226, 120, 150], pier: [118, 98, 120], palm: [28, 120, 70], palmLit: [78, 178, 96], trunk: [128, 88, 52], cloud: [255, 255, 255], cloudShade: [214, 232, 250] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
@@ -303,20 +309,15 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline && !game.level.moon && !game.level.hell && !game.level.frost) return;
+    const themed = THEMED_SKIES.find((k) => game.level[k]);
+    if (!game.level.skyline && !game.level.moon && !themed) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
-    if (game.level.hell) {
+    if (themed) {
+      // a stage with its own picture behind it: it moves only a little with the camera's height
       g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
-      this.drawHellSky(g, cam, horizon);
-      g.ox = ox;
-      g.oy = oy;
-      return;
-    }
-    if (game.level.frost) {
-      g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
-      this.drawFrostSky(g, cam, horizon);
+      this[`draw${themed[0].toUpperCase()}${themed.slice(1)}Sky`](g, cam, horizon);
       g.ox = ox;
       g.oy = oy;
       return;
@@ -487,6 +488,109 @@ export class Renderer {
           if (x < -2) continue;
           g.fill(x, y, size, size, [255, 255, 255]);
         }
+      }
+    }
+  }
+
+  // Boardwalk's sky: bright blue bands paling toward the horizon, a high sun, slow puffs of cloud, a strip of
+  // glittering sea with a pier and Ferris wheel standing in it, a row of palms, and gulls gliding across.
+  drawBeachSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = BEACH_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, BEACH_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, BEACH_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, BEACH_BANDS[BEACH_BANDS.length - 1]);
+    // the sun: a bright disc with a pale halo, high and left
+    const sx = 250 - shiftOf(0.01);
+    const sy = horizon - 118;
+    g.circle(sx, sy, 17, [200, 232, 255], true);
+    g.circle(sx, sy, 13, [255, 246, 190], true);
+    g.circle(sx, sy, 10, [255, 255, 235], true);
+    // clouds: flat-bottomed puffs drifting slowly (they also creep with time)
+    const cs = shiftOf(0.04) + Math.round(t * 2);
+    for (let cell = Math.floor(cs / 150) - 1; cell * 150 - cs < g.w + 150; cell++) {
+      const h = hash(cell, 71);
+      if (h % 3 === 0) continue;
+      const cx = cell * 150 - cs + (h % 60);
+      const cy = horizon - 70 - ((h >> 5) % 60);
+      for (const [dx, dy, r] of [[0, 0, 7], [9, -3, 9], [20, 0, 7], [-9, 2, 5]]) g.circle(cx + dx, cy + dy, r, BEACH.cloud, true);
+      g.fill(cx - 14, cy + 6, 40, 3, BEACH.cloudShade);
+      g.fill(cx - 14, cy + 9, 40, 4, BEACH_BANDS[3]);
+    }
+    // the sea: a band of deeper blue meeting the sky, glitter on it, slower than the street
+    const seaTop = horizon - 22;
+    g.fill(0, seaTop, g.w, 24, BEACH.seaFar);
+    g.fill(0, seaTop + 8, g.w, 16, BEACH.sea);
+    const ss = shiftOf(0.08);
+    for (let x = 0; x < g.w; x++) {
+      const wx = x + ss;
+      const w = hash(wx >> 1, 9) % 14;
+      if (w === 0) g.pset(x, seaTop + 3 + (hash(wx, 4) % 6) + Math.round(Math.sin(t * 2 + wx)), BEACH.seaLit);
+      if (w === 1) g.pset(x, seaTop + 12 + (hash(wx, 6) % 8), BEACH.seaLit);
+    }
+    g.fill(0, seaTop - 1, g.w, 1, [170, 214, 248]);
+    // a pier and a Ferris wheel standing in the sea, far away and faint
+    const ps = shiftOf(0.12);
+    for (let cell = Math.floor(ps / 420) - 1; cell * 420 - ps < g.w + 120; cell++) {
+      const px = cell * 420 - ps + 90 + (hash(cell, 3) % 60);
+      g.fill(px - 30, seaTop + 6, 90, 3, BEACH.pier); // the deck
+      for (let k = 0; k < 90; k += 9) g.fill(px - 30 + k, seaTop + 9, 2, 8, BEACH.pier); // piles
+      const wy = seaTop - 22;
+      g.circle(px + 12, wy, 19, BEACH.wheel);
+      g.circle(px + 12, wy, 18, BEACH.wheel);
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 + t * 0.15;
+        g.line(px + 12, wy, px + 12 + Math.round(Math.cos(a) * 18), wy + Math.round(Math.sin(a) * 18), BEACH.wheel);
+        g.fill(px + 11 + Math.round(Math.cos(a) * 18), wy - 1 + Math.round(Math.sin(a) * 18), 3, 3, k % 2 ? [255, 214, 90] : [255, 255, 255]);
+      }
+      g.line(px + 12, wy, px + 4, seaTop + 6, BEACH.wheel);
+      g.line(px + 12, wy, px + 20, seaTop + 6, BEACH.wheel);
+    }
+    // palms along the horizon: a leaning trunk and a crown of fronds, in a repeating row
+    const ls = shiftOf(0.3);
+    for (let cell = Math.floor(ls / 96) - 1; cell * 96 - ls < g.w + 40; cell++) {
+      const h = hash(cell, 53);
+      if (h % 3 === 0) continue;
+      const tx = cell * 96 - ls + (h % 30);
+      const th = 26 + ((h >> 4) % 12);
+      const lean = ((h >> 8) % 3) - 1;
+      for (let row = 0; row < th; row++) g.fill(tx + Math.round((row * lean) / 6) - (row < 3 ? 1 : 0), horizon - row, row < 3 ? 3 : 2, 1, BEACH.trunk);
+      const hx = tx + Math.round((th * lean) / 6);
+      const hy = horizon - th;
+      for (let k = 0; k < 7; k++) {
+        const a = Math.PI + (k / 6) * Math.PI; // fronds fan up and droop at the tips
+        const len = 11 + (k % 2) * 2;
+        for (let i = 1; i <= len; i++) {
+          const fxp = hx + Math.round(Math.cos(a) * i);
+          const fyp = hy + Math.round(Math.sin(a) * i * 0.6 + (i * i) / (len * 2.4));
+          g.pset(fxp, fyp, BEACH.palm);
+          g.pset(fxp, fyp - 1, i % 3 ? BEACH.palm : BEACH.palmLit);
+        }
+      }
+      g.fill(hx - 1, hy, 3, 2, [96, 62, 34]); // coconuts
+    }
+    // gulls: little white Vs gliding across, wings flapping
+    const gs = shiftOf(0.18);
+    for (let i = 0; i < 4; i++) {
+      const h = hash(i, 19);
+      const gx = ((((h % 500) + Math.round(t * (8 + (h % 6)))) % 500) + 500) % 500;
+      const gy = horizon - 90 - ((h >> 8) % 60) + Math.round(Math.sin(t * 0.8 + i) * 3);
+      const flap = Math.floor(t * 4 + i) % 2;
+      for (let tile = Math.floor(gs / 500) - 1; tile * 500 + gx - gs < g.w + 8; tile++) {
+        const x = tile * 500 + gx - gs;
+        if (x < -8) continue;
+        g.pset(x, gy, [255, 255, 255]);
+        g.pset(x - 1, gy - flap, [255, 255, 255]);
+        g.pset(x - 2, gy - 1 - flap, [255, 255, 255]);
+        g.pset(x + 1, gy - flap, [255, 255, 255]);
+        g.pset(x + 2, gy - 1 - flap, [255, 255, 255]);
       }
     }
   }
@@ -1194,11 +1298,18 @@ export class Renderer {
   // before has been finished.
   drawSelect(scr) {
     const cx = RES.W / 2;
-    const tight = scr.stages.length > 5; // six or more buttons: pack them closer
-    const { y } = scr.stages.length > 6 ? this.panel('STAGES', 28, 148) : this.panel('STAGES'); // seven or more: the panel is taller
+    const n = scr.stages.length;
+    const two = n > 7; // eight or more: two columns (an odd last one sits centred at the bottom)
+    const tight = n > 5; // six or more buttons: pack them closer
+    const { y } = n > 6 ? this.panel('STAGES', 28, 148) : this.panel('STAGES'); // seven or more: the panel is taller
     scr.stages.forEach((st, i) => {
       const open = i < scr.unlocked;
-      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);
+      const label = open ? st.name.toUpperCase() : 'LOCKED';
+      if (two) {
+        const alone = i === n - 1 && n % 2 === 1;
+        const bx = alone ? cx - 45 : cx + (i % 2 ? 4 : -94);
+        this.button(`stage${i}`, label, bx, y + 32 + Math.floor(i / 2) * 18, 90, open);
+      } else this.button(`stage${i}`, label, cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);
     });
     // Opened from a stage's start or bail screen: a way back to it.
     if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);
