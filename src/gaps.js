@@ -59,4 +59,15 @@ export const GAPS = [
   { id: 'roof-drop', stage: 'stage-7', section: 5, name: 'ROOF DROP', points: 350, from: [360, 580], to: [580, 960], on: 'land' },
   { id: 'ice-bridge', stage: 'stage-7', section: 6, name: 'ICE BRIDGE', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
   { id: 'crevasse-jump', stage: 'stage-7', section: 6, name: 'CREVASSE JUMP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
+  // ---- Stage 8 (Boardwalk)
+  { id: 'board-grind', stage: 'stage-8', section: 1, name: 'BOARD GRIND', points: 450, from: [200, 330], to: [500, 740], on: 'grind' },
+  { id: 'rope-grind', stage: 'stage-8', section: 2, name: 'ROPE GRIND', points: 400, from: [100, 300], to: [310, 570], on: 'grind' },
+  { id: 'sea-leap', stage: 'stage-8', section: 2, name: 'SEA LEAP', points: 450, from: [140, 300], to: [560, 960], on: 'land' },
+  { id: 'cart-grind', stage: 'stage-8', section: 3, name: 'CART GRIND', points: 350, from: null, to: [330, 430], on: 'grind' },
+  { id: 'chair-slide', stage: 'stage-8', section: 3, name: 'CHAIR SLIDE', points: 400, from: null, to: [700, 754], on: 'grind' },
+  { id: 'tower-grind', stage: 'stage-8', section: 5, name: 'TOWER GRIND', points: 400, from: null, to: [360, 550], on: 'grind' },
+  { id: 'tower-leap', stage: 'stage-8', section: 5, name: 'TOWER LEAP', points: 500, from: [150, 360], to: [550, 960], on: 'land' },
+  { id: 'tower-drop', stage: 'stage-8', section: 5, name: 'TOWER DROP', points: 350, from: [360, 550], to: [550, 960], on: 'land' },
+  { id: 'pier-bridge', stage: 'stage-8', section: 6, name: 'PIER BRIDGE', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
+  { id: 'pier-leap', stage: 'stage-8', section: 6, name: 'PIER LEAP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
 ];

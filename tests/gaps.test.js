@@ -88,6 +88,16 @@ const SCRIPTS = {
   'roof-drop': [[0.36, 'tap'], [1.36, 'tap']], // up onto the roof, then ollie off its end
   'ice-bridge': [[0.5, 'tap'], [0.5, 'hold']],
   'crevasse-jump': [[0, 'cs'], [0.56, 'cr']],
+  'board-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'rope-grind': [[0.6, 'tap'], [0.6, 'hold']],
+  'sea-leap': [[0, 'cs'], [0.67, 'cr']],
+  'cart-grind': [[0.2, 'tap'], [0.2, 'hold']],
+  'chair-slide': [[0.3, 'tap'], [1.3, 'tap'], [1.3, 'hold']], // over the cart, then lock the chair
+  'tower-grind': [[0.45, 'tap'], [0.45, 'hold']],
+  'tower-leap': [[0, 'cs'], [0.55, 'cr']],
+  'tower-drop': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
+  'pier-bridge': [[0.5, 'tap'], [0.5, 'hold']],
+  'pier-leap': [[0, 'cs'], [0.56, 'cr']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

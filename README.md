@@ -239,6 +239,16 @@ rail across it, ICE BRIDGE, or a charged ollie, CREVASSE JUMP; the summit flag s
 is `frost: true` (the sky, mountains, pines and snow in `Renderer.drawFrostSky`) with the `frost` palette,
 and the pieces are in `src/obstacles/frost.js`. Timing windows: `node scripts/stage-windows.mjs 7`.
 
+**Stage 8: Boardwalk** (a sunny seaside promenade, not a race). It opens once Stage 7 is finished, has its
+own top 5 (`stage-8`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage8`). Sand
+Dunes (two dunes, then a sandcastle), Pier Rail (a wooden kicker and a lifebuoy rail: BOARD GRIND), Sea Gap
+(a 260-wide gap over the sea with a rope rail across it: ROPE GRIND, or a charged ollie, SEA LEAP), Ice
+Cream Cart (ollie or grind the cart, then the deck chair: CART GRIND, CHAIR SLIDE), Bunting (a beach ball,
+a string of flags you can jump through, a surfboard rack, a gold string), Lifeguard Tower (ride, grind,
+drop off or fly it) and Pier End (kicker, a 320-wide gap and an arched rail: PIER BRIDGE or PIER LEAP).
+The look is `beach: true` (`Renderer.drawBeachSky`) with the `beach` palette; pieces are in
+`src/obstacles/boardwalk.js`. Timing windows: `node scripts/stage-windows.mjs 8`.
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
 off the kicker to clear the whole rail and land in the long bank that starts right

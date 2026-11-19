@@ -38,8 +38,8 @@ function nextObstacleX(game, x) {
   return xs.length ? Math.min(...xs) : Infinity;
 }
 
-test('there are 7 stages (7 checkpoints each, Hellride 9) and the Mega Ramp', () => {
-  assert.equal(STAGES.length, 7);
+test('there are 8 stages (7 checkpoints each, Hellride 9) and the Mega Ramp', () => {
+  assert.equal(STAGES.length, 8);
   STAGES.forEach((st, n) => assert.equal(st.sections.length, st.id === 'stage-6' ? 9 : 7, st.id));
   assert.ok(SECRET);
 });
