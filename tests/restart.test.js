@@ -300,8 +300,6 @@ for (const st of STAGES) {
           if (clears(st, i, [[a, 'tap'], [a + d, 'tap']])) windows.push(1);
         }
         if (clears(st, i, [[a, 'tap'], [a, 'hold']])) windows.push(1);
-        // ollie, then ollie again with the finger held to grind (the dump truck after the Big Gap)
-        for (const d of [0.6, 0.8, 1.0, 1.2, 1.4]) if (clears(st, i, [[a, 'tap'], [a + d, 'tap'], [a + d, 'hold']])) windows.push(1);
       }
       const best = Math.max(...windows);
       assert.ok(best >= MIN_WINDOW, `${label(st, i)}: no way to clear it (best timing window ${best.toFixed(2)} s)`);
@@ -337,7 +335,7 @@ const TIGHT = { 'stage-1:6': 0.5 }; // ... and counting the ready beat, from the
 function lastGoodInput(st, i) {
   const ok = (acts) => clears(st, i, acts);
   for (let t = 2.8; t >= 0; t -= 0.02) {
-    if (ok([[t, 'tap']]) || ok([[0, 'cs'], [Math.min(t, 1.6), 'cr']]) || ok([[t, 'tap'], [t, 'hold']]) || [0.15, 0.3, 0.45, 0.6, 0.8, 1.0].some((d) => ok([[t, 'tap'], [t + d, 'tap']])) || [0.6, 0.8, 1.0, 1.2, 1.4].some((d) => ok([[t, 'tap'], [t + d, 'tap'], [t + d, 'hold']]))) return t;
+    if (ok([[t, 'tap']]) || ok([[0, 'cs'], [Math.min(t, 1.6), 'cr']]) || ok([[t, 'tap'], [t, 'hold']]) || [0.15, 0.3, 0.45, 0.6, 0.8, 1.0].some((d) => ok([[t, 'tap'], [t + d, 'tap']]))) return t;
   }
   return -1;
 }

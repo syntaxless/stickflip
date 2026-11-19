@@ -3,7 +3,8 @@ import { PAL, Pix } from '../render/pixel.js';
 
 // A dump truck parked on the street, facing right, its bed heaped with gravel.
 // The bed's top edge is a grindable rim (like a rail) and its front wall is the
-// tallest thing on the truck; the cab is lower, with a flat roof you can land on
+// tallest thing on the truck; the cab (behind the bed, toward the front) is lower, with a flat roof you can land on,
+// and a short hood sticks out the front (right) lower still, so it reads as facing right
 // and roll across. Anything else is a slam. Ollie off the street onto the cab, or
 // a charged ollie over the whole truck, or grind the rim.
 //
@@ -15,7 +16,7 @@ const P = (v) => Math.round(v / 3);
 const G = WORLD.GROUND;
 const { ink, steel, shine, wheel: white } = PAL;
 
-export const TRUCK = Object.freeze({ BED_W: 111, BED_H: 93, CAB_W: 66, CAB_H: 72 });
+export const TRUCK = Object.freeze({ BED_W: 99, BED_H: 93, CAB_W: 42, CAB_H: 72, HOOD_W: 18, HOOD_H: 54 });
 
 const BODY = [244, 188, 36];
 const BODY_LIT = [255, 228, 112];
@@ -61,8 +62,8 @@ const pebbleTime = (i) => {
 };
 const PEBBLE_AT = Array.from({ length: PEBBLES }, (_, i) => pebbleTime(i));
 
-const PILE_W = 34; // pixels wide behind the truck, and tall at the most
-const PILE_H = 15;
+const PILE_W = 20; // pixels wide behind the truck, and tall at the most
+const PILE_H = 13;
 const pileTop = (d, share) => {
   // the pile's height `d` pixels out from the tailgate: a mound that grows as it fills
   if (d < 0 || d >= PILE_W) return 0;
@@ -81,23 +82,28 @@ function scratch() {
 }
 
 export function dumpTruck({ x, base = G }) {
-  const { BED_W, BED_H, CAB_W, CAB_H } = TRUCK;
+  const { BED_W, BED_H, CAB_W, CAB_H, HOOD_W, HOOD_H } = TRUCK;
   const bedTop = base - BED_H;
   const cabTop = base - CAB_H;
   const rim = { x1: x + 6, x2: x + BED_W, y: bedTop, grindable: true, landable: false, dumps: true };
   const roof = { x1: x + BED_W, x2: x + BED_W + CAB_W, y: cabTop, grindable: false, landable: true };
+  const hoodTop = base - HOOD_H;
+  const hood = { x1: roof.x2, x2: roof.x2 + HOOD_W, y: hoodTop, grindable: false, landable: true };
   return {
     type: 'dump-truck',
-    surfaces: [rim, roof],
+    surfaces: [rim, roof, hood],
     solids: [
       { x, y: bedTop, w: BED_W, h: BED_H, slappy: null },
       { x: x + BED_W, y: cabTop, w: CAB_W, h: CAB_H, slappy: null },
+      { x: roof.x2, y: hoodTop, w: HOOD_W, h: HOOD_H, slappy: null },
     ],
     draw(g, fx = {}) {
       const age = fx.dump ?? null;
       const l = P(x);
       const bedR = P(x + BED_W) - 1;
-      const r = P(x + BED_W + CAB_W) - 1;
+      const cabR = P(x + BED_W + CAB_W) - 1;
+      const r = P(x + BED_W + CAB_W + HOOD_W) - 1;
+      const ht = P(hoodTop);
       const b = P(base) - 1;
       const t = P(bedTop);
       const ct = P(cabTop);
@@ -135,7 +141,7 @@ export function dumpTruck({ x, base = G }) {
         g.line(fx2 + 1, b - 9, bx + 1, by, steel);
       }
       drawTailgate(g, l, t, b - 10, age);
-      drawCab(g, bedR + 1, r, ct, b);
+      drawCab(g, bedR + 1, cabR, r, ct, ht, b);
       drawWheels(g, l, r, b);
       drawStream(g, l, b, age);
     },
@@ -153,7 +159,7 @@ function drawChassis(g, l, bedR, r, b) {
 }
 
 function drawWheels(g, l, r, b) {
-  for (const cx of [l + 11, l + 27, r - 9]) {
+  for (const cx of [l + 11, l + 27, r - 7]) {
     const cy = b - 5;
     g.circle(cx, cy, 5, ink, true);
     g.circle(cx, cy, 4, TYRE, true);
@@ -164,41 +170,54 @@ function drawWheels(g, l, r, b) {
   }
 }
 
-// The cab: yellow, with a blue-tinted window and a step, a grille and bumper at the front.
-function drawCab(g, cl, r, ct, b) {
+// The cab sits behind a short hood that sticks out the front (right): a side window with a
+// slanted windscreen edge at the front, a door, then a lower hood with a grille, a headlight and a bumper.
+function drawCab(g, cl, cr, r, ct, ht, b) {
   const bot = b - 10;
-  g.fill(cl, ct, r - cl + 1, bot - ct + 1, BODY);
-  g.line(cl, ct + 1, r - 1, ct + 1, BODY_LIT); // lit roof edge
-  g.line(cl, ct + 2, r - 1, ct + 2, BODY_LIT);
+  // ---- the cabin
+  g.fill(cl, ct, cr - cl + 1, bot - ct + 1, BODY);
+  g.line(cl, ct + 1, cr - 1, ct + 1, BODY_LIT);
+  g.line(cl, ct + 2, cr - 1, ct + 2, BODY_LIT);
   g.fill(cl, ct + 3, 2, bot - ct - 3, BODY_LIT);
-  g.fill(r - 3, ct + 3, 3, bot - ct - 3, BODY_DARK);
-  g.line(cl, bot - 1, r, bot - 1, BODY_DARK);
-  g.line(cl, bot, r, bot, BODY_DEEP);
-  // the window, looking forward and to the side: a big pane with a glint
+  g.line(cl, bot - 1, cr, bot - 1, BODY_DARK);
+  g.line(cl, bot, cr, bot, BODY_DEEP);
+  // side window: the right edge leans forward at the top, like a raked windscreen
   const wl = cl + 3;
-  const wr = r - 6;
-  g.fill(wl, ct + 4, wr - wl + 1, 8, GLASS_DARK);
-  g.fill(wl + 1, ct + 5, wr - wl - 1, 4, GLASS);
-  g.line(wl + 2, ct + 5, wl + 5, ct + 5, white);
-  g.rect(wl - 1, ct + 3, wr - wl + 3, 10, ink);
-  // a door line and a handle
+  for (let k = 0; k < 8; k++) {
+    const wr = cr - 6 + (7 - k >> 1);
+    g.line(wl, ct + 4 + k, wr, ct + 4 + k, k < 4 ? GLASS : GLASS_DARK);
+    g.pset(wr + 1, ct + 4 + k, ink);
+  }
+  g.line(wl - 1, ct + 3, cr - 2, ct + 3, ink);
+  g.line(wl - 1, ct + 3, wl - 1, ct + 12, ink);
+  g.line(wl, ct + 12, cr - 6, ct + 12, ink);
+  g.line(wl + 1, ct + 5, wl + 4, ct + 5, white);
+  // the door: a seam each side and a handle
   g.line(cl + 3, ct + 14, cl + 3, bot - 2, BODY_DARK);
-  g.line(r - 8, ct + 14, r - 8, bot - 2, BODY_DARK);
-  g.line(cl + 5, ct + 17, cl + 8, ct + 17, steel);
-  // grille and headlight at the front, and a chunky bumper
-  g.fill(r - 5, ct + 15, 4, 6, [60, 60, 70]);
-  g.fill(r - 4, ct + 16, 2, 1, shine);
-  g.fill(r - 5, ct + 22, 4, 2, [255, 244, 170]);
-  g.fill(r - 2, bot - 4, 4, 4, [70, 70, 80]);
-  g.rect(r - 2, bot - 5, 5, 6, ink);
-  // outline
-  g.rect(cl, ct, r - cl + 1, bot - ct + 1, ink);
-  // an exhaust stack beside the cab, behind the bed's front wall, with a puff of smoke
+  g.line(cr - 5, ct + 14, cr - 5, bot - 2, BODY_DARK);
+  g.line(cr - 8, ct + 17, cr - 6, ct + 17, steel);
+  g.rect(cl, ct, cr - cl + 1, bot - ct + 1, ink);
+  // the exhaust stack behind the cab, against the bed's front wall
   g.fill(cl + 1, ct - 5, 2, 5, steel);
   g.rect(cl, ct - 6, 4, 7, ink);
   g.pset(cl + 1, ct - 5, shine);
-  // rust bleeding down from the roof
   for (const [rx, ry, rl] of [[cl + 10, ct + 3, 3], [cl + 17, ct + 3, 2]]) g.line(rx, ry, rx, ry + rl - 1, RUST);
+  // ---- the hood: lower than the cabin, with the grille on its front face
+  const hl = cr + 1;
+  g.fill(hl, ht, r - hl + 1, bot - ht + 1, BODY);
+  g.line(hl, ht + 1, r - 1, ht + 1, BODY_LIT);
+  g.fill(r - 2, ht + 2, 2, bot - ht - 2, BODY_DARK);
+  g.line(hl, bot - 1, r, bot - 1, BODY_DARK);
+  g.line(hl, bot, r, bot, BODY_DEEP);
+  g.rect(hl - 1, ht, r - hl + 2, bot - ht + 1, ink);
+  g.line(hl, ht + 4, r - 1, ht + 4, BODY_DARK); // a vent line along the bonnet
+  // grille slats and a headlight on the front (right) face, and a black bumper
+  g.fill(r - 5, ht + 6, 4, 7, [60, 60, 70]);
+  for (let k = 0; k < 3; k++) g.line(r - 5, ht + 7 + k * 2, r - 2, ht + 7 + k * 2, shine);
+  g.fill(r - 5, ht + 14, 4, 3, [255, 244, 170]);
+  g.rect(r - 5, ht + 14, 4, 3, ink);
+  g.fill(r - 3, bot - 5, 5, 5, [70, 70, 80]);
+  g.rect(r - 3, bot - 6, 6, 7, ink);
 }
 
 // The bed, upright, into `rec`: its yellow shell, ribs, a hazard stripe and the gravel
@@ -293,7 +312,7 @@ function drawStream(g, l, b, age) {
     if (t < 0) continue;
     const u = (hash(i, 3) % 1000) / 1000;
     const v = (hash(i, 4) % 1000) / 1000;
-    const vx = -(26 + 105 * u);
+    const vx = -(20 + 60 * u);
     const vy = -10 + 20 * v;
     const px = l - 1 + vx * t;
     const py = b - 13 + vy * t + 0.5 * GRAV * t * t;
