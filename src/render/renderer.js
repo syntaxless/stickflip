@@ -62,21 +62,31 @@ function makeSkyline(seed, count, minW, maxW, minH, maxH) {
 }
 const SKY_FAR = makeSkyline(11, 18, 12, 26, 28, 70);
 const SKY_NEAR = makeSkyline(23, 14, 16, 30, 18, 50);
-// The Mega Ramp's forest: two repeating rows of trees (far pines, near pines and
-// round-topped trees), same idea as the skyline.
-function makeForest(seed, count, minW, maxW, minH, maxH) {
-  const list = [];
+// The Mega Ramp's moon: a jagged ridge of far mountains per layer (a column height for
+// every pixel of one repeating tile), and the moon's own palette.
+function makeRidge(seed, width, minH, maxH) {
+  const hs = new Array(width).fill(minH);
   let x = 0;
-  for (let i = 0; i < count; i++) {
-    const h = hash(i, seed);
-    const w = minW + (h % (maxW - minW + 1));
-    list.push({ x, w, h: minH + (hash(seed, i * 3 + 1) % (maxH - minH + 1)), round: hash(i, seed + 7) % 3 === 0 });
-    x += w - 4 + (hash(i, seed + 2) % 8);
+  while (x < width) {
+    const run = 10 + (hash(x, seed) % 22); // a slope, up or down, a few px per column
+    const to = minH + (hash(seed, x + 3) % (maxH - minH + 1));
+    const from = hs[Math.max(0, x - 1)];
+    for (let i = 0; i < run && x + i < width; i++) hs[x + i] = Math.round(from + ((to - from) * (i + 1)) / run);
+    x += run;
   }
-  return { list, width: x };
+  // wrap: blend the last columns back to the first so the tile repeats
+  for (let i = 0; i < 16; i++) hs[width - 1 - i] = Math.round(hs[width - 1 - i] * (i / 16) + hs[0] * (1 - i / 16));
+  return hs;
 }
-const FOREST_FAR = makeForest(31, 16, 30, 46, 96, 170);
-const FOREST_NEAR = makeForest(47, 13, 34, 52, 70, 130);
+const RIDGE_FAR = makeRidge(5, 300, 14, 58);
+const RIDGE_NEAR = makeRidge(9, 260, 6, 30);
+const MOON = {
+  sky: [16, 24, 88],
+  surface: [158, 158, 168], surfaceLit: [206, 206, 216], surfaceDark: [96, 96, 108],
+  rock: [118, 118, 130], rockLight: [140, 140, 152], rockDark: [88, 88, 100],
+  stone: [176, 176, 186], stoneDark: [70, 70, 82],
+  craterIn: [64, 64, 78], craterDeep: [48, 48, 62], rimLit: [170, 170, 182],
+};
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
@@ -261,16 +271,15 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline && !game.level.forest) return;
+    if (!game.level.skyline && !game.level.moon) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
-    if (game.level.morning) this.drawMorningSky(g, cam);
-    if (game.level.forest) {
-      // distant trees: they move only a little with the camera's height, so they stay in view up on the decks
-      // (cam.py is the true camera; `top` lifts the bars' bigger frame so the trees line up with the game picture instead of repeating it)
+    if (game.level.moon) {
+      // the sky behind the Mega Ramp moves only a little with the camera's height, so it stays in view up on the decks
+      // (cam.py is the true camera; `top` lifts the bars' bigger frame so the sky lines up with the game picture instead of repeating it)
       g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
-      this.drawForest(g, cam, horizon);
+      this.drawMoonSky(g, cam, horizon);
       g.ox = ox;
       g.oy = oy;
       return;
@@ -301,56 +310,59 @@ export class Renderer {
     g.oy = oy;
   }
 
-  // The Mega Ramp's forest: two layers of chunky pixel trees with a black outline,
-  // slower than the stage, standing on the horizon. Far trees are pale and misty so
-  // the rider still reads against them.
-  drawForest(g, cam, horizon) {
-    const layers = [
-      [FOREST_FAR, 0.1, { body: [160, 198, 160], edge: [124, 164, 134], trunk: [140, 130, 110], line: [96, 128, 104] }],
-      [FOREST_NEAR, 0.26, { body: [100, 164, 108], edge: [68, 124, 82], trunk: [110, 74, 44], line: [8, 20, 12] }],
-    ];
-    for (const [f, factor, c] of layers) {
-      const shift = Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
-      const T = f.width;
-      for (let tile = Math.floor(shift / T) - 1; tile * T - shift < g.w + 40; tile++) {
-        for (const t of f.list) {
-          const bx = tile * T + t.x - shift;
-          if (bx > g.w || bx + t.w < 0) continue;
-          g.ox = 0;
-          const cx = bx + (t.w >> 1);
-          const trunkH = 14; // trunk showing under the lowest branches
-          const crown = t.round ? Math.min(t.h - trunkH + 4, Math.round(t.w * 1.15)) : t.h - trunkH + 4;
-          const top = horizon - trunkH + 4 - crown;
-          // one continuous trunk from the crown's top down past the horizon; the
-          // branches are drawn over it, so every tier visibly hangs off the trunk
-          g.fill(cx - 2, top + 2, 5, horizon + 60 - top - 2, c.line);
-          g.fill(cx - 1, top + 2, 3, horizon + 60 - top - 2, c.trunk);
-          if (t.round) {
-            // a round-topped tree: a blob of stacked 2 px rows
-            const r = t.w >> 1;
-            const half = (y) => Math.max(1, Math.round(r * Math.sqrt(Math.max(0, 1 - (1 - 1.7 * (y / crown)) ** 2)) * 0.95));
-            for (let y = 0; y < crown; y += 2) g.fill(cx - half(y) - 1, top + y - 1, half(y) * 2 + 3, 4, c.line);
-            for (let y = 0; y < crown; y += 2) g.fill(cx - half(y), top + y, half(y) * 2 + 1, 2, y > crown * 0.55 ? c.edge : c.body);
-          } else {
-            // a pine: tiers that widen downward, each a triangle of 2 px rows, with a
-            // 4 px gap of bare trunk between tiers
-            const tiers = Math.max(3, Math.round(t.h / 16));
-            const tierH = Math.floor(crown / tiers / 2) * 2;
-            const gap = 4;
-            for (let pass = 0; pass < 2; pass++) {
-              for (let i = 0; i < tiers; i++) {
-                const y0 = top + i * tierH;
-                const rows = tierH - gap;
-                const maxHalf = Math.round((t.w / 2) * (0.45 + (0.55 * (i + 1)) / tiers));
-                for (let y = 0; y < rows; y += 2) {
-                  const half = Math.max(2, Math.round((maxHalf * (y + 2)) / rows));
-                  const o = pass === 0 ? 1 : 0;
-                  g.fill(cx - half - o, y0 + y - o, half * 2 + 1 + o * 2, 2 + o * 2, pass === 0 ? c.line : y > rows * 0.6 ? c.edge : c.body);
-                }
-              }
-            }
-          }
+  // The Mega Ramp's sky: navy, white stars that barely drift, a pixel Earth, and two
+  // layers of far grey mountains standing on the horizon.
+  drawMoonSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    // stars: one possible star per 14 px cell, most a single white pixel, some bigger or dim
+    const CELL = 14;
+    const sh = shiftOf(0.03);
+    const y0 = Math.floor(-g.oy / CELL) - 1;
+    for (let cy = y0; cy * CELL < -g.oy + g.h + CELL; cy++) {
+      for (let cx = Math.floor(sh / CELL) - 1; cx * CELL - sh < g.w + CELL; cx++) {
+        const h = hash(cx + 400, cy + 77);
+        if (h % 3 !== 0) continue;
+        const x = cx * CELL - sh + ((h >> 4) % CELL);
+        const y = cy * CELL + ((h >> 9) % CELL);
+        if (y > horizon - 4) continue;
+        const kind = (h >> 14) % 12;
+        if (kind === 0) {
+          // a bright star: a plus shape
+          g.fill(x - 1, y, 3, 1, [255, 255, 255]);
+          g.fill(x, y - 1, 1, 3, [255, 255, 255]);
+        } else if (kind < 4) g.pset(x, y, [150, 160, 220]); // dim
+        else g.pset(x, y, [255, 255, 255]);
+      }
+    }
+    // Earth, big and low in the sky, slow to drift: ocean, a bit of land, cloud, a shaded side
+    const ex = 244 - shiftOf(0.01);
+    const ey = horizon - 100;
+    const R = 15;
+    for (let dy = -R - 1; dy <= R + 1; dy++) {
+      for (let dx = -R - 1; dx <= R + 1; dx++) {
+        const d2 = dx * dx + dy * dy;
+        if (d2 > (R + 1) * (R + 1)) continue;
+        let c = [0, 0, 0];
+        if (d2 <= R * R) {
+          c = [44, 96, 214];
+          const land = Math.sin(dx * 0.55 + 1) + Math.cos(dy * 0.6 - 0.5) + Math.sin((dx + dy) * 0.3);
+          if (land > 1.1) c = [60, 160, 84]; // land
+          if (hash((dx + 40) >> 1, (dy + 40) >> 1) % 7 === 0 && Math.abs(dy) < 11) c = [236, 242, 252]; // cloud flecks
+          if (dx + dy > 14 || dx * 0.5 + dy * 0.9 > 13) c = c.map((v) => Math.round(v * 0.55)); // night side
+          else if (dx + dy < -14) c = c.map((v) => Math.min(255, v + 36)); // lit rim
         }
+        g.pset(ex + dx, ey + dy, c);
+      }
+    }
+    // far mountains, then nearer ones: dark grey-blue, with a lit top edge
+    for (const [ridge, factor, body, lit] of [[RIDGE_FAR, 0.06, [40, 44, 92], [66, 70, 124]], [RIDGE_NEAR, 0.16, [58, 60, 100], [92, 94, 136]]]) {
+      const T = ridge.length;
+      const s = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const h = ridge[(((x + s) % T) + T) % T];
+        g.fill(x, horizon - h, 1, h + 60, body);
+        g.fill(x, horizon - h, 1, 1, lit);
       }
     }
   }
@@ -389,32 +401,6 @@ export class Renderer {
     g.oy = oy;
   }
 
-  // A morning sky: gold haze lying on the horizon and a low, pale sun that barely
-  // moves with the camera. Kept light so the black rider reads against it.
-  drawMorningSky(g, cam) {
-    const ox = g.ox;
-    g.ox = 0;
-    const horizon = P(WORLD.GROUND);
-    // haze: ten bands of 12 px fading from the sky colour down to pale gold at the horizon
-    const [top, low] = [[190, 222, 246], [255, 226, 160]];
-    for (let i = 0; i < 10; i++) {
-      const k = (i + 1) / 10;
-      const c = top.map((v, n) => Math.round(v + (low[n] - v) * k * k));
-      g.fill(0, horizon - 120 + i * 12, g.w, 132 - i * 12 + 60, c);
-    }
-    if (g === this.g) {
-      const sx = 250 - Math.round(cam.x * 0.02);
-      const sy = horizon - 34;
-      const [c1, c2] = [[255, 246, 190], [255, 226, 140]];
-      g.fill(sx - 10, sy - 6, 20, 12, c2);
-      g.fill(sx - 7, sy - 10, 14, 20, c2);
-      g.fill(sx - 8, sy - 8, 16, 16, c2);
-      g.fill(sx - 6, sy - 7, 12, 14, c1);
-      g.fill(sx - 4, sy - 9, 8, 18, c1);
-    }
-    g.ox = ox;
-  }
-
   drawBackground(game, cam = { x: 0, y: 0 }, g = this.g) {
     const G = P(WORLD.GROUND);
 
@@ -431,8 +417,8 @@ export class Renderer {
     let top = topAt(cam.x);
     for (let x = cam.x; x < cam.x + g.w; x++) {
       const next = topAt(x + 1);
-      if (top < bottom && game.level.wood) {
-        this.drawWood(g, x, top, bottom);
+      if (top < bottom && game.level.moon) {
+        this.drawMoon(g, x, top, next, bottom);
       } else if (top < bottom && ['concrete', 'wood'].includes(game.groundAt(x * S + S / 2).material)) {
         // a poured concrete slab (a bank, the Euro Gap) or a wooden ramp down to the street, then the street's own layers
         const base = Math.max(top, G);
@@ -501,6 +487,52 @@ export class Renderer {
       if (y === top) c = [84, 80, 76];
       g.pset(x, y, c);
     }
+  }
+
+  // The Mega Ramp's ground, ramps and quarter pipe alike: grey moon rock. A thin
+  // pale surface strip the rider rolls on, then chunky regolith in 2x2 blocks of grey
+  // (with the odd stone and round craters, lit on their upper-left rim), down to where
+  // the street's own layers end, then plain black. A black outline runs along the top.
+  // `next` is the next column's top, so steep ramps get an unbroken outline.
+  drawMoon(g, x, top, next, bottom) {
+    const G = P(WORLD.GROUND);
+    const end = Math.min(bottom, Math.max(top, G) + ASPHALT_H + GRASS_H + DIRT_H);
+    g.fill(x, Math.min(top, next) - 1, 1, Math.abs(top - next) + 1, ink);
+    g.fill(x, top, 1, bottom - top, ink);
+    for (let y = top; y < end; y++) {
+      const hb = hash(x >> 1, y >> 1) % 16; // one value per 2x2 block
+      let c;
+      if (y < top + 4) {
+        c = hb < 3 ? MOON.surfaceLit : hb < 5 ? MOON.surfaceDark : MOON.surface;
+        if (y === top) c = MOON.surfaceLit;
+        else if (y === top + 3) c = MOON.surfaceDark;
+      } else {
+        c = hb < 4 ? MOON.rockLight : hb < 6 ? MOON.rockDark : MOON.rock;
+        if (hash((x >> 1) + 5, (y >> 1) + 9) % 53 === 0) c = (x & 1) === 0 && (y & 1) === 0 ? MOON.stone : MOON.stoneDark;
+        c = this.craterColour(x, y - G, c);
+      }
+      g.pset(x, y, c);
+    }
+  }
+
+  // A round crater in the rock: cells of 40x24 px, a third of them with one crater
+  // (dark inside, a lit rim up and left, a dark one down and right). The row of cells
+  // under the street's surface is fixed so its craters fit in the strip.
+  craterColour(x, y, c) {
+    const cx = Math.floor(x / 40);
+    const cy = Math.floor(y / 24);
+    const h = hash(cx + 91, cy + 17);
+    if (h % 3 !== 0) return c;
+    const rx = 6 + ((h >> 5) % 6);
+    const ry = Math.max(2, Math.round(rx * 0.4));
+    const px = cx * 40 + rx + 2 + ((h >> 9) % (40 - 2 * rx - 4));
+    const py = cy * 24 + (cy === 0 ? 11 : ry + 2 + ((h >> 13) % (24 - 2 * ry - 4)));
+    const dx = (x - px) / rx;
+    const dy = (y - py) / ry;
+    const d2 = dx * dx + dy * dy;
+    if (d2 <= 0.7) return dy > -0.2 ? MOON.craterIn : MOON.craterDeep;
+    if (d2 <= 1) return dx + dy < 0 ? MOON.rimLit : MOON.rockDark;
+    return c;
   }
 
   // The Mega Ramp's ground: wooden planks all the way down (street, ramps and
