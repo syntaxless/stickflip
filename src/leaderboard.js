@@ -6,6 +6,7 @@
 //   submit(initials, score)   -> the new entry's rank (0-based), or -1
 
 export const TABLE_SIZE = 5;
+export const MAX_SCORE = 10000000; // the database refuses anything above this (supabase/scores.sql)
 export const INITIALS = 6; // letters per name (the database allows up to 6: see supabase/scores.sql)
 
 // `store` is any { get(key, fallback), set(key, value) } (localStorage in the
@@ -80,6 +81,7 @@ export function supabaseLeaderboard({ url, key }, { size = TABLE_SIZE, stage = n
     },
     async submit(initials, score) {
       const name = cleanInitials(initials);
+      score = Math.min(MAX_SCORE, Math.max(1, Math.floor(score)));
       await call('', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(stage ? { initials: name, score, stage } : { initials: name, score }) });
       const list = await top();
       // The newest matching row ranks last among equal scores, so take the last match.
