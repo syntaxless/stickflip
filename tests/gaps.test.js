@@ -59,7 +59,11 @@ const SCRIPTS = {
   'kicker-to-rail': [[0.8, 'tap'], [0.8, 'hold']],
   'barrier-to-gap': [[0.22, 'tap'], [1.57, 'tap']],
   'barrel-drop': [[0, 'cs'], [1.3, 'cr']],
-  'broken-walk': [[0, 'cs'], [0.75, 'cr']],
+  'broken-walk': [[0.81, 'tap']], // a plain ollie clears just the gap (and then meets the truck)
+  // a charged ollie off the slab carries over the gap and the bed onto the cab
+  'truck-leap': [[0, 'cs'], [0.79, 'cr']],
+  // the same pop with the finger kept down locks the bed rim
+  'gravel-dump': [[0, 'cs'], [0.68, 'cr'], [0.68, 'hold']],
   'sandbox-leap': [[0, 'cs'], [0.85, 'cr']],
   'seesaw-launch': [[0.3, 'tap'], [0.3, 'hold'], [1.2, 'tap']],
   'monkey-business': [[0.27, 'tap'], [0.27, 'hold'], [1.52, 'tap']],

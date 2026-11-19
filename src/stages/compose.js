@@ -15,9 +15,10 @@ const SECTION_W = WORLD.W; // a multiple of 3, so sections line up with the pixe
 // raised start, say). They go first, so their ground wins where they overlap.
 // `starts`: { sectionIndex: offset } to spawn a replay at x + offset instead of
 // the usual PHYS.START_X; negative reaches back onto the section before.
+// `tail`: extra length past the last section's screen, for a last obstacle that doesn't fit on it.
 // `race`: { finishAt } makes it a race (see rival.js): the finish line stands at that x of the
 // last section, and the sections' `cues` (the rival's inputs) are laid along with them.
-export function stage({ id, name, sections, extra = [], starts = {}, race = null, ...rest }) {
+export function stage({ id, name, sections, extra = [], starts = {}, race = null, tail = 0, ...rest }) {
   const obstacles = [...extra];
   const marks = [];
   const cues = [];
@@ -34,7 +35,7 @@ export function stage({ id, name, sections, extra = [], starts = {}, race = null
     name,
     sections: marks,
     obstacles,
-    width: sections.length * SECTION_W,
+    width: sections.length * SECTION_W + tail,
     ...(race && { race: { cues, ...race, finishX: (sections.length - 1) * SECTION_W + race.finishAt } }),
     ...rest,
   };
