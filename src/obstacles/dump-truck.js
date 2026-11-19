@@ -16,7 +16,7 @@ const P = (v) => Math.round(v / 3);
 const G = WORLD.GROUND;
 const { ink, steel, shine, wheel: white } = PAL;
 
-export const TRUCK = Object.freeze({ BED_W: 99, BED_H: 93, CAB_W: 42, CAB_H: 72, HOOD_W: 18, HOOD_H: 54 });
+export const TRUCK = Object.freeze({ BED_W: 99, BED_H: 93, CAB_W: 45, CAB_H: 84, HOOD_W: 27, HOOD_H: 57 });
 
 const BODY = [244, 188, 36];
 const BODY_LIT = [255, 228, 112];
@@ -170,54 +170,71 @@ function drawWheels(g, l, r, b) {
   }
 }
 
-// The cab sits behind a short hood that sticks out the front (right): a side window with a
-// slanted windscreen edge at the front, a door, then a lower hood with a grille, a headlight and a bumper.
+// The cab, in profile: a tall cabin with a raked windscreen, a window and a door, then a short flat hood in
+// front with a grille, a headlight and a black bumper. The exhaust stack stands behind the cab.
 function drawCab(g, cl, cr, r, ct, ht, b) {
   const bot = b - 10;
-  // ---- the cabin
-  g.fill(cl, ct, cr - cl + 1, bot - ct + 1, BODY);
-  g.line(cl, ct + 1, cr - 1, ct + 1, BODY_LIT);
-  g.line(cl, ct + 2, cr - 1, ct + 2, BODY_LIT);
-  g.fill(cl, ct + 3, 2, bot - ct - 3, BODY_LIT);
+  const fill = (x, y, w, h, c) => g.fill(x, y, w, h, c);
+  // ---- the cabin: a yellow box, the top front corner cut away to a slope
+  fill(cl, ct + 4, cr - cl + 1, bot - ct - 3, BODY);
+  for (let k = 0; k < 4; k++) fill(cl, ct + k, cr - 3 + k - cl + 1, 1, BODY); // the roof slopes down at the front
+  g.line(cl, ct + 1, cr - 3, ct + 1, BODY_LIT); // lit roof
+  g.line(cl, ct + 2, cr - 3, ct + 2, BODY_LIT);
+  fill(cl, ct + 3, 2, bot - ct - 3, BODY_LIT); // lit rear edge
+  fill(cr - 2, ct + 5, 3, bot - ct - 5, BODY_DARK); // shaded front edge
   g.line(cl, bot - 1, cr, bot - 1, BODY_DARK);
   g.line(cl, bot, cr, bot, BODY_DEEP);
-  // side window: the right edge leans forward at the top, like a raked windscreen
+  // the window: glass with a raked front edge, two tones and a white glint, in a black frame
   const wl = cl + 3;
-  for (let k = 0; k < 8; k++) {
-    const wr = cr - 6 + (7 - k >> 1);
-    g.line(wl, ct + 4 + k, wr, ct + 4 + k, k < 4 ? GLASS : GLASS_DARK);
-    g.pset(wr + 1, ct + 4 + k, ink);
+  const wt = ct + 4;
+  for (let k = 0; k < 9; k++) {
+    const wr = cr - 6 + Math.min(3, (8 - k) >> 1); // wider at the top: the windscreen leans forward
+    g.line(wl, wt + k, wr, wt + k, k < 5 ? GLASS : GLASS_DARK);
+    g.pset(wr + 1, wt + k, ink);
   }
-  g.line(wl - 1, ct + 3, cr - 2, ct + 3, ink);
-  g.line(wl - 1, ct + 3, wl - 1, ct + 12, ink);
-  g.line(wl, ct + 12, cr - 6, ct + 12, ink);
-  g.line(wl + 1, ct + 5, wl + 4, ct + 5, white);
-  // the door: a seam each side and a handle
-  g.line(cl + 3, ct + 14, cl + 3, bot - 2, BODY_DARK);
-  g.line(cr - 5, ct + 14, cr - 5, bot - 2, BODY_DARK);
-  g.line(cr - 8, ct + 17, cr - 6, ct + 17, steel);
-  g.rect(cl, ct, cr - cl + 1, bot - ct + 1, ink);
-  // the exhaust stack behind the cab, against the bed's front wall
-  g.fill(cl + 1, ct - 5, 2, 5, steel);
-  g.rect(cl, ct - 6, 4, 7, ink);
-  g.pset(cl + 1, ct - 5, shine);
-  for (const [rx, ry, rl] of [[cl + 10, ct + 3, 3], [cl + 17, ct + 3, 2]]) g.line(rx, ry, rx, ry + rl - 1, RUST);
-  // ---- the hood: lower than the cabin, with the grille on its front face
+  g.line(wl - 1, wt - 1, cr - 3, wt - 1, ink);
+  g.line(wl - 1, wt - 1, wl - 1, wt + 9, ink);
+  g.line(wl - 1, wt + 9, cr - 6, wt + 9, ink);
+  g.line(wl + 1, wt + 1, wl + 4, wt + 1, white);
+  g.pset(wl + 1, wt + 2, white);
+  // the door below it: seams, a handle and a step at the foot
+  g.line(cl + 2, wt + 11, cr - 3, wt + 11, BODY_DARK);
+  g.line(cl + 3, wt + 11, cl + 3, bot - 3, BODY_DARK);
+  g.line(cr - 4, wt + 11, cr - 4, bot - 3, BODY_DARK);
+  g.line(cl + 5, wt + 13, cl + 7, wt + 13, steel);
+  g.pset(cl + 5, wt + 12, shine);
+  fill(cl + 4, bot - 2, cr - cl - 6, 2, [70, 70, 80]);
+  // outline: the roof slopes down at the front
+  g.line(cl, ct, cr - 4, ct, ink);
+  g.line(cr - 3, ct, cr, ct + 3, ink);
+  g.line(cl, ct, cl, bot, ink);
+  g.line(cr, ct + 3, cr, bot, ink);
+  g.line(cl, bot, cr, bot, ink);
+  // a roof light and the exhaust stack behind the cab, against the bed's front wall
+  g.fill(cl + 5, ct - 2, 4, 2, [255, 150, 40]);
+  g.rect(cl + 4, ct - 3, 6, 4, ink);
+  g.fill(cl + 5, ct - 2, 4, 2, [255, 150, 40]);
+  g.fill(cl + 1, ct - 6, 2, 6, steel);
+  g.rect(cl, ct - 7, 4, 8, ink);
+  g.pset(cl + 1, ct - 6, shine);
+  // ---- the hood: short, flat and lower than the cabin
   const hl = cr + 1;
-  g.fill(hl, ht, r - hl + 1, bot - ht + 1, BODY);
+  fill(hl, ht, r - hl + 1, bot - ht + 1, BODY);
   g.line(hl, ht + 1, r - 1, ht + 1, BODY_LIT);
-  g.fill(r - 2, ht + 2, 2, bot - ht - 2, BODY_DARK);
+  g.line(hl, ht + 2, r - 2, ht + 2, BODY_LIT);
   g.line(hl, bot - 1, r, bot - 1, BODY_DARK);
   g.line(hl, bot, r, bot, BODY_DEEP);
   g.rect(hl - 1, ht, r - hl + 2, bot - ht + 1, ink);
-  g.line(hl, ht + 4, r - 1, ht + 4, BODY_DARK); // a vent line along the bonnet
-  // grille slats and a headlight on the front (right) face, and a black bumper
-  g.fill(r - 5, ht + 6, 4, 7, [60, 60, 70]);
-  for (let k = 0; k < 3; k++) g.line(r - 5, ht + 7 + k * 2, r - 2, ht + 7 + k * 2, shine);
-  g.fill(r - 5, ht + 14, 4, 3, [255, 244, 170]);
-  g.rect(r - 5, ht + 14, 4, 3, ink);
-  g.fill(r - 3, bot - 5, 5, 5, [70, 70, 80]);
-  g.rect(r - 3, bot - 6, 6, 7, ink);
+  g.line(hl, ht + 5, r - 2, ht + 5, BODY_DARK); // a bonnet line
+  // front face: grille with silver slats, a headlight, and a black bumper that sticks out
+  fill(r - 4, ht + 3, 3, 6, [50, 50, 60]);
+  for (let k = 0; k < 3; k++) g.line(r - 4, ht + 4 + k * 2, r - 2, ht + 4 + k * 2, shine);
+  fill(r - 4, ht + 10, 3, 3, [255, 244, 170]);
+  g.rect(r - 4, ht + 10, 3, 3, ink);
+  g.pset(r - 3, ht + 11, white);
+  fill(r - 2, bot - 5, 4, 5, [60, 60, 70]);
+  g.rect(r - 2, bot - 6, 5, 7, ink);
+  g.pset(r - 1, bot - 4, shine);
 }
 
 // The bed, upright, into `rec`: its yellow shell, ribs, a hazard stripe and the gravel
@@ -256,9 +273,9 @@ function drawBed(rec, l, bedR, t, bot, age) {
     rec.pset(rx + 1, ry + 2, RUST);
   }
   // a number plate on the side
-  rec.fill(l + 24, t + 10, 12, 5, [236, 200, 60]);
-  rec.rect(l + 24, t + 10, 12, 5, ink);
-  rec.line(l + 26, t + 12, l + 34, t + 12, BODY_DARK);
+  rec.fill(l + 12, t + 10, 12, 5, [236, 200, 60]);
+  rec.rect(l + 12, t + 10, 12, 5, ink);
+  rec.line(l + 14, t + 12, l + 22, t + 12, BODY_DARK);
   rec.rect(l, t, span + 1, bot - t + 1, ink);
   // the front wall (the headboard) stands a little taller than the rim, over the cab
   rec.fill(bedR - 3, t - 3, 4, 3, BODY);
