@@ -12,6 +12,11 @@ import { squashOf, RAG_SIZE } from '../ragdoll.js';
 
 const S = 3;
 const P = (v) => Math.round(v / S);
+// The white glow around the player in Hellride, and the offsets that make its ring (one pixel out,
+// corners included).
+const HELL_GLOW = [255, 255, 255];
+const GLOW_RING = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
 const snap = (v) => Math.round(v / S) * S;
@@ -672,6 +677,24 @@ export class Renderer {
   // `advance` false redraws this frame's pose without moving the animation on.
   // `who` 'rival' draws the rival's Game (a pale skeleton with horns on a dark red board).
   drawSkater(game, g = this.g, advance = true, who = null) {
+    // Hellride's backdrop is dark, so the player gets a thin white glow: the same picture in flat
+    // white, a pixel out in every direction, under the real one. (The pale rival has none.)
+    if (game.level.hell && !who && HELL_GLOW) {
+      const { ox, oy } = g;
+      g.flat = HELL_GLOW;
+      for (const [dx, dy] of GLOW_RING) {
+        g.ox = ox + dx;
+        g.oy = oy + dy;
+        this.drawSkaterBody(game, g, false, who);
+      }
+      g.flat = null;
+      g.ox = ox;
+      g.oy = oy;
+    }
+    this.drawSkaterBody(game, g, advance, who);
+  }
+
+  drawSkaterBody(game, g = this.g, advance = true, who = null) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
     const look = who ? RIVAL_LOOK : {};

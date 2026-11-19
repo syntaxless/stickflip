@@ -133,6 +133,9 @@ export class Pix {
     // Camera offset in pixels, added to everything drawn (scrolling levels).
     this.ox = 0;
     this.oy = 0;
+    // When set, everything plotted comes out in this one colour (a flat silhouette), used to
+    // draw a glow around a sprite by plotting it shifted a pixel each way in light.
+    this.flat = null;
   }
 
   clear(c = PAL.sky) {
@@ -154,6 +157,7 @@ export class Pix {
     y = Math.round(y) + this.oy;
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const i = (y * this.w + x) * 4;
+    if (this.flat) c = this.flat;
     this.data[i] = c[0];
     this.data[i + 1] = c[1];
     this.data[i + 2] = c[2];
