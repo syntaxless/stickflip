@@ -34,5 +34,4 @@ export default stage({
   camTop: 100,
   palette: 'hell',
   hell: true, // the sky and the ground
-  gameCenter: false, // no Game Center board for this stage yet
 });

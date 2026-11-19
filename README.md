@@ -223,7 +223,7 @@ the rubber band can give), its pace is rubber-banded (`RACE` in `src/config.js`:
 yours, quicker when you pull ahead, easing off when you fall behind), and it takes every turbo on
 its line, so riding its line cleanly beats it by about half a second and manuals win by a lot. The
 race rules are in `src/rival.js` and `Game` (`race`, `lose()`, `finish()`), the pieces in
-`src/obstacles/hell.js`. Game Center has no board for it yet (`gameCenter: false`).
+`src/obstacles/hell.js`. Its Game Center board is `stickflip.stage6`.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
