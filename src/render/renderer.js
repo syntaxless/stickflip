@@ -89,6 +89,8 @@ const MOON = {
 };
 // Hellride: the sky's bands (top to horizon), the black mountains, and the rival's look.
 const HELL_BANDS = [[120, 16, 36], [158, 26, 40], [190, 42, 40], [222, 74, 42], [244, 120, 52], [252, 170, 70]];
+// the far wall of fire along the horizon: deep red body, hotter core, lighter tip (all brighter than the rider is dark)
+const HELL_FIRE = [[196, 46, 36], [226, 84, 40], [250, 140, 58]];
 const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
@@ -344,8 +346,8 @@ export class Renderer {
     g.oy = oy;
   }
 
-  // Hellride's sky: bands of red deepening to blood orange at the horizon, a huge low sun, drifting
-  // embers, and two layers of black volcano ridges with the odd lava glow, scrolling at their own pace.
+  // Hellride's sky: bands of red deepening to blood orange at the horizon, a huge low sun sinking into the
+  // horizon, and drifting embers. No mountains: the plain bands keep the dark rider easy to see.
   drawHellSky(g, cam, horizon) {
     const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
     g.ox = 0;
@@ -359,12 +361,42 @@ export class Renderer {
       if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, HELL_BANDS[i]);
       y -= h;
     }
-    // the sun: a big disc, half sunk behind the mountains
+    // the bright band carries on down past the horizon (the sky shifts a little against the ground as the camera rises)
+    g.fill(0, horizon, g.w, 160, HELL_BANDS[HELL_BANDS.length - 1]);
+    // the sun: a big disc, half sunk below the horizon
     const sx = 236 - shiftOf(0.015);
     const sr = 26;
     for (let dy = -sr; dy <= sr; dy++) {
       const half = Math.round(Math.sqrt(sr * sr - dy * dy));
-      g.fill(sx - half, horizon - 34 + dy, half * 2 + 1, 1, HELL_SUN[dy < 4 ? 0 : 1]);
+      g.fill(sx - half, horizon - 4 + dy, half * 2 + 1, 1, HELL_SUN[dy < 4 ? 0 : 1]);
+    }
+    // a far wall of fire: two rows of slow, flickering tongues of flame standing on the horizon (the
+    // back row taller, dimmer and slower), in reds close to the bands so they glow without competing
+    // with the rider
+    const fireT = this.time;
+    for (const [factor, cell, minH, rangeH, body, core, speed, salt] of [
+      [0.03, 17, 16, 24, [178, 34, 40], [206, 58, 40], 0.7, 77],
+      [0.06, 11, 8, 18, HELL_FIRE[0], HELL_FIRE[1], 1, 91],
+    ]) {
+      const fsh = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const wx = x + fsh;
+        const c = Math.floor(wx / cell);
+        const hh = hash(c, salt);
+        if (hh % 10 < 2) continue; // gaps between the flames
+        const u = wx - c * cell - cell / 2; // across the tongue, centred
+        const phase = (hh >> 4) % 100;
+        const flick = Math.round((Math.sin(fireT * 2.4 * speed + phase) * 3 + Math.sin(fireT * 5.1 * speed + phase * 2) * 1.2) * (cell / 11));
+        const top = minH + ((hh >> 9) % rangeH) + flick; // flame height
+        const sway = Math.sin(fireT * 1.7 * speed + phase) * (cell / 7);
+        const lean = Math.abs(u - sway * 0.5);
+        const ht = Math.round(top * Math.pow(Math.max(0, 1 - lean / (cell * 0.5)), 1.3));
+        if (ht <= 0) continue;
+        g.fill(x, horizon - ht, 1, ht + 40, body);
+        const inner = Math.round(ht * 0.62);
+        if (inner > 2 && lean < cell * 0.3) g.fill(x, horizon - inner, 1, inner, core);
+        if (salt === 91 && ht > 14 && lean < 1.2) g.pset(x, horizon - ht + 1, HELL_FIRE[2]);
+      }
     }
     // embers drifting up (and across): 26 per 700-pixel tile of sky, which scrolls slower than the stage
     const t = this.time;
@@ -378,17 +410,6 @@ export class Renderer {
         if (x < -2) continue;
         g.pset(x, yy, EMBER[h % 3]);
         if (h % 5 === 0) g.pset(x + 1, yy, EMBER[1]);
-      }
-    }
-    // ridges: far, then near, black-purple with a lit edge and the odd glowing lava seam
-    for (const [ridge, factor, body, lit, glow] of [[RIDGE_FAR, 0.06, [52, 14, 40], [118, 34, 50], false], [RIDGE_NEAR, 0.16, [26, 8, 24], [92, 26, 38], true]]) {
-      const T = ridge.length;
-      const sh = shiftOf(factor);
-      for (let x = 0; x < g.w; x++) {
-        const h = ridge[(((x + sh) % T) + T) % T] + (glow ? 4 : 18);
-        g.fill(x, horizon - h, 1, h + 60, body);
-        g.fill(x, horizon - h, 1, 1, lit);
-        if (glow && hash((x + sh) >> 2, 5) % 11 === 0) g.fill(x, horizon - h + 2, 1, Math.min(h - 2, 5 + (hash(x + sh, 3) % 6)), EMBER[2]);
       }
     }
   }
