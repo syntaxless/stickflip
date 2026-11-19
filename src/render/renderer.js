@@ -87,6 +87,15 @@ const MOON = {
   stone: [176, 176, 186], stoneDark: [70, 70, 82],
   craterIn: [64, 64, 78], craterDeep: [48, 48, 62], rimLit: [170, 170, 182],
 };
+// Hellride: the sky's bands (top to horizon), the black mountains, and the rival's look.
+const HELL_BANDS = [[120, 16, 36], [158, 26, 40], [190, 42, 40], [222, 74, 42], [244, 120, 52], [252, 170, 70]];
+// the far wall of fire along the horizon: deep red body, hotter core, lighter tip (all brighter than the rider is dark)
+const HELL_FIRE = [[196, 46, 36], [226, 84, 40], [250, 140, 58]];
+const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
+const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
+const RIVAL_DECK = [140, 10, 24];
+const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
+const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
@@ -99,6 +108,8 @@ export class Renderer {
   // `keepPose`: the rider rolled on from the last screen, so don't snap his pose.
   reset(keepPose = false) {
     if (!keepPose || !this.pose) this.pose = new PoseBlender('idle');
+    this.rivalPose = new PoseBlender('idle');
+    this.turbo = 0; // seconds left of the turbo flash and its trail
     this.particles = [];
     // Pop-up text lives in one fixed slot under the HUD, and a new message
     // replaces the old one instead of piling on top of it. Trick names show in
@@ -136,13 +147,17 @@ export class Renderer {
         case 'trick':
           this.pulse = 0.25;
           break;
+        case 'boost':
+          this.turbo = 0.9;
+          this.embers(e.x, e.y, 14);
+          break;
         case 'special':
           this.specials.push({ text: `${e.name} +${e.points}`, kind: e.kind, age: 0 });
           if (this.specials.length > 3) this.specials.shift();
           break;
         case 'bail': {
-          const pool = e.reason === 'gap' && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
-          if (pool) this.splash(e.x, pool.splash.y, pool.splash.kind);
+          const pool = (e.reason === 'gap' || e.reason === 'rolled') && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
+          if (pool && (e.reason === 'gap' || pool.splash.kind === 'lava')) this.splash(e.x, pool.splash.y, pool.splash.kind);
           else this.dust(e.x, e.y, 10);
           break;
         }
@@ -152,17 +167,25 @@ export class Renderer {
 
   // Water, or coloured balls, flung up where the rider fell in.
   splash(x, y, kind = 'water') {
-    const balls = kind === 'balls';
+    const balls = kind === 'balls' || kind === 'lava'; // flung blobs: coloured balls, or glowing lava
+    const colors = kind === 'lava' ? LAVA_BALLS : BALL_COLORS;
     for (let i = 0; i < (balls ? 22 : 28); i++) {
       this.particles.push({
         kind: balls ? 'ball' : 'splash',
-        color: balls ? BALL_COLORS[i % BALL_COLORS.length] : null,
+        color: balls ? colors[i % colors.length] : null,
         x: x + (Math.random() - 0.5) * (balls ? 70 : 50),
         y: y - 2,
         vx: (Math.random() - 0.5) * (balls ? 260 : 200),
         vy: (balls ? -220 : -150) - Math.random() * 300,
         life: balls ? 1.1 : 0.7,
       });
+    }
+  }
+
+  // Turbo sparks: bright embers thrown back behind the rider.
+  embers(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      this.particles.push({ kind: 'ember', x: x - 10 - Math.random() * 20, y: y - 8 - Math.random() * 24, vx: -120 - Math.random() * 220, vy: -80 + Math.random() * 120, life: 0.45 + Math.random() * 0.3, c: i % 3 });
     }
   }
 
@@ -200,6 +223,7 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    if (game.rival) this.drawSkater(game.rival.game, g, true, 'rival'); // behind the player
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -214,13 +238,17 @@ export class Renderer {
 
   step(game, dt) {
     this.squash = Math.max(0, this.squash - dt);
+    if (this.turbo > 0) {
+      this.turbo = Math.max(0, this.turbo - dt);
+      if (game.phase === 'playing' && Math.random() < 0.7) this.embers(game.sk.x, game.sk.y, 1);
+    }
     this.pulse = Math.max(0, this.pulse - dt);
     if (game.sk.mode === 'grind' && Math.random() < 0.6) this.sparks(game.sk.x, game.sk.y, 1);
     for (const p of this.particles) {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += (p.kind === 'spark' ? 1400 : p.kind === 'ball' ? 900 : 300) * dt;
+      p.vy += (p.kind === 'spark' ? 1400 : p.kind === 'ball' ? 900 : p.kind === 'ember' ? 0 : 300) * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
     for (const sp of this.specials) sp.age += dt;
@@ -262,6 +290,7 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    if (game.rival) this.drawSkater(game.rival.game, g, false, 'rival');
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -271,10 +300,17 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline && !game.level.moon) return;
+    if (!game.level.skyline && !game.level.moon && !game.level.hell) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
+    if (game.level.hell) {
+      g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
+      this.drawHellSky(g, cam, horizon);
+      g.ox = ox;
+      g.oy = oy;
+      return;
+    }
     if (game.level.moon) {
       // the sky behind the Mega Ramp moves only a little with the camera's height, so it stays in view up on the decks
       // (cam.py is the true camera; `top` lifts the bars' bigger frame so the sky lines up with the game picture instead of repeating it)
@@ -308,6 +344,74 @@ export class Renderer {
     }
     g.ox = ox;
     g.oy = oy;
+  }
+
+  // Hellride's sky: bands of red deepening to blood orange at the horizon, a huge low sun sinking into the
+  // horizon, and drifting embers. No mountains: the plain bands keep the dark rider easy to see.
+  drawHellSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    // bands: the last (brightest) one rests on the horizon, the rest stack above it; the top one goes on up
+    const bandH = [22, 24, 20, 18, 16, 12];
+    let y = horizon;
+    for (let i = HELL_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, HELL_BANDS[i]);
+      // a dithered edge to the band above, so it blends in chunky steps
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, HELL_BANDS[i]);
+      y -= h;
+    }
+    // the bright band carries on down past the horizon (the sky shifts a little against the ground as the camera rises)
+    g.fill(0, horizon, g.w, 160, HELL_BANDS[HELL_BANDS.length - 1]);
+    // the sun: a big disc, half sunk below the horizon
+    const sx = 236 - shiftOf(0.015);
+    const sr = 26;
+    for (let dy = -sr; dy <= sr; dy++) {
+      const half = Math.round(Math.sqrt(sr * sr - dy * dy));
+      g.fill(sx - half, horizon - 4 + dy, half * 2 + 1, 1, HELL_SUN[dy < 4 ? 0 : 1]);
+    }
+    // a far wall of fire: two rows of slow, flickering tongues of flame standing on the horizon (the
+    // back row taller, dimmer and slower), in reds close to the bands so they glow without competing
+    // with the rider
+    const fireT = this.time;
+    for (const [factor, cell, minH, rangeH, body, core, speed, salt] of [
+      [0.03, 17, 16, 24, [178, 34, 40], [206, 58, 40], 0.7, 77],
+      [0.06, 11, 8, 18, HELL_FIRE[0], HELL_FIRE[1], 1, 91],
+    ]) {
+      const fsh = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const wx = x + fsh;
+        const c = Math.floor(wx / cell);
+        const hh = hash(c, salt);
+        if (hh % 10 < 2) continue; // gaps between the flames
+        const u = wx - c * cell - cell / 2; // across the tongue, centred
+        const phase = (hh >> 4) % 100;
+        const flick = Math.round((Math.sin(fireT * 2.4 * speed + phase) * 3 + Math.sin(fireT * 5.1 * speed + phase * 2) * 1.2) * (cell / 11));
+        const top = minH + ((hh >> 9) % rangeH) + flick; // flame height
+        const sway = Math.sin(fireT * 1.7 * speed + phase) * (cell / 7);
+        const lean = Math.abs(u - sway * 0.5);
+        const ht = Math.round(top * Math.pow(Math.max(0, 1 - lean / (cell * 0.5)), 1.3));
+        if (ht <= 0) continue;
+        g.fill(x, horizon - ht, 1, ht + 40, body);
+        const inner = Math.round(ht * 0.62);
+        if (inner > 2 && lean < cell * 0.3) g.fill(x, horizon - inner, 1, inner, core);
+        if (salt === 91 && ht > 14 && lean < 1.2) g.pset(x, horizon - ht + 1, HELL_FIRE[2]);
+      }
+    }
+    // embers drifting up (and across): 26 per 700-pixel tile of sky, which scrolls slower than the stage
+    const t = this.time;
+    const esh = shiftOf(0.2);
+    for (let i = 0; i < 26; i++) {
+      const h = hash(i, 41);
+      const u = ((((h % 700) - Math.round(t * (6 + (h % 9)))) % 700) + 700) % 700;
+      const yy = horizon - 6 - ((((h >> 8) % 400) + Math.round(t * (10 + (h % 14)))) % 150);
+      for (let tile = Math.floor(esh / 700) - 1; tile * 700 + u - esh < g.w + 2; tile++) {
+        const x = tile * 700 + u - esh;
+        if (x < -2) continue;
+        g.pset(x, yy, EMBER[h % 3]);
+        if (h % 5 === 0) g.pset(x + 1, yy, EMBER[1]);
+      }
+    }
   }
 
   // The Mega Ramp's sky: navy, white stars that barely drift, a pixel Earth, and two
@@ -587,14 +691,19 @@ export class Renderer {
   }
 
   // `advance` false redraws this frame's pose without moving the animation on.
-  drawSkater(game, g = this.g, advance = true) {
+  // `who` 'rival' draws the rival's Game (a pale skeleton with horns on a dark red board).
+  drawSkater(game, g = this.g, advance = true, who = null) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
+    const look = who ? RIVAL_LOOK : {};
+    const deck = who ? RIVAL_DECK : PAL.deck;
+    const poseOf = who ? this.rivalPose : this.pose;
+    const squash = who ? 0 : this.squash;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -605,7 +714,7 @@ export class Renderer {
       // squash and stretch sit on the lowest joint, in three steps so it stays pixel art
       const tf = (p) => ({ x: (px + (p.x - px) * sx) / S, y: (low + (p.y - low) * sy) / S });
       const tilt = Math.atan2(pts.head.x - pts.neck.x, -(pts.head.y - pts.neck.y));
-      drawFigure(g, tf, pts, { k: RAG_SIZE, face: r.dir, tilt });
+      drawFigure(g, tf, pts, { k: RAG_SIZE, face: r.dir, tilt, ...look });
       return;
     }
 
@@ -616,8 +725,8 @@ export class Renderer {
     else if (s.mode === 'ramp') target = 'crouch';
     else if (s.manual) target = 'prime';
     else if (s.charge) target = game.chargeLevel() > 0.5 ? 'charge' : 'crouch'; // crouch deeper the longer you hold
-    else if (this.squash > 0) target = 'crouch';
-    if (advance) this.pose.update(target, dt);
+    else if (squash > 0) target = 'crouch';
+    if (advance) poseOf.update(target, dt);
 
     // The board follows the ground (banks), tilts with the arc in the air,
     // and with the rail on a sloped grind. `face` is the way the skater faces:
@@ -667,8 +776,8 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift);
-    drawFigure(g, squashX(base, bodySx), this.pose.pose);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck);
+    drawFigure(g, squashX(base, bodySx), poseOf.pose, look);
   }
 
   drawParticles() {
@@ -676,6 +785,10 @@ export class Renderer {
       if (p.kind === 'ball') {
         this.g.fill(P(p.x), P(p.y), 2, 2, p.color); // a flung ball: a 2x2 block
         this.g.pset(P(p.x), P(p.y), PAL.wheel);
+        continue;
+      }
+      if (p.kind === 'ember') {
+        this.g.pset(P(p.x), P(p.y), EMBER[p.life < 0.2 ? 2 : p.c]);
         continue;
       }
       const c = p.kind === 'spark' ? red : p.kind === 'splash' ? [190, 225, 255] : ink;
@@ -753,6 +866,7 @@ export class Renderer {
     const total = opts.total ?? game.score;
     g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
     if (game.phase === 'playing') this.drawSpeed(game, R, 15);
+    if (game.rival) this.drawRace(game, L, R);
     // After a retry the rider stands ready for a moment before rolling off.
     if (game.phase === 'playing' && game.wait > 0) {
       const cx = RES.W / 2;
@@ -782,6 +896,41 @@ export class Renderer {
     }
   }
 
+  // The race: a track along the bottom of the screen (the black below the ground) from the start to the
+  // finish flag with a marker for you and one for the rival, a "RIVAL >>" arrow when it is off the
+  // right edge of the screen, and "<< RIVAL" when it is behind the left edge.
+  drawRace(game, L, R) {
+    const g = this.g;
+    const { finishX } = game.level.race;
+    const x0 = game.sections[0].x + PHYS.START_X;
+    const frac = (x) => Math.max(0, Math.min(1, (x - x0) / (finishX - x0)));
+    const y = RES.H - 6;
+    g.fill(0, RES.H - 12, RES.W, 12, ink); // a black strip behind the bar, whatever the camera shows below the ground
+    const CREAM = [255, 240, 200];
+    const RED = [230, 50, 50];
+    // legend
+    g.fill(L, y - 2, 5, 5, CREAM);
+    g.text('YOU', L + 8, y - 3, CREAM);
+    g.fill(L + 34, y - 2, 5, 5, RED);
+    g.text('RIVAL', L + 42, y - 3, RED);
+    // the track
+    const tx0 = L + 82;
+    const tx1 = R - 10;
+    g.fill(tx0, y, tx1 - tx0 + 1, 1, [150, 150, 150]);
+    for (let i = 0; i <= 8; i++) g.pset(tx0 + Math.round(((tx1 - tx0) * i) / 8), y - 1, [110, 110, 110]);
+    // finish flag: a small chequered square
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) g.pset(tx1 + 1 + i, y - 4 + j, (i + j) % 2 ? [250, 250, 250] : ink);
+    const mark = (x, c, dy) => g.fill(Math.round(tx0 + (tx1 - tx0) * frac(x)) - 2, y - 2 + dy, 5, 5, c);
+    const rx = game.rival.x;
+    mark(rx, RED, 0);
+    mark(game.sk.mode === 'bail' && game.sk.bail ? game.sk.bail.x : game.sk.x, CREAM, 0);
+    // off-screen arrows
+    const cam = this.cam || { x: 0 };
+    const sx = P(rx) - cam.x;
+    if (game.phase === 'playing' && sx > RES.W + 2) g.text('RIVAL >>', R, 118, red, 1, 'right');
+    else if (game.phase === 'playing' && sx < -6) g.text('<< RIVAL', L, 118, red, 1, 'left');
+  }
+
   // SPEED and a bar of cells, right-aligned to `right`: the middle cell is cruising speed.
   drawSpeed(game, right, y) {
     const g = this.g;
@@ -790,7 +939,8 @@ export class Renderer {
     const hi = game.cruise * (game.sk.manual ? PHYS.MANUAL_SPEED_MAX : PHYS.SPEED_MAX); // a manual's climb has its own top
     const n = Math.max(1, Math.min(cells, Math.round(1 + ((cells - 1) * (game.speed - lo)) / (hi - lo))));
     const bx = right - cells * 4 + 1;
-    g.text('SPEED', bx - 4, y, red, 1, 'right');
+    if (this.turbo > 0 && this.blink(5)) g.text('TURBO', bx - 4, y, [255, 150, 20], 1, 'right');
+    else g.text('SPEED', bx - 4, y, red, 1, 'right');
     for (let i = 0; i < cells; i++) {
       if (i < n) g.fill(bx + i * 4, y, 3, 7, red);
       else g.rect(bx + i * 4, y, 3, 7, red);
@@ -826,11 +976,21 @@ export class Renderer {
         this.drawTable(opts.highScores, 62, -1, 11);
         tapY = 124;
       } else {
-        g.text('STICKFLIP', cx + 1, 39, ink, 4, 'center');
-        g.text('STICKFLIP', cx, 38, red, 4, 'center');
+        const title = game.rival ? 'HELLRIDE' : 'STICKFLIP';
+        g.text(title, cx + 1, 39, ink, 4, 'center');
+        g.text(title, cx, 38, red, 4, 'center');
+        if (game.rival) g.text('FIRST TO THE FINISH WINS', cx, 70, red, 1, 'center');
         tapY = 80; // no control tips: players find the controls themselves
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
+    } else if (game.phase === 'beaten') {
+      // the rival crossed the line first
+      g.text('RIVAL WINS!', cx + 1, 39, ink, 3, 'center');
+      g.text('RIVAL WINS!', cx, 38, red, 3, 'center');
+      g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
+      const spot = loserSpot(cx);
+      drawSticker(g, spot.x, spot.y, 'LOSER', spot.opts);
+      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO RACE AGAIN', cx, 82, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
@@ -954,9 +1114,10 @@ export class Renderer {
   drawSelect(scr) {
     const cx = RES.W / 2;
     const { y } = this.panel('STAGES');
+    const tight = scr.stages.length > 5; // six or more buttons: pack them closer
     scr.stages.forEach((st, i) => {
       const open = i < scr.unlocked;
-      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + 32 + i * 20, 90, open);
+      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);
     });
     // Opened from a stage's start or bail screen: a way back to it.
     if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);
@@ -964,10 +1125,13 @@ export class Renderer {
 
   // Above the end-of-run panel: the no-bail bonus, when earned (already in the total).
   drawBonus(scr, panelY) {
-    if (!scr.bonus || !this.blink(2)) return;
+    if (!this.blink(2)) return;
     const cx = RES.W / 2;
-    this.g.text(`NO BAIL BONUS +${scr.bonus}`, cx + 1, panelY - 11, ink, 1, 'center');
-    this.g.text(`NO BAIL BONUS +${scr.bonus}`, cx, panelY - 12, red, 1, 'center');
+    const lines = [scr.note, scr.bonus ? `NO BAIL BONUS +${scr.bonus}` : null].filter(Boolean);
+    lines.forEach((text, i) => {
+      this.g.text(text, cx + 1, panelY - 11 - i * 10, ink, 1, 'center');
+      this.g.text(text, cx, panelY - 12 - i * 10, red, 1, 'center');
+    });
   }
 
   // A press inside a button wins; otherwise the nearest button within a

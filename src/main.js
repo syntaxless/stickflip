@@ -118,9 +118,13 @@ const openNextStage = (i) => {
 //   { type: 'scores', score, highlight, t }    the table
 //   { type: 'select', t }                      the stage list
 let screen = null;
+let raceWon = null; // { lead, bonus } once a race is won, until the run's end screen has shown it
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
 
 async function finishRun() {
+  // A race won: the win bonus is already in the stage's score; say so on the screen.
+  const note = raceWon ? `RACE WON +${raceWon.bonus}` : null;
+  raceWon = null;
   // No bails all the way through: the bonus goes on the total.
   const bonus = run.bonus();
   const score = run.total() + bonus;
@@ -133,31 +137,31 @@ async function finishRun() {
   store.set('level', 0);
   store.set('checkpoint', null);
   await refreshScores(stageIndex);
-  submitToGameCenter(score, LEVELS[stageIndex].id);
+  if (LEVELS[stageIndex].gameCenter !== false) submitToGameCenter(score, LEVELS[stageIndex].id);
   refreshGameCenter();
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
-    screen = { type: 'entry', score, bonus, stageIndex, letters: saved.split(''), pos: 0, t: 0 };
+    screen = { type: 'entry', score, bonus, note, stageIndex, letters: saved.split(''), pos: 0, t: 0 };
   } else {
-    screen = scoresScreen(stageIndex, score, bonus, -1);
+    screen = scoresScreen(stageIndex, score, bonus, -1, note);
   }
 }
 
 // `back`: opened from a stage's own start/bail screen, so it can be closed again.
 const selectScreen = (back = false) => ({ type: 'select', stages: LEVELS, unlocked, back, t: 0 });
 
-function scoresScreen(stageIndex, score, bonus, highlight) {
+function scoresScreen(stageIndex, score, bonus, highlight, note = null) {
   const title = `${LEVELS[stageIndex].name.toUpperCase()} TOP 5`;
-  return { type: 'scores', score, bonus, highlight, stageIndex, title, next: unlocked > 1 ? 'STAGES' : 'REPLAY', t: 0 };
+  return { type: 'scores', score, bonus, note, highlight, stageIndex, title, next: unlocked > 1 ? 'STAGES' : 'REPLAY', t: 0 };
 }
 
 async function submitInitials() {
   const name = screen.letters.join('').trim() || 'ANON'.slice(0, INITIALS);
   store.set('initials', screen.letters.join(''));
-  const { score, bonus, stageIndex } = screen;
+  const { score, bonus, note, stageIndex } = screen;
   const highlight = await boardFor(stageIndex).submit(name, score);
   await refreshScores(stageIndex);
-  screen = scoresScreen(stageIndex, score, bonus, highlight);
+  screen = scoresScreen(stageIndex, score, bonus, highlight, note);
 }
 
 function cycleLetter(i, step) {
@@ -337,6 +341,12 @@ const stagesAvailable = () => unlocked > 1 && levelIndex !== SECRET_INDEX;
 function press(clientX, clientY) {
   if (screen) return screenPress(clientX, clientY);
   if (game.phase === 'complete') return; // between screens / end of the run
+  if (game.phase === 'beaten') {
+    // the rival won: a tap races again from the very start
+    game.tap();
+    if (game.phase !== 'beaten') store.set('checkpoint', null);
+    return;
+  }
   if (game.phase === 'bailed' && clientX != null) {
     const p = toWorld(clientX, clientY);
     if (renderer.hitButton(p.x, p.y) === 'restart') {
@@ -582,6 +592,12 @@ function frame(now) {
       run.recordBail();
       saveRun();
     }
+    if (e.type === 'beaten') {
+      if (navigator.vibrate && !NATIVE) navigator.vibrate(60);
+      run.recordBail(); // losing the race is not a clean run
+      saveRun();
+    }
+    if (e.type === 'race') raceWon = { lead: e.lead, bonus: e.bonus };
     if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score });
     if (e.type === 'complete') {
       run.recordClear(slotOf(levelIndex), e.score);
@@ -608,7 +624,7 @@ function frame(now) {
     total: run.total(slotOf(levelIndex), game.phase === 'bailed' ? game.checkpoint.score : game.score), // running total, this level included
     screen,
     highScores,
-    gameCenter: gameCenterReady(),
+    gameCenter: gameCenterReady() && !(screen?.type === 'scores' && LEVELS[screen.stageIndex ?? 0]?.gameCenter === false),
     attract: levelIndex !== SECRET_INDEX && game.section === 0,
     stagesButton: stagesAvailable() && (game.phase === 'bailed' || game.section === 0),
   });

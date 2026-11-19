@@ -776,7 +776,7 @@ test('backgrounds: sky layers in the wide frame behind the bars line up with the
   const { Renderer } = await import('../src/render/renderer.js');
   const rd = new Renderer(gridFb(320, 180));
   rd.time = 4.2;
-  for (const lvl of [{ clouds: true }, { skyline: true }, { moon: true }]) {
+  for (const lvl of [{ clouds: true }, { skyline: true }, { moon: true }, { hell: true }]) {
     for (const camX of [0, 977, 2400]) {
       const game = { level: lvl };
       const main = gridFb(320, 180);

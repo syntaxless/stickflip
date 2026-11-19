@@ -1,6 +1,7 @@
 import { GAPS } from './gaps.js';
 import { createRagdoll, stepRagdoll } from './ragdoll.js';
-import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS, MANUALS } from './config.js';
+import { WORLD, PHYS, SCORE, SPECIAL_POINTS, TRICKS, GRINDS, MANUALS, RACE, BOOST } from './config.js';
+import { Rival } from './rival.js';
 
 // Game logic for one level: skater physics, the one-button control scheme and
 // scoring. It never touches the DOM, so it runs in tests as well as the browser.
@@ -71,8 +72,15 @@ export class Game {
   // A stage (see stages/compose.js) is a long level with named sections. A
   // bail replays from the start of the section it happened in (keeping the
   // score banked before it); `checkpoint` ({ index, score }) starts there.
-  constructor(level, entry = null, checkpoint = null) {
+  //
+  // A race level (`level.race`, see rival.js) also has a computer rival skating
+  // the same course in its own Game (`opts.rival` marks that inner one).
+  constructor(level, entry = null, checkpoint = null, opts = {}) {
     this.level = level;
+    this.isRival = !!opts.rival;
+    this.finishX = level.race?.finishX ?? null; // crossing this x finishes the stage (a race has a finish line)
+    this.rival = level.race && !this.isRival ? new Rival(Game, level) : null;
+    this.raceResult = null; // { won, lead, bonus } once the race is decided
     this.entry = entry;
     this.sections = level.sections || [{ name: level.name, x: 0 }];
     this.checkpoint = checkpoint || { index: 0, score: 0 };
@@ -87,10 +95,12 @@ export class Game {
     // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
     this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
+    this.speedReturn = level.speedReturn ?? PHYS.SPEED_RETURN; // how fast the speed drifts back to cruising
     this.gravity = PHYS.GRAVITY * (level.gravity ?? 1); // the moon (Mega Ramp) is floaty
     this.popScale = level.popScale ?? 1; // and its ollies are a little softer, so they don't fly off the screen
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
+    this.rival?.place(this.checkpoint);
   }
 
   reset() {
@@ -153,6 +163,8 @@ export class Game {
   restartStage() {
     this.checkpoint = { index: 0, score: 0 };
     this.reset();
+    this.rival?.place(this.checkpoint); // a new race: the rival is back at the start too
+    this.raceResult = null;
     this.start(true);
   }
 
@@ -182,7 +194,7 @@ export class Game {
       this.speed = this.clampSpeed(this.speed + PHYS.HOLD_ACCEL * dt); // the crouched push
     } else {
       const diff = this.cruise - this.speed;
-      this.speed += Math.sign(diff) * Math.min(Math.abs(diff), PHYS.SPEED_RETURN * dt);
+      this.speed += Math.sign(diff) * Math.min(Math.abs(diff), this.speedReturn * dt);
     }
     s.vx = s.dir * this.speed;
   }
@@ -239,6 +251,9 @@ export class Game {
           this.start(true);
         }
         break;
+      case 'beaten':
+        if (this.phaseTime >= PHYS.BAIL_RETRY_DELAY) this.restartStage(); // the rival won: race again from the top
+        break;
       // 'complete' taps are handled by the UI buttons.
     }
   }
@@ -258,6 +273,7 @@ export class Game {
   // The rider rolls off. A finger still down becomes the crouch (charge).
   go() {
     this.wait = 0;
+    this.rival?.begin(); // the race starts when the player does (a retry after a bail leaves it running)
     this.sk.mode = 'roll';
     this.sk.vx = this.speed;
     this.emit('push');
@@ -465,6 +481,28 @@ export class Game {
   // ------------------------------------------------------------- update
 
   update(dt) {
+    this.advance(dt);
+    if (this.rival) this.updateRace(dt);
+  }
+
+  // The rival skates on (even while you are bailed or waiting to retry). If it
+  // gets to the finish line before you do, the race is lost.
+  updateRace(dt) {
+    const r = this.rival;
+    if (!r.running || this.phase === 'complete' || this.phase === 'beaten') return;
+    const s = this.sk;
+    r.update(dt, s.mode === 'bail' && s.bail ? s.bail.x : s.x);
+    if (r.finished) this.lose();
+  }
+
+  lose() {
+    this.combo = [];
+    this.raceResult = { won: false, lead: 0, bonus: 0 };
+    this.setPhase('beaten');
+    this.emit('beaten');
+  }
+
+  advance(dt) {
     this.time += dt;
     this.phaseTime += dt;
     if (this.hold) this.hold.dirT += dt;
@@ -473,6 +511,7 @@ export class Game {
     const fromX = s.x;
 
     if (this.phase === 'ready') return;
+    if (this.phase === 'beaten') return;
     if (this.phase === 'bailed') return this.updateBail(dt);
     if (this.wait > 0) {
       this.wait -= dt;
@@ -551,6 +590,7 @@ export class Game {
     } else if (s.mode === 'air') {
       this.updateAir(dt);
     }
+    if (this.phase === 'playing' && this.finishX !== null && s.x >= this.finishX) return this.finish(); // the finish line
     if (this.phase === 'playing') this.passHazards(fromX);
     if (this.phase === 'playing') this.checkSection();
   }
@@ -566,7 +606,10 @@ export class Game {
       if (fromX >= h.x || s.x < h.x) continue;
       const head = s.y - PHYS.RIDER_HEIGHT;
       if (head < h.top) return this.bail(h.reason);
-      if (head < h.bottom) this.addTrick(h.trick, h.points);
+      if (head < h.bottom) {
+        this.addTrick(h.trick, h.points);
+        this.boost(BOOST.RING);
+      }
     }
   }
 
@@ -734,6 +777,7 @@ export class Game {
       this.gapsDone.add(g.id);
       this.addTrick(g.name, g.points, 'gap');
       this.emit('gap', { name: g.name, points: g.points });
+      this.boost(BOOST.GAP);
     }
   }
 
@@ -745,6 +789,7 @@ export class Game {
     s.primed = false;
     s.grind = { surface, dist: 0, key, type: GRINDS[key] };
     this.emit('grind', { key });
+    this.boost(BOOST.GRIND);
     this.checkGaps('grind');
   }
 
@@ -843,8 +888,28 @@ export class Game {
       this.endManual();
       this.bankCombo();
     }
+    if (this.rival && !this.isRival) {
+      // Across the line first (if the rival had been, lose() would have ended it already): bank any
+      // trick still in the air, then the win bonus is on top of the score.
+      this.bankCombo();
+      const lead = this.rival.secondsBehind(this.finishX);
+      const bonus = RACE.WIN_BONUS + Math.round(lead * RACE.LEAD_BONUS);
+      this.score += bonus;
+      this.raceResult = { won: true, lead, bonus };
+      this.emit('race', { lead, bonus });
+    }
     this.setPhase('complete');
     this.emit('complete', { score: this.score });
+  }
+
+  // A turbo kick (levels with `boost`): `amount` is a share of cruising speed, capped at the usual
+  // top speed, and it eases off slowly (see `speedReturn`).
+  boost(amount) {
+    if (!this.level.boost) return;
+    const s = this.sk;
+    this.speed = Math.max(this.speed, Math.min(this.cruise * PHYS.SPEED_MAX, this.speed + this.cruise * amount));
+    if (s.mode !== 'roll') s.vx = s.dir * this.speed;
+    this.emit('boost', { amount });
   }
 
   // -------------------------------------------------------------- bails

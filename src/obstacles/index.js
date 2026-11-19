@@ -15,3 +15,4 @@ export { water } from './water.js';
 export { cone, barrier, sawhorse, sign, citySign, hydrant, trafficBarrel, scaffold } from './construction.js';
 export { hubba, curbCut, concreteSet, funBox, woodRamp, copCar } from './skatepark.js';
 export { toyBlocks, playSlide, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
+export { lavaPit, fireRing, barricade, finishArch, bridgeRail } from './hell.js';

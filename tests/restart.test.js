@@ -18,7 +18,13 @@ const RIDER_H = 90; // generous standing height
 const sectionsOf = (st) => st.sections || [{ name: st.name, x: 0 }];
 const label = (st, i) => `${st.name} checkpoint ${i + 1} (${sectionsOf(st)[i].name})`;
 const camera = (game) => Renderer.prototype.camera.call({}, game);
-const fresh = (st, i, score = SCORE) => new Game(st, null, { index: i, score });
+// (Hellride's rival is switched off here: these tests stand, bail and wait for seconds at a time,
+// and a rival that wins the race meanwhile would end the attempt. tests/race.test.js covers it.)
+const fresh = (st, i, score = SCORE) => {
+  const g = new Game(st, null, { index: i, score });
+  g.rival = null;
+  return g;
+};
 const checkpoints = ALL.flatMap((st) => sectionsOf(st).map((_, i) => [st, i]));
 
 // What is ahead of x that needs a decision: a solid, a rail, a hazard, or ground that
@@ -32,9 +38,9 @@ function nextObstacleX(game, x) {
   return xs.length ? Math.min(...xs) : Infinity;
 }
 
-test('there are 5 stages (7 checkpoints each) and the Mega Ramp', () => {
-  assert.equal(STAGES.length, 5);
-  STAGES.forEach((st, n) => assert.equal(st.sections.length, 7, st.id));
+test('there are 6 stages (7 checkpoints each, Hellride 9) and the Mega Ramp', () => {
+  assert.equal(STAGES.length, 6);
+  STAGES.forEach((st, n) => assert.equal(st.sections.length, st.id === 'stage-6' ? 9 : 7, st.id));
   assert.ok(SECRET);
 });
 
