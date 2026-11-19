@@ -268,7 +268,7 @@ test('every air trick can be done popping off a slappy', async () => {
   }
 });
 
-test('the manual speed ramp is brutal: lands at 1.4x, about 2.6x after a second, 3.8x after two, capped at 4x', () => {
+test('the manual speed ramp: lands at 1.15x, about 1.75x after a second, capped at 1.8x', () => {
   const g = new Game(level);
   g.tap();
   const q = [[0.1, 'tap'], [0.2, 'hold'], [0.3, 'hold', 'left']];
@@ -286,8 +286,8 @@ test('the manual speed ramp is brutal: lands at 1.4x, about 2.6x after a second,
     if (g.sk.manual && t0 === null) t0 = t;
     if (t0 !== null && g.sk.manual) for (const s of [1, 2]) if (!at[s] && t - t0 >= s) at[s] = g.speed / g.cruise;
   }
-  assert.ok(at[1] > 2.55 && at[1] < 2.65, `1 s: ${at[1]}`);
-  assert.ok(at[2] > 3.75 && at[2] < 3.85, `2 s: ${at[2]}`);
+  assert.ok(at[1] > 1.7 && at[1] < 1.8, `1 s: ${at[1]}`);
+  assert.ok(at[2] > 1.78 && at[2] < 1.82, `2 s: ${at[2]}`);
   assert.ok(g.speed / g.cruise <= PHYS.MANUAL_SPEED_MAX + 1e-6);
 });
 
@@ -352,7 +352,7 @@ function longManual() {
 
 test('manual speed carries through the pop and the trick, then eases back to normal', () => {
   const g = longManual();
-  assert.ok(g.sk.manual && g.speed > g.cruise * 2.5, `speed ${g.speed}`);
+  assert.ok(g.sk.manual && g.speed > g.cruise * 1.7, `speed ${g.speed}`);
   const fast = g.speed;
   g.setHold(false);
   g.update(STEP);
@@ -360,7 +360,7 @@ test('manual speed carries through the pop and the trick, then eases back to nor
   assert.ok(g.speed > fast - 5, 'no drop at the pop');
   assert.ok(Math.abs(g.sk.vx) > fast - 5, `rider vx ${g.sk.vx}`);
   for (let i = 0; i < 20; i++) g.update(STEP); // a sixth of a second in
-  assert.ok(g.speed < fast && g.speed > g.cruise * 2.5, 'eases, not snaps');
+  assert.ok(g.speed < fast && g.speed > g.cruise * 1.4, 'eases, not snaps');
   const s1 = g.speed;
   for (let i = 0; i < 120 * 5 && g.phase === 'playing'; i++) g.update(STEP);
   if (g.phase === 'playing') assert.ok(g.speed <= s1 && g.speed <= g.cruise * PHYS.SPEED_MAX + 1e-6, `later ${g.speed}`);
@@ -418,4 +418,50 @@ test('a manual held 1 s, 2 s, 3 s banks its payout times its multiplier', () => 
   }
   assert.deepEqual(out.map((o) => o[0]), [2, 3, 4]);
   assert.ok(out[0][1] > 500 && out[1][1] > out[0][1] * 3 && out[2][1] > out[1][1] * 2, JSON.stringify(out));
+});
+
+// Chaining a manual into a rail: the manual has to be popped out of inside a short
+// window (the ollie lands on the bar), and riding the manual into the rail bails.
+test('manual into a rail: pop out inside a short window, or hit it and bail', async () => {
+  const { STAGES } = await import('../src/stages/index.js');
+  const cases = [
+    { stage: STAGES[1], sec: 3, railX: 3 * 960 + 520, name: 'Kicker Rail', max: 0.35 },
+    { stage: STAGES[4], sec: 1, railX: 960 + 320, name: 'Flat Bar', max: 0.45 },
+  ];
+  const D = 450; // a manual started this far before the rail
+  const attempt = (c, pop) => {
+    const g = new Game(c.stage, null, { index: c.sec, score: 0 });
+    g.tap();
+    g.sk.x = c.railX - D;
+    g.sk.y = 450;
+    g.hold = { dir: 'left', used: false, dirT: 1 };
+    g.startManual('manual');
+    let t = 0;
+    let popped = false;
+    let tapAt = null;
+    let res = 'none';
+    while (t < 4 && res === 'none' && g.phase === 'playing') {
+      if (!popped && t >= pop) {
+        g.setHold(false);
+        popped = true;
+      }
+      if (popped && g.sk.mode === 'air' && tapAt === null && g.predictContact().t <= 0.12) {
+        g.tap();
+        tapAt = t;
+      }
+      g.update(STEP);
+      t += STEP;
+      for (const e of g.drainEvents()) if (e.type === 'grind') res = 'grind';
+      if (g.sk.x > c.railX + 700) break;
+    }
+    return g.phase !== 'playing' ? 'bail' : res;
+  };
+  for (const c of cases) {
+    const ok = [];
+    for (let p = 0; p <= 1.5; p += 0.02) if (attempt(c, p) === 'grind') ok.push(p);
+    assert.ok(ok.length > 5, `${c.name}: some pop times work`);
+    const width = ok[ok.length - 1] - ok[0] + 0.02;
+    assert.ok(width <= c.max, `${c.name}: window ${width.toFixed(2)} s`);
+    assert.equal(attempt(c, 99), 'bail', `${c.name}: holding the manual into the rail bails`);
+  }
 });
