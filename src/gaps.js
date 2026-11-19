@@ -39,4 +39,11 @@ export const GAPS = [
   { id: 'box-clear', stage: 'stage-5', section: 4, name: 'BOX CLEAR', points: 500, from: [200, 520], to: [810, 1100], on: 'land' },
   { id: 'big-set', stage: 'stage-5', section: 5, name: 'BIG SET', points: 500, from: [150, 380], to: [580, 960], on: 'land' },
   { id: 'siren-grind', stage: 'stage-5', section: 6, name: 'SIREN GRIND', points: 400, from: null, to: [474, 558], on: 'grind' },
+  // ---- Stage 6 (Hellride; each one also kicks the turbo in)
+  { id: 'cinder-grind', stage: 'stage-6', section: 1, name: 'CINDER GRIND', points: 450, from: [200, 300], to: [470, 770], on: 'grind' },
+  { id: 'lava-grind', stage: 'stage-6', section: 2, name: 'LAVA GRIND', points: 400, from: null, to: [300, 600], on: 'grind' },
+  { id: 'fire-pit-leap', stage: 'stage-6', section: 5, name: 'FIRE PIT LEAP', points: 300, from: [100, 330], to: [530, 960], on: 'land' },
+  { id: 'devil-stairs', stage: 'stage-6', section: 6, name: 'DEVIL STAIRS', points: 300, from: [300, 420], to: [650, 960], on: 'land' },
+  { id: 'hellmouth-grind', stage: 'stage-6', section: 7, name: 'HELLMOUTH GRIND', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
+  { id: 'hellmouth-jump', stage: 'stage-6', section: 7, name: 'HELLMOUTH JUMP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
 ];
