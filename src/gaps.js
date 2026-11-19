@@ -48,4 +48,15 @@ export const GAPS = [
   { id: 'devil-stairs', stage: 'stage-6', section: 6, name: 'DEVIL STAIRS', points: 300, from: [300, 420], to: [650, 960], on: 'land' },
   { id: 'hellmouth-grind', stage: 'stage-6', section: 7, name: 'HELLMOUTH GRIND', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
   { id: 'hellmouth-jump', stage: 'stage-6', section: 7, name: 'HELLMOUTH JUMP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
+  // ---- Stage 7 (Frostbite)
+  { id: 'sled-grind', stage: 'stage-7', section: 1, name: 'SLED GRIND', points: 450, from: [200, 330], to: [500, 740], on: 'grind' },
+  { id: 'floe-hop', stage: 'stage-7', section: 2, name: 'FLOE HOP', points: 300, from: [140, 300], to: [390, 500], on: 'land' },
+  { id: 'pond-leap', stage: 'stage-7', section: 2, name: 'POND LEAP', points: 450, from: [140, 300], to: [595, 960], on: 'land' },
+  { id: 'ice-grind', stage: 'stage-7', section: 3, name: 'ICE GRIND', points: 350, from: null, to: [330, 386], on: 'grind' },
+  { id: 'slide-grind', stage: 'stage-7', section: 3, name: 'FROZEN SLIDE', points: 400, from: null, to: [700, 764], on: 'grind' },
+  { id: 'cabin-grind', stage: 'stage-7', section: 5, name: 'CABIN GRIND', points: 400, from: null, to: [360, 580], on: 'grind' },
+  { id: 'cabin-leap', stage: 'stage-7', section: 5, name: 'CABIN LEAP', points: 500, from: [150, 360], to: [580, 960], on: 'land' },
+  { id: 'roof-drop', stage: 'stage-7', section: 5, name: 'ROOF DROP', points: 350, from: [360, 580], to: [580, 960], on: 'land' },
+  { id: 'ice-bridge', stage: 'stage-7', section: 6, name: 'ICE BRIDGE', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
+  { id: 'crevasse-jump', stage: 'stage-7', section: 6, name: 'CREVASSE JUMP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
 ];

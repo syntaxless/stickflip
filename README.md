@@ -143,8 +143,10 @@ its own top 5.
 Each stage has its own look: Stages 1 and 2 have a lighter blue sky (#6EB4FF) with
 slow parallax clouds and asphalt; Stage 3 a light grey sky with a faint parallax
 city and a concrete sidewalk; Stage 4 a bright blue sky and a red rubber-mat
-surface; Stage 5 a sunset sky with a dusk skyline. Under the surface every stage
-has a thin grass layer, chunky muted-brown dirt and then plain black.
+surface; Stage 5 a sunset sky with a dusk skyline; Stage 6 a blood-orange sky and lava; Stage 7 a pale
+winter sky with snow-capped mountains, pines and falling snow, and a snow surface. Under the surface every
+stage has a thin grass layer, chunky muted-brown dirt and then plain black (Stage 7's are an icy blue layer
+and frozen blue-slate earth).
 
 **Stage 1** is a rock, then the six original levels in order, joined by a bank
 (a good way past the rail, so you can land first) up to Five Stair's platform
@@ -224,6 +226,18 @@ yours, quicker when you pull ahead, easing off when you fall behind), and it tak
 its line, so riding its line cleanly beats it by about half a second and manuals win by a lot. The
 race rules are in `src/rival.js` and `Game` (`race`, `lose()`, `finish()`), the pieces in
 `src/obstacles/hell.js`. Its Game Center board is `stickflip.stage6`.
+
+**Stage 7: Frostbite** (a frozen mountain pass, not a race; a first pass). It opens once Stage 6 is
+finished, has its own top 5 (`stage-7`) and no Game Center board yet (`gameCenter: false`; create
+`stickflip.stage7` in App Store Connect and drop the flag). Snowdrifts (three drifts, then a snowman to
+ollie), Sled Run (a wooden sled kicker and a snowy rail: SLED GRIND), Frozen Pond (a 295-wide pond with an ice
+floe in the middle: hop to the floe and hop off again, FLOE HOP, or charge one long jump, POND LEAP), Ice
+Hurdles (two ice blocks: ollie them, or grind either top edge), Slalom (an ice block, then a ski gate you
+can jump through for a bonus; head above the banner is a bail), Cabin Roof (ollie up onto a log cabin's
+snowy roof and ride, grind or fly it) and Crevasse Jump (a sled kicker, a 320-wide crevasse and an arched
+rail across it, ICE BRIDGE, or a charged ollie, CREVASSE JUMP; the summit flag stands past it). The look
+is `frost: true` (the sky, mountains, pines and snow in `Renderer.drawFrostSky`) with the `frost` palette,
+and the pieces are in `src/obstacles/frost.js`. Timing windows: `node scripts/stage-windows.mjs 7`.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
@@ -360,7 +374,7 @@ tests/                  node:test suites
    `endAfterQuarter` to end the stage when the rider has ridden back down a
    quarter pipe; `finishLeft` to end on a ride back to the left; `race: { finishAt }`
    for a race against a rival (see Stage 6), `boost: true` (+ `speedReturn`) for the turbo,
-   `hell: true` for Hellride's sky, `gameCenter: false` for a stage with no Game Center board.
+   `hell: true` for Hellride's sky, `frost: true` for Frostbite's, `gameCenter: false` for a stage with no Game Center board.
 3. Append it to `STAGES` in `src/stages/index.js` (stage id `stage-N`, which is also
    the shared leaderboard key and the Game Center leaderboard `stickflip.stageN`).
 4. Add timed-ollie clears for each checkpoint to `tests/stage.test.js` and a line per

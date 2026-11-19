@@ -17,3 +17,4 @@ export { dumpTruck } from './dump-truck.js';
 export { hubba, curbCut, concreteSet, funBox, woodRamp, copCar } from './skatepark.js';
 export { toyBlocks, playSlide, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
 export { lavaPit, fireRing, barricade, finishArch, bridgeRail } from './hell.js';
+export { snowman, iceBlock, icePond, skiGate, cabin, snowRail, summitFlag } from './frost.js';

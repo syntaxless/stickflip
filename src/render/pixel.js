@@ -52,6 +52,9 @@ const PALETTES = {
   // Hellride: a blood-orange sky (bands and mountains are painted over it), light ember-red text (the sky is dark at the top), black basalt ground
   // with a smoulder in the cracks, scorched "grass" and maroon rock.
   hell: { ...BASE, sky: [214, 68, 40], red: [255, 170, 130], ground: [58, 40, 48], kerb: [92, 62, 70], crack: [30, 16, 24], fleck: [226, 96, 36], grass: [96, 30, 22], blade: [160, 52, 24], shade: [52, 16, 16], dirt: [66, 26, 30], dirtLight: [96, 38, 34], dirtDark: [38, 14, 20], stone: [132, 70, 50], stoneDark: [80, 36, 34] },
+  // Frostbite: a pale blue winter sky, white snow for a surface (blue-grey shadow flecks), an icy
+  // layer under it, then frozen blue-slate earth. Dark red text reads on the pale sky.
+  frost: { ...BASE, sky: [182, 208, 242], red: [150, 0, 28], ground: [238, 244, 252], kerb: [150, 176, 214], crack: [118, 146, 196], fleck: [255, 255, 255], grass: [150, 196, 230], blade: [196, 228, 250], shade: [96, 140, 190], dirt: [72, 86, 116], dirtLight: [98, 114, 150], dirtDark: [48, 58, 84], stone: [154, 170, 194], stoneDark: [98, 110, 134] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 
