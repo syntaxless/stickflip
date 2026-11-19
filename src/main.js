@@ -137,7 +137,7 @@ async function finishRun() {
   store.set('level', 0);
   store.set('checkpoint', null);
   await refreshScores(stageIndex);
-  if (LEVELS[stageIndex].gameCenter !== false) submitToGameCenter(score, LEVELS[stageIndex].id); // (Hellride has no board yet)
+  if (LEVELS[stageIndex].gameCenter !== false) submitToGameCenter(score, LEVELS[stageIndex].id);
   refreshGameCenter();
   if (await board.qualifies(score)) {
     const saved = String(store.get('initials', 'AAAA')).padEnd(INITIALS).slice(0, INITIALS);
