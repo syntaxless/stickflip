@@ -5,12 +5,12 @@
 -- The game only ever uses the public anon key. With row level security on,
 -- that key can read the table and add rows, nothing else: no updates, no
 -- deletes, no reading the hidden ip_hash column. Every new row is checked
--- (1-6 letters A-Z or spaces, a score from 1 to 100000) and rate limited.
+-- (1-6 letters A-Z or spaces, a score from 1 to 10,000,000) and rate limited.
 
 create table if not exists public.scores (
   id bigint generated always as identity primary key,
   initials text not null check (initials ~ '^[A-Z ]{1,6}$' and btrim(initials) <> ''),
-  score integer not null check (score between 1 and 100000),
+  score integer not null check (score between 1 and 10000000),
   created_at timestamptz not null default now(),
   ip_hash text
 );
@@ -26,6 +26,12 @@ alter table public.scores add constraint scores_initials_check
 alter table public.scores add column if not exists stage text not null default 'stage-1';
 alter table public.scores drop constraint if exists scores_stage_check;
 alter table public.scores add constraint scores_stage_check check (stage ~ '^[a-z0-9-]{1,20}$');
+
+-- Runs went past 100,000 points (2026-11-19) and the old limit made the
+-- database refuse them, so the board stopped updating: raise the limit on a
+-- table made before then.
+alter table public.scores drop constraint if exists scores_score_check;
+alter table public.scores add constraint scores_score_check check (score between 1 and 10000000);
 
 create index if not exists scores_top on public.scores (score desc, created_at);
 create index if not exists scores_stage_top on public.scores (stage, score desc, created_at);

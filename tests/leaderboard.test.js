@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { localLeaderboard, supabaseLeaderboard, withFallback, cleanInitials, TABLE_SIZE } from '../src/leaderboard.js';
+import { localLeaderboard, supabaseLeaderboard, withFallback, cleanInitials, TABLE_SIZE, MAX_SCORE } from '../src/leaderboard.js';
 import { Run } from '../src/run.js';
 
 const memoryStore = () => {
@@ -123,4 +123,18 @@ test('a stage board reads and writes only its own stage', async () => {
   await lb.submit('ABC', 500);
   assert.ok(calls[0].url.includes('stage=eq.stage-2'));
   assert.deepEqual(JSON.parse(calls[1].body), { initials: 'ABC', score: 500, stage: 'stage-2' });
+});
+
+test('six-digit scores are sent as they are (the database limit is far above them)', async () => {
+  const bodies = [];
+  const fetchFn = async (url, opts = {}) => {
+    if (opts.body) bodies.push(JSON.parse(opts.body));
+    return { ok: true, json: async () => [] };
+  };
+  const lb = supabaseLeaderboard({ url: 'https://x', key: 'k' }, { fetchFn });
+  await lb.submit('ABC', 160198);
+  await lb.submit('ABC', MAX_SCORE * 5);
+  assert.equal(bodies[0].score, 160198);
+  assert.equal(bodies[1].score, MAX_SCORE);
+  assert.ok(MAX_SCORE > 160198);
 });
