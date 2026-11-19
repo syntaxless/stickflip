@@ -89,6 +89,8 @@ const MOON = {
 };
 // Hellride: the sky's bands (top to horizon), the black mountains, and the rival's look.
 const HELL_BANDS = [[120, 16, 36], [158, 26, 40], [190, 42, 40], [222, 74, 42], [244, 120, 52], [252, 170, 70]];
+// the far wall of fire along the horizon: deep red body, hotter core, lighter tip (all brighter than the rider is dark)
+const HELL_FIRE = [[196, 46, 36], [226, 84, 40], [250, 140, 58]];
 const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
@@ -367,6 +369,34 @@ export class Renderer {
     for (let dy = -sr; dy <= sr; dy++) {
       const half = Math.round(Math.sqrt(sr * sr - dy * dy));
       g.fill(sx - half, horizon - 4 + dy, half * 2 + 1, 1, HELL_SUN[dy < 4 ? 0 : 1]);
+    }
+    // a far wall of fire: two rows of slow, flickering tongues of flame standing on the horizon (the
+    // back row taller, dimmer and slower), in reds close to the bands so they glow without competing
+    // with the rider
+    const fireT = this.time;
+    for (const [factor, cell, minH, rangeH, body, core, speed, salt] of [
+      [0.03, 17, 16, 24, [178, 34, 40], [206, 58, 40], 0.7, 77],
+      [0.06, 11, 8, 18, HELL_FIRE[0], HELL_FIRE[1], 1, 91],
+    ]) {
+      const fsh = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const wx = x + fsh;
+        const c = Math.floor(wx / cell);
+        const hh = hash(c, salt);
+        if (hh % 10 < 2) continue; // gaps between the flames
+        const u = wx - c * cell - cell / 2; // across the tongue, centred
+        const phase = (hh >> 4) % 100;
+        const flick = Math.round((Math.sin(fireT * 2.4 * speed + phase) * 3 + Math.sin(fireT * 5.1 * speed + phase * 2) * 1.2) * (cell / 11));
+        const top = minH + ((hh >> 9) % rangeH) + flick; // flame height
+        const sway = Math.sin(fireT * 1.7 * speed + phase) * (cell / 7);
+        const lean = Math.abs(u - sway * 0.5);
+        const ht = Math.round(top * Math.pow(Math.max(0, 1 - lean / (cell * 0.5)), 1.3));
+        if (ht <= 0) continue;
+        g.fill(x, horizon - ht, 1, ht + 40, body);
+        const inner = Math.round(ht * 0.62);
+        if (inner > 2 && lean < cell * 0.3) g.fill(x, horizon - inner, 1, inner, core);
+        if (salt === 91 && ht > 14 && lean < 1.2) g.pset(x, horizon - ht + 1, HELL_FIRE[2]);
+      }
     }
     // embers drifting up (and across): 26 per 700-pixel tile of sky, which scrolls slower than the stage
     const t = this.time;
