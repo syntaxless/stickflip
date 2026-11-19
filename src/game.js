@@ -87,6 +87,8 @@ export class Game {
     // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
     this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
+    this.gravity = PHYS.GRAVITY * (level.gravity ?? 1); // the moon (Mega Ramp) is floaty
+    this.popScale = level.popScale ?? 1; // and its ollies are a little softer, so they don't fly off the screen
     this.width = level.width || WORLD.W; // wider levels scroll
     this.reset();
   }
@@ -319,7 +321,7 @@ export class Game {
   takeOff(speed) {
     const s = this.sk;
     s.mode = 'air';
-    s.vy = -speed;
+    s.vy = -speed * this.popScale;
     s.vx = s.dir * this.speed;
     s.support = null;
     s.primed = false;
@@ -407,7 +409,7 @@ export class Game {
   // ground. Stepped forward in time, so any shape of ground works.
   predictContact() {
     const s = this.sk;
-    const g = PHYS.GRAVITY;
+    const g = this.gravity;
     const dt = 1 / 240;
     let px = s.x;
     let py = s.y;
@@ -598,7 +600,7 @@ export class Game {
       s.ramp = null;
       s.mode = 'air';
       // the air's speed is its own (QP_AIR_SPEED), so its height stays put
-      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME, v: this.baseSpeed * PHYS.QP_AIR_SPEED };
+      s.qpAir = { qp: r.qp, t: 0, dur: PHYS.QP_AIR_TIME * (this.level.qpAirScale ?? 1), v: this.baseSpeed * PHYS.QP_AIR_SPEED };
       s.x = cx + R - 1;
       s.y = cy;
       s.vx = 0;
@@ -635,7 +637,7 @@ export class Game {
     const prevY = s.y;
     const prevX = s.x;
     if (s.qpAir) s.vy = s.qpAir.t < s.qpAir.dur / 2 ? -s.qpAir.v : s.qpAir.v; // steady up, steady down
-    else s.vy += PHYS.GRAVITY * dt;
+    else s.vy += this.gravity * dt;
     s.x += s.vx * dt;
     s.y += s.vy * dt;
     this.stepTrick(dt);
@@ -890,7 +892,7 @@ export class Game {
 
   updateBail(dt) {
     const b = this.sk.bail;
-    const g = PHYS.GRAVITY;
+    const g = this.gravity;
     stepRagdoll(b.rag, dt, (x) => this.groundAt(x).y);
     this.syncBail();
     // the board tumbles on its own: it bounces higher and keeps spinning until it settles flat

@@ -216,7 +216,7 @@ before the no-bail bonus) and you're taken there; its score counts toward the ru
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a moon
 look: a navy sky with white stars, a pixel Earth and two layers of far mountains, grey cratered rock for the
-ground, ramps and quarter pipe, and a wooden-sign banner.
+ground, ramps and quarter pipe, and a riveted rock-plate sign banner.
 
 Bails explain what went wrong: slammed or clipped the rail, landed mid-flip, came
 up short, landed on the stairs or a step, rolled off an edge, or hit the quarter

@@ -392,7 +392,7 @@ test('secret mega ramp: ollie the kicker over the rail, or grind it, then air th
   const clear = playActs(SECRET, [[1.1, 'tap']]);
   assert.equal(clear.game.phase, 'complete', `bailed: ${clear.game.bailReason}`);
   assert.ok(clear.seen.has('FS AIR'));
-  const grind = playActs(SECRET, [[1.35, 'tap']]);
+  const grind = playActs(SECRET, [[1.8, 'tap']]);
   assert.equal(grind.game.phase, 'complete', `bailed: ${grind.game.bailReason}`);
   assert.ok(grind.seen.has('50-50 GRIND'));
   assert.equal(play(SECRET, []).game.bailReason, 'clipped', 'no input lands on the rail');
@@ -433,8 +433,8 @@ test('secret mega ramp: the ollie clears the whole rainbow rail into the bank, t
   const g = new Game(SECRET);
   g.tap();
   const ys = [];
-  for (let s = 0; s < 3; s += STEP) {
-    if (Math.abs(s - 1.35) < STEP / 2) g.tap();
+  for (let s = 0; s < 4; s += STEP) {
+    if (Math.abs(s - 1.8) < STEP / 2) g.tap();
     g.update(STEP);
     if (g.sk.mode === 'grind') ys.push([g.sk.x, g.sk.y]);
   }
@@ -525,4 +525,15 @@ test('a drawing head start shortens a trick but its animation still starts at 0'
   game.startTrick('circle', 0.4);
   assert.ok(game.sk.flip.t > 0);
   assert.equal(game.flipProgress(), 0);
+});
+
+test('secret mega ramp: moon gravity, a curved roll-in, and the rail well past the kicker', () => {
+  assert.ok(new Game(SECRET).gravity < PHYS.GRAVITY * 0.6, 'floaty');
+  assert.equal(new Game(LEVELS[0]).gravity, PHYS.GRAVITY, 'other levels are unchanged');
+  const segs = SECRET.obstacles.flatMap((o) => o.ground || []).filter((g) => g.x1 >= 300 && g.x2 <= 560 && g.y2 > g.y1);
+  assert.ok(segs.length >= 10, 'the roll-in is many short banks');
+  const slopes = segs.map((g) => (g.y2 - g.y1) / (g.x2 - g.x1));
+  for (let i = 1; i < slopes.length; i++) assert.ok(slopes[i] <= slopes[i - 1] + 1e-9, 'it flattens out smoothly');
+  const rail = SECRET.obstacles.find((o) => o.type === 'rail').surfaces[0];
+  assert.ok(rail.x1 >= 1100, 'the rail starts well past the kicker');
 });

@@ -21,7 +21,7 @@ const CONC_DARK = [128, 128, 138];
 const GRAVEL = [[150, 148, 144], [176, 170, 158], [124, 120, 116], [188, 168, 130], [160, 156, 150], [138, 130, 118]];
 const GRAVEL_LIT = [220, 214, 200];
 const GRAVEL_DARK = [84, 80, 76];
-const BANNER_TEXT = [255, 214, 120]; // the unlock sign's lettering, whatever the palette
+const BANNER_TEXT = [255, 255, 255]; // the unlock sign's lettering, whatever the palette
 const WOOD_A = [176, 108, 50];
 const WOOD_B = [160, 96, 44];
 const WOOD_LIGHT = [214, 146, 76];
@@ -850,24 +850,29 @@ export class Renderer {
     const g = this.g;
     const cx = RES.W / 2;
     const [x, y, w, h] = [20, 48, 280, 70];
-    // a wooden sign: planks with a dark frame, lettering in warm amber
-    g.fill(x, y, w, h, WOOD_DARK);
+    // a moon-base sign: a panel of grey rock plating with a black outline and rivets, over a
+    // navy screen with a few stars, lettering in white and pale blue
+    g.fill(x, y, w, h, MOON.rockDark);
     for (let py = y + 2; py < y + h - 2; py++) {
-      const row = Math.floor((py - y) / 6);
       for (let px = x + 2; px < x + w - 2; px++) {
-        let c = row % 2 ? WOOD_A : WOOD_B;
-        if ((py - y) % 6 === 5 || (px + row * 31) % 70 === 0) c = WOOD_DARK;
-        g.pset(px, py, c);
+        const hb = hash(px >> 1, py >> 1) % 16;
+        g.pset(px, py, hb < 4 ? MOON.rockLight : hb < 6 ? MOON.rockDark : MOON.rock);
       }
     }
     g.rect(x, y, w, h, ink);
-    g.rect(x + 3, y + 3, w - 6, h - 6, WOOD_DARK);
-    g.fill(x + 6, y + 6, w - 12, h - 12, [60, 32, 14]);
+    g.rect(x + 3, y + 3, w - 6, h - 6, MOON.stoneDark);
+    g.fill(x + 6, y + 6, w - 12, h - 12, [10, 14, 52]);
+    for (const [rx, ry] of [[x + 3, y + 3], [x + w - 5, y + 3], [x + 3, y + h - 5], [x + w - 5, y + h - 5]]) g.fill(rx, ry, 2, 2, MOON.stone); // rivets
+    for (let i = 0; i < 26; i++) {
+      const sx = x + 8 + (hash(i, 3) % (w - 16));
+      const sy = y + 8 + (hash(i, 8) % (h - 16));
+      g.pset(sx, sy, i % 3 ? [255, 255, 255] : [150, 160, 220]);
+    }
     if (this.blink(4)) {
       g.text('SECRET LEVEL', cx + 1, y + 13, ink, 3, 'center');
       g.text('SECRET LEVEL', cx, y + 12, BANNER_TEXT, 3, 'center');
       g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx + 1, y + 39, ink, 2, 'center');
-      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, WOOD_LIGHT, 2, 'center');
+      g.text(screen.first ? 'UNLOCKED!' : 'AHEAD!', cx, y + 38, [150, 200, 255], 2, 'center');
     }
   }
 
