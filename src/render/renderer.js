@@ -222,7 +222,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) this.drawSkater(game.rival.game, g, true, 'rival'); // behind the player
     this.drawSkater(game);
     this.drawParticles();
@@ -289,7 +289,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) this.drawSkater(game.rival.game, g, false, 'rival');
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;

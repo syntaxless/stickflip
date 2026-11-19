@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { Game } from '../src/game.js';
+import { Pix } from '../src/render/pixel.js';
 import { STAGES } from '../src/stages/index.js';
 import trashCanLevel from '../src/levels/trash-can.js';
 import rockLevel from '../src/levels/rock.js';
@@ -267,8 +269,11 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
   const clears = [[0.85, 1.8], [0.8], [0.62, 1.57], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
   clears.forEach((taps, i) => {
-    const game = ride3(i, taps);
-    assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
+    // Big Gap (the last) is the slab, the gap and then the dump truck: two moves, see the truck tests below
+    if (i < 6) {
+      const game = ride3(i, taps);
+      assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
+    }
     assert.equal(ride3(i, []).phase, 'bailed', `${stage3.sections[i].name} with no ollie`);
   });
 });
@@ -931,4 +936,144 @@ test('dumpster: the flames animate without throwing, over several seconds of fra
   const g = new Proxy({}, { get: () => () => calls++ });
   for (let time = 0; time < 3; time += 0.05) d.draw(g, { time });
   assert.ok(calls > 1000);
+});
+
+// ------------------------------------------------------ the dump truck (3-7)
+
+const truck = stage3.obstacles.find((o) => o.type === 'dump-truck');
+const TRUCK_X = stage3.sections[6].x + 680; // where it stands in the strip
+
+// Rides 3-7 from its restart point, popping off the slab. `mode`: 'tap' (a plain ollie at t0), 'charge' (a charged
+// ollie let go at t0) or 'grind' (a charged ollie let go at t0 with the finger kept down, to lock a grind).
+// Returns the game, the names of the tricks and gaps, and the events.
+function rideTruck(mode, t0) {
+  const game = new Game(stage3, null, { index: 6, score: 0 });
+  game.tap();
+  if (mode !== 'tap') {
+    game.setHold(true);
+    game.startCharge();
+  }
+  const names = new Set();
+  const events = [];
+  let done = false;
+  for (let t = 0; t < 7 && game.phase === 'playing'; t += STEP) {
+    if (!done && t >= t0) {
+      done = true;
+      if (mode === 'tap') game.tap();
+      else {
+        game.setHold(mode === 'grind');
+        game.releaseCharge();
+      }
+    }
+    game.update(STEP);
+    for (const e of game.drainEvents()) {
+      events.push(e);
+      if (e.type === 'trick' || e.type === 'gap') names.add(e.name);
+    }
+  }
+  return { game, names, events };
+}
+
+test('3-7: a dump truck stands right after the gap, facing right: the bed on the left, a lower cab and a hood at the front', () => {
+  assert.ok(truck, 'there is a truck');
+  const [bed, roof, hood] = truck.surfaces;
+  assert.equal(bed.grindable, true);
+  assert.equal(bed.landable, false);
+  assert.equal(bed.dumps, true);
+  assert.equal(roof.landable, true);
+  assert.equal(roof.grindable, false);
+  assert.ok(roof.x1 === bed.x2 && hood.x1 === roof.x2, 'bed, then cab, then hood: the nose is on the right');
+  assert.ok(roof.y > bed.y && hood.y > roof.y, 'the cab roof is lower than the bed rim and the hood lower again (y grows down)');
+  const gap = stage3.obstacles.find((o) => o.type === 'broken-gap');
+  const street = bed.x1 - gap.dirt.x2;
+  assert.ok(street > 0 && street < 80, `the truck stands close to the gap (${street} of street)`);
+  assert.ok(stage3.width > 7 * 960, 'the stage runs on past the last screen to make room');
+});
+
+test('3-7: the stage ends with room to roll out after the truck', () => {
+  const hood = truck.surfaces[2];
+  assert.ok(stage3.width + 40 - hood.x2 >= 250, 'a stretch of street after the hood before the finish');
+});
+
+test('3-7 dump truck: doing nothing falls in the gap; a plain ollie clears the gap and slams the truck', () => {
+  assert.equal(rideTruck('tap', 99).game.phase, 'bailed');
+  const plain = rideTruck('tap', 0.81);
+  assert.equal(plain.game.bailReason, 'slam');
+  assert.ok(plain.names.has('BROKEN WALK'), 'the gap itself is cleared');
+});
+
+test('3-7 dump truck: a charged ollie off the slab carries over the gap and the bed onto the cab for TRUCK LEAP (0.75 to 0.83 s)', () => {
+  for (const t of [0.76, 0.79, 0.82]) {
+    const { game, names } = rideTruck('charge', t);
+    assert.equal(game.phase, 'complete', `charged at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('TRUCK LEAP'), `charged at ${t}: ${[...names]}`);
+    assert.equal(game.dumpAt, null, 'no dump without a grind');
+  }
+  for (const t of [0.66, 0.7, 0.73]) assert.equal(rideTruck('charge', t).game.bailReason, 'clipped', `landing on the bed rim at ${t} without a grind clips`);
+  assert.equal(rideTruck('charge', 0.6).game.bailReason, 'slam', 'short of the bed slams the side');
+});
+
+test('3-7 dump truck: the same pop with the finger held locks a grind on the bed rim and dumps the gravel (0.61 to 0.74 s)', () => {
+  for (const t of [0.62, 0.68, 0.73]) {
+    const { game, names, events } = rideTruck('grind', t);
+    assert.equal(game.phase, 'complete', `grind at ${t}: ${game.bailReason}`);
+    assert.ok(names.has('50-50 GRIND'), `grind at ${t}: ${[...names]}`);
+    assert.ok(names.has('GRAVEL DUMP'), `the gap bonus at ${t}`);
+    assert.ok(game.dumpAt !== null, 'the bed started to dump');
+    assert.equal(events.filter((e) => e.type === 'dump').length, 1, 'the dump goes off once');
+    const lock = events.findIndex((e) => e.type === 'grind');
+    assert.equal(events.findIndex((e) => e.type === 'dump'), lock + 1, 'the dump starts the moment the grind locks');
+  }
+  assert.equal(rideTruck('grind', 0.5).game.phase, 'bailed', 'too early falls short');
+});
+
+test('3-7 dump truck: the dump is only a drawing: the rim never moves in the physics', () => {
+  const [bed] = truck.surfaces;
+  const y = bed.y;
+  const { game } = rideTruck('grind', 0.68);
+  assert.equal(bed.y, y);
+  assert.ok(bed.x2 - bed.x1 > 80);
+  assert.ok(game.score > 300, `banked ${game.score}`);
+});
+
+test('3-7 dump truck: it draws whole, tipping and emptied without error, the gravel pile grows', () => {
+  const grid = () => {
+    const cells = new Map();
+    const g = new Pix({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) }, 330, 200);
+    const set = g.pset.bind(g);
+    g.pset = (x, y, c) => { set(x, y, c); cells.set(`${Math.round(x)},${Math.round(y)}`, c.join()); };
+    return { g, cells };
+  };
+  for (const dump of [null, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.4, 5]) {
+    const { g, cells } = grid();
+    truck.draw(g, { time: 1, dump });
+    assert.ok(cells.size > 600, `age ${dump} drew ${cells.size} pixels`);
+  }
+  // pile pixels: gravel behind (left of) the truck's rear, on the street
+  const behind = (dump) => {
+    const { g, cells } = grid();
+    truck.draw(g, { time: 1, dump });
+    const rear = Math.round((TRUCK_X - stage3.sections[6].x) / 3);
+    let n = 0;
+    for (const k of cells.keys()) {
+      const [x, y] = k.split(',').map(Number);
+      if (x < rear - 4 && y > 135) n++;
+    }
+    return n;
+  };
+  assert.equal(behind(null), 0, 'nothing behind a full truck');
+  assert.ok(behind(0.5) > behind(0.2), 'the pile grows');
+  assert.ok(behind(2) > behind(0.5), 'and keeps growing to its full size');
+  assert.equal(behind(2), behind(9), 'then it stays put');
+});
+
+test('3-7 dump truck: the dump is the same picture every time for the same age (nothing random)', () => {
+  const pixels = (dump) => {
+    const g = new Pix({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }) }, 330, 200);
+    g.ox = 20 - Math.round(TRUCK_X / 3); // bring the truck onto the little screen
+    truck.draw(g, { time: 1, dump });
+    return createHash('sha1').update(g.data).digest('hex');
+  };
+  for (const age of [0.2, 0.5, 0.8]) assert.equal(pixels(age), pixels(age));
+  assert.notEqual(pixels(0.2), pixels(0.8));
 });

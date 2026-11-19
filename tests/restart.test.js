@@ -155,6 +155,7 @@ function bailAndRetry(game, st, i, why, reason = 'slam') {
   assert.equal(game.hold, null, `${why}: hold`);
   assert.equal(game.tilt, 0, `${why}: seesaw tilt`);
   assert.equal(game.boomAt, null, `${why}: cop car blast`);
+  assert.equal(game.dumpAt, null, `${why}: dump truck`);
   assert.equal(game.bailReason, null);
   assert.equal(game.section, game.checkpoint.index);
   assert.deepEqual(camera(game), camera(ref), `${why}: camera`);
