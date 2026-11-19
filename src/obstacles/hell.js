@@ -33,7 +33,7 @@ export function lavaPit({ x, width }) {
       const [l, r] = [P(x), P(x + width) - 1];
       const top = P(G) - 1;
       const t = fx.time || 0;
-      g.fill(l, top, r - l + 1, 700, LAVA.deep); // all the way down (the portrait view shows a lot below the street)
+      g.fill(l, top, r - l + 1, 90, LAVA.deep); // a pool as deep as the water; the black ground below it is drawn by the background
       g.fill(l, top, r - l + 1, 12, LAVA.mid);
       for (let px = l; px <= r; px++) {
         const wave = Math.floor(Math.sin(px * 0.35 + t * 3) * 1.2 + 1.2);
@@ -47,8 +47,8 @@ export function lavaPit({ x, width }) {
         }
       }
       for (let px = l; px <= r; px += 5) g.pset(px + (hash(px, 3) % 3), top + 5 + (hash(px, 9) % 6), LAVA.hot);
-      g.line(l - 1, top, l - 1, top + 700, ink);
-      g.line(r + 1, top, r + 1, top + 700, ink);
+      g.line(l - 1, top, l - 1, top + 90, ink);
+      g.line(r + 1, top, r + 1, top + 90, ink);
       // a glow on the rock at either lip
       for (const px of [l - 2, r + 2]) g.pset(px, top, LAVA.hot);
     },

@@ -190,7 +190,7 @@ it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long
 jersey barrier you can ollie onto or grind, then a gap right behind it),
 Barricade (two sawhorses: two jumps), Scaffold Rail (grind the top pipe), Big Drop
 (a concrete platform to roll or jump off, with a traffic barrel at the bottom:
-land and ollie the barrel, or take one charged ollie over both) and Big Gap (a
+land and ollie the barrel, or take one charged ollie over both) and Dumper (a
 broken slab of sidewalk as the kicker and a 240-unit gap full of rubble). Road signs
 stand behind the action as decor.
 
