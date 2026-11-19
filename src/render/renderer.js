@@ -92,6 +92,9 @@ const HELL_BANDS = [[120, 16, 36], [158, 26, 40], [190, 42, 40], [222, 74, 42], 
 // the far wall of fire along the horizon: deep red body, hotter core, lighter tip (all brighter than the rider is dark)
 const HELL_FIRE = [[196, 46, 36], [226, 84, 40], [250, 140, 58]];
 const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
+// Frostbite (Stage 7): a pale winter sky (top to horizon), snow-capped mountains and a row of dark pines.
+const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
+const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
@@ -300,13 +303,20 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline && !game.level.moon && !game.level.hell) return;
+    if (!game.level.skyline && !game.level.moon && !game.level.hell && !game.level.frost) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
     if (game.level.hell) {
       g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
       this.drawHellSky(g, cam, horizon);
+      g.ox = ox;
+      g.oy = oy;
+      return;
+    }
+    if (game.level.frost) {
+      g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
+      this.drawFrostSky(g, cam, horizon);
       g.ox = ox;
       g.oy = oy;
       return;
@@ -410,6 +420,73 @@ export class Renderer {
         if (x < -2) continue;
         g.pset(x, yy, EMBER[h % 3]);
         if (h % 5 === 0) g.pset(x + 1, yy, EMBER[1]);
+      }
+    }
+  }
+
+  // Frostbite's sky: pale bands deepening upward, a low white sun, two layers of snow-capped
+  // mountains, a row of pines, and snow drifting down in two layers (far flakes small and slow).
+  drawFrostSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = FROST_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, FROST_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, FROST_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, FROST_BANDS[FROST_BANDS.length - 1]);
+    // the sun: a pale disc low in the sky with a lighter halo ring
+    const sx = 70 - shiftOf(0.015);
+    const sy = horizon - 70;
+    g.circle(sx, sy, 15, [244, 248, 254], true);
+    g.circle(sx, sy, 11, [255, 255, 255], true);
+    // mountains: a blue body with a white snow cap on the high part (a jagged lower edge)
+    for (const [ridge, factor, body, rise, capLine] of [[RIDGE_FAR, 0.06, FROST.far, 34, 66], [RIDGE_NEAR, 0.14, FROST.near, 22, 38]]) {
+      const T = ridge.length;
+      const s = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const k = (((x + s) % T) + T) % T;
+        const h = ridge[k] + rise;
+        g.fill(x, horizon - h, 1, h + 60, body);
+        const cap = h - capLine + (hash(k >> 1, 3) % 4) - 1;
+        if (cap > 0) g.fill(x, horizon - h, 1, Math.min(cap, 22), FROST.cap);
+      }
+    }
+    // pines along the horizon: stacked tiers of triangle, snow on their shoulders, in a repeating row
+    const ps = shiftOf(0.3);
+    for (let cell = Math.floor(ps / 22) - 1; cell * 22 - ps < g.w + 22; cell++) {
+      const h = hash(cell, 61);
+      if (h % 4 === 0) continue;
+      const tx = cell * 22 - ps + (h % 9);
+      const th = 16 + ((h >> 4) % 12);
+      for (let row = 0; row < th; row++) {
+        const tier = row % 5; // each tier widens, then steps back in
+        const w = Math.min(6, 1 + (row >> 2) + (tier >> 1));
+        g.fill(tx - w, horizon - th + row, w * 2 + 1, 1, FROST.pine);
+        g.pset(tx - w, horizon - th + row, FROST.pineLit);
+        if (tier === 0 && row > 0) g.fill(tx - w, horizon - th + row, w * 2 + 1, 1, FROST.pineSnow);
+      }
+      g.fill(tx - 1, horizon - 1, 2, 3, [60, 44, 40]);
+    }
+    // snow: far flakes (single pixels, slow) and near flakes (2x2, quicker), drifting down and sideways
+    // through the sky's height (190 px above the horizon)
+    const t = this.time;
+    for (const [n, fall, drift, factor, size] of [[44, 9, 5, 0.1, 1], [26, 22, 12, 0.22, 2]]) {
+      const esh = shiftOf(factor);
+      const col = 300;
+      for (let i = 0; i < n; i++) {
+        const h = hash(i, 88 + size);
+        const u = (((h % col) + Math.round(t * drift * (0.6 + (h % 5) / 5))) % col + col) % col;
+        const v = ((h >> 9) % 190 + Math.round(t * fall * (0.7 + (h % 7) / 7))) % 190;
+        const y = horizon - 190 + v;
+        for (let tile = Math.floor(esh / col) - 1; tile * col + u - esh < g.w + 2; tile++) {
+          const x = tile * col + u - esh;
+          if (x < -2) continue;
+          g.fill(x, y, size, size, [255, 255, 255]);
+        }
       }
     }
   }
@@ -1055,9 +1132,9 @@ export class Renderer {
   }
 
   // A box like the level-complete one, for the end-of-run screens.
-  panel(title) {
+  panel(title, top = 38, height = 136) {
     const g = this.g;
-    const [x, y, w, h] = [56, 38, 208, 136];
+    const [x, y, w, h] = [56, top, 208, height];
     g.fill(x, y, w, h, ink);
     g.rect(x, y, w, h, red);
     g.rect(x + 2, y + 2, w - 4, h - 4, red);
@@ -1117,8 +1194,8 @@ export class Renderer {
   // before has been finished.
   drawSelect(scr) {
     const cx = RES.W / 2;
-    const { y } = this.panel('STAGES');
     const tight = scr.stages.length > 5; // six or more buttons: pack them closer
+    const { y } = scr.stages.length > 6 ? this.panel('STAGES', 28, 148) : this.panel('STAGES'); // seven or more: the panel is taller
     scr.stages.forEach((st, i) => {
       const open = i < scr.unlocked;
       this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);

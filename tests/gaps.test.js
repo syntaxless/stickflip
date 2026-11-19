@@ -78,6 +78,16 @@ const SCRIPTS = {
   'devil-stairs': [[0.97, 'tap']],
   'hellmouth-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'hellmouth-jump': [[0, 'cs'], [0.53, 'cr']], // a plain ollie falls short: it takes a charge (or the turbo)
+  'sled-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'floe-hop': [[0.57, 'tap']], // a plain ollie lands on the floe in the middle of the pond
+  'pond-leap': [[0, 'cs'], [0.71, 'cr']], // or a charged one flies the whole pond
+  'ice-grind': [[0.15, 'tap'], [0.15, 'hold']],
+  'slide-grind': [[0.38, 'tap'], [1.18, 'tap'], [1.18, 'hold']], // over the first block, then lock the second
+  'cabin-grind': [[0.45, 'tap'], [0.45, 'hold']],
+  'cabin-leap': [[0, 'cs'], [0.6, 'cr']],
+  'roof-drop': [[0.36, 'tap'], [1.36, 'tap']], // up onto the roof, then ollie off its end
+  'ice-bridge': [[0.5, 'tap'], [0.5, 'hold']],
+  'crevasse-jump': [[0, 'cs'], [0.56, 'cr']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

@@ -2,7 +2,7 @@
   "name": "stickflip",
   "version": "0.1.0",
   "private": true,
-  "description": "Tap-to-play stick figure skateboarding game. Five stages of named checkpoints and a secret Mega Ramp.",
+  "description": "Tap-to-play stick figure skateboarding game. Seven stages of named checkpoints and a secret Mega Ramp.",
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.mjs",
