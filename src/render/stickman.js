@@ -66,30 +66,51 @@ function poly(g, tf, pts, color) {
 // a solid round head and a cap.
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
+// `opts.color` draws the limbs and head in another colour with a black outline (the
+// rival in Hellride is a pale skeleton), and `opts.horns` adds two horns on the head.
 export function drawFigure(g, tf, p, opts = {}) {
-  const { k = 1, face = 1, tilt = 0 } = opts;
+  const { k = 1, face = 1, tilt = 0, color = null, horns = null } = opts;
   const ct = Math.cos(tilt);
   const st = Math.sin(tilt);
   // a point on the cap, offset (ox, oy) from the head in pose units
   const cap = (ox, oy) => pt(p.head.x + (ct * ox * face - st * oy) * k, p.head.y + (st * ox * face + ct * oy) * k);
-  const W = PAL.ink;
-  poly(g, tf, [p.footB, p.kneeB, p.hip], W);
-  poly(g, tf, [p.footF, p.kneeF, p.hip], W);
-  poly(g, tf, [p.hip, p.neck], W);
-  poly(g, tf, [p.neck, p.elbowB, p.handB], W);
-  poly(g, tf, [p.neck, p.elbowF, p.handF], W);
-  const h = tf(p.head);
-  // a slightly bigger head: two r=3 discs offset by one pixel make an 8x8 blob (7px before)
-  for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, W, true);
+  const body = (t, c) => {
+    poly(g, t, [p.footB, p.kneeB, p.hip], c);
+    poly(g, t, [p.footF, p.kneeF, p.hip], c);
+    poly(g, t, [p.hip, p.neck], c);
+    poly(g, t, [p.neck, p.elbowB, p.handB], c);
+    poly(g, t, [p.neck, p.elbowF, p.handF], c);
+    const h = t(p.head);
+    // a slightly bigger head: two r=3 discs offset by one pixel make an 8x8 blob (7px before)
+    for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, c, true);
+  };
+  if (color) {
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1]]) {
+      body((q) => {
+        const r = tf(q);
+        return { x: r.x + dx, y: r.y + dy };
+      }, PAL.ink);
+    }
+    body(tf, color);
+  } else body(tf, PAL.ink);
   // cap: crown + peak, following the body's rotation
   poly(g, tf, [cap(-9, -7), cap(9, -7)], PAL.ink);
   poly(g, tf, [cap(-7, -10), cap(7, -10)], PAL.ink);
   poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
+  if (horns) {
+    for (const side of [-1, 1]) {
+      const base = tf(cap(side * 8, -9));
+      const tip = tf(cap(side * 12, -22));
+      g.line(base.x, base.y, tip.x, tip.y, PAL.ink);
+      g.pset(base.x + (side > 0 ? -1 : 1), base.y - 1, horns);
+      g.pset(tip.x, tip.y, horns);
+    }
+  }
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle
 // (0 = grip side up); seen side-on, so mid-flip it shows its width.
-export function drawBoard(g, tf, spin = 0, lift = 0) {
+export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck) {
   const c = Math.cos(spin);
   const thick = Math.abs(Math.sin(spin)) * 18;
   const y = -8 - lift;
@@ -99,8 +120,8 @@ export function drawBoard(g, tf, spin = 0, lift = 0) {
     // wheels) on the other.
     const t = thick / 2;
     const bottom = Math.sin(spin) > 0;
-    for (let o = -t; o <= t; o += 1.5) poly(g, tf, [pt(-26, y + o), pt(26, y + o)], bottom ? PAL.deck : PAL.ink);
-    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], PAL.deck);
+    for (let o = -t; o <= t; o += 1.5) poly(g, tf, [pt(-26, y + o), pt(26, y + o)], bottom ? deck : PAL.ink);
+    poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], deck);
     if (bottom) {
       for (const wx of [-16, 16]) {
         for (const wo of [-t + 2, t - 2]) {
@@ -111,7 +132,7 @@ export function drawBoard(g, tf, spin = 0, lift = 0) {
     }
     return;
   }
-  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], PAL.deck);
+  poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], deck);
   // Wheels: 2x2 blocks under the trucks (on top when the board is upside down).
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));

@@ -16,6 +16,7 @@ function newGame(stage, index, start) {
   if (start !== undefined) sec.start = start;
   const g = new Game(stage, null, { index, score: 0 });
   sec.start = saved;
+  g.rival = null; // (Hellride's rival would win the race while these scripts idle: see race.test.js)
   return g;
 }
 const EURO_TOP = -120;
@@ -67,6 +68,12 @@ const SCRIPTS = {
   'box-clear': [[0.11, 'cs'], [0.86, 'cr']],
   'big-set': [[0, 'cs'], [0.75, 'cr']],
   'siren-grind': [[0.62, 'tap'], [0.62, 'hold']],
+  'cinder-grind': [[0.51, 'tap'], [0.51, 'hold']],
+  'lava-grind': [[0.33, 'tap'], [0.33, 'hold']],
+  'fire-pit-leap': [[0.66, 'tap']],
+  'devil-stairs': [[0.97, 'tap']],
+  'hellmouth-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'hellmouth-jump': [[0, 'cs'], [0.53, 'cr']], // a plain ollie falls short: it takes a charge (or the turbo)
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

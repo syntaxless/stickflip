@@ -49,6 +49,9 @@ const PALETTES = {
   secret: { ...BASE, sky: [16, 24, 88], red: [255, 96, 96], fire: [255, 255, 0], flame: [255, 0, 0] },
   play: { ...BASE, sky: [110, 180, 255], red: [170, 0, 0], ground: [150, 70, 70], kerb: [190, 100, 100], crack: [110, 40, 40], fleck: [210, 130, 130], far: [110, 180, 255], near: [110, 180, 255], window: [110, 180, 255] },
   park: { ...BASE, sky: [236, 140, 92], red: [128, 0, 0], ground: [150, 140, 140], kerb: [180, 170, 170], crack: [110, 100, 104], fleck: [200, 190, 190], far: [216, 120, 100], near: [190, 100, 100], window: [250, 190, 110] },
+  // Hellride: a blood-orange sky (bands and mountains are painted over it), light ember-red text (the sky is dark at the top), black basalt ground
+  // with a smoulder in the cracks, scorched "grass" and maroon rock.
+  hell: { ...BASE, sky: [214, 68, 40], red: [255, 170, 130], ground: [58, 40, 48], kerb: [92, 62, 70], crack: [30, 16, 24], fleck: [226, 96, 36], grass: [96, 30, 22], blade: [160, 52, 24], shade: [52, 16, 16], dirt: [66, 26, 30], dirtLight: [96, 38, 34], dirtDark: [38, 14, 20], stone: [132, 70, 50], stoneDark: [80, 36, 34] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 

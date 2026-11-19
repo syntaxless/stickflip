@@ -64,6 +64,32 @@ export const SCOREBOARD = Object.freeze({
   key: 'sb_publishable_NHTCq8t75Xnp6NMI9pHLHQ_8A_w50kV',
 });
 
+// Race levels (Hellride): a computer-controlled rival skates the same course and
+// the first across the finish line wins. Winning pays WIN_BONUS plus LEAD_BONUS
+// for every second you were ahead. The rival takes every turbo on its line but
+// cruises a touch slower than you (RIVAL_PACE), and its pace is rubber-banded:
+// it speeds up when you pull ahead and eases off when you fall behind, so the race
+// stays close without being rigged. Riding the rival's own line cleanly beats it by
+// about half a second; skipping the rails (no turbo) loses, manuals win by a lot.
+export const RACE = Object.freeze({
+  WIN_BONUS: 3000,
+  LEAD_BONUS: 1000,
+  RIVAL_PACE: 0.96, // the rival's cruising speed, as a share of yours
+  CATCH_UP: 1 / 6000, // pace gained per px you are ahead (up to CATCH_UP_MAX)
+  CATCH_UP_MAX: 0.03,
+  EASE_OFF: 1 / 3000, // pace lost per px you are behind (up to EASE_OFF_MAX)
+  EASE_OFF_MAX: 0.07,
+  START_GAP: 45, // the rival lines up this far behind you on the start line
+  WIPEOUT_DELAY: 0.9, // s the rival lies there after a bail before it is back on its board
+});
+
+// Turbo (levels with `boost: true`, like Hellride): locking a grind, going
+// through a ring of fire or landing a named gap kicks the speed up this much
+// (a share of cruising speed, never past the usual top speed), and it fades
+// away slowly (the level's `speedReturn`). Faster means longer jumps, so a boost
+// has to be managed, the way a turbo is on a dirt bike.
+export const BOOST = Object.freeze({ GRIND: 0.25, RING: 0.25, GAP: 0.2 });
+
 // A trick (or grind) worth at least this many points is a "special": it gets a
 // banner and a jingle, like a named gap bonus does.
 export const SPECIAL_POINTS = 300;

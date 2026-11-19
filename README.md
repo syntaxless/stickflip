@@ -3,8 +3,8 @@
 A tap-to-play stick figure skateboarding game in chunky pixel art. Each stage
 is one long strip of obstacles the camera pans along; its levels are named
 sections of the strip, and each one is a checkpoint. You get past everything
-using nothing but taps, holds and drawn trick shapes. Five stages and a
-secret Mega Ramp.
+using nothing but taps, holds and drawn trick shapes. Six stages (the last one
+is a race) and a secret Mega Ramp.
 
 ## Play and develop
 
@@ -206,6 +206,25 @@ trapezoid with a rail on top), Big Set (three big concrete steps, no rail) and C
 Car (a wooden ramp up to a police car: grind its light bar and the car blows up in a cartoon
 blast once the grind is over, leaving a smoking wreck; ollie over it and nothing happens).
 
+**Stage 6: Hellride** (a race): a computer-controlled rival skates the same course and
+the first across the finish line wins (a win pays 3000 plus 1000 per second ahead, and
+the stage's top 5 is for winning runs; losing means racing again from the start). It opens
+once Stage 5 is finished. Brimstone Bumps (three bumps and a low block), Cinder Rail (kicker
+and a long rail), Lava Moat (a 300-wide lava pit with a rail hung across: ollie on and lock
+the grind, or charge a long ollie over it), Imp Hurdles (two basalt blocks), Bone Bar (a flat
+bar), Fire Pit (a 200-wide pit with a ring of fire hanging over it), Devil's Stairs (five
+stairs and a handrail) and Hellmouth Jump (a kicker and a 320-wide pit: a plain ollie falls short, so
+it takes the turbo or a charge, or the arched rail across) and the Finish Straight. Locking
+a grind, going through a ring of fire and landing a named gap kick up a turbo (+25% speed, fading
+over a few seconds): faster means longer jumps, so it has to be managed (brake with hold and drag
+down). The rival rides the same course by the same rules: its inputs are cues in each section file
+(`cues`, found by `node scripts/solve-rival.mjs --write`, which rides the real course at every pace
+the rubber band can give), its pace is rubber-banded (`RACE` in `src/config.js`: slightly under
+yours, quicker when you pull ahead, easing off when you fall behind), and it takes every turbo on
+its line, so riding its line cleanly beats it by about half a second and manuals win by a lot. The
+race rules are in `src/rival.js` and `Game` (`race`, `lose()`, `finish()`), the pieces in
+`src/obstacles/hell.js`. Game Center has no board for it yet (`gameCenter: false`).
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
 off the kicker to clear the whole rail and land in the long bank that starts right
@@ -339,7 +358,9 @@ tests/                  node:test suites
    close to the top the rider gets before the camera rises); `palette` (`'site'`,
    `'play'`, `'park'`...), `sidewalk`, `skyline`, `clouds` for the look;
    `endAfterQuarter` to end the stage when the rider has ridden back down a
-   quarter pipe; `finishLeft` to end on a ride back to the left.
+   quarter pipe; `finishLeft` to end on a ride back to the left; `race: { finishAt }`
+   for a race against a rival (see Stage 6), `boost: true` (+ `speedReturn`) for the turbo,
+   `hell: true` for Hellride's sky, `gameCenter: false` for a stage with no Game Center board.
 3. Append it to `STAGES` in `src/stages/index.js` (stage id `stage-N`, which is also
    the shared leaderboard key and the Game Center leaderboard `stickflip.stageN`).
 4. Add timed-ollie clears for each checkpoint to `tests/stage.test.js` and a line per
