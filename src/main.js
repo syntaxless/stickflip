@@ -645,7 +645,14 @@ function frame(now) {
   drawLetterbox();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(low, view.ox * view.dpr, view.oy * view.dpr, RES.W * view.scale * view.dpr, RES.H * view.scale * view.dpr);
-  if (view.portrait) drawTouchPad();
+  if (view.portrait) {
+    // Solid black under the game frame, so nothing the scene draws below the level (a pool, a lava pit) can show in the
+    // touch area; the dashed hint goes on top of it.
+    const frameBottom = Math.round((view.oy + RES.H * view.scale) * view.dpr);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, frameBottom, canvas.width, canvas.height - frameBottom);
+    drawTouchPad();
+  }
   if (TESTING) drawStrokeDebug();
   requestAnimationFrame(frame);
 }

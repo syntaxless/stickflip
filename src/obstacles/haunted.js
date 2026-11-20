@@ -1,6 +1,6 @@
 import { box } from './box.js';
 import { rail } from './rail.js';
-import { P, G, ink, hash, gate, pit } from './art.js';
+import { P, G, ink, hash, gate, pit, POOL_DEPTH } from './art.js';
 
 // Haunted Night's own pieces (Stage 10): gravestones, a grave mound, a coffin kicker, an iron fence rail,
 // an open grave with a coffin lid floating in it, pumpkins, a standing coffin, lantern gates, a mausoleum
@@ -137,14 +137,14 @@ export function openGrave({ x, width, floes = [], deep = false }) {
     paint(g, fx, { l, r, top }) {
       const t = fx.time || 0;
       const [c1, c2] = deep ? [[10, 8, 24], [26, 20, 54]] : [[16, 12, 32], [40, 30, 64]];
-      g.fill(l, top, r - l + 1, 90, c1);
+      g.fill(l, top, r - l + 1, POOL_DEPTH, c1);
       g.fill(l, top + 2, r - l + 1, 9, c2);
       for (let px = l; px <= r; px++) {
         const wave = Math.floor(Math.sin(px * 0.3 + t * 1.6) * 0.9 + 0.9);
         if (hash(px, 5) % 4 === 0) g.pset(px, top + 2 + wave, [90, 200, 130]);
         if (hash(px, 29) % 15 === 0) g.pset(px, top + 5 + ((t * 6 + px) % 6), MIST); // wisps rising
       }
-      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + 90, ink);
+      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + POOL_DEPTH, ink);
       // raw earth at the lips, with roots
       for (let i = 0; i < 5; i++) for (const px of [l + i, r - i]) g.fill(px, top, 1, Math.max(1, 3 - (i >> 1)), [74, 52, 58]);
       for (const px of [l + 3, r - 3]) g.line(px, top + 3, px, top + 7, [112, 82, 80]);
@@ -195,7 +195,7 @@ export function pumpkin({ x, w = 50, h = 36 }) {
       g.fill(cx - 1, t - 3, 3, 3, PUMPKIN.stem);
       g.rect(cx - 2, t - 4, 5, 5, ink);
       g.fill(cx - 1, t - 3, 3, 3, PUMPKIN.stem);
-      const flick = Math.floor((fx.time || 0) * 4) % 3;
+      const flick = Math.floor(Math.max(0, fx.time || 0) * 4) % 3;
       const lit = GLOW[flick % 3];
       for (const ex of [cx - 5, cx + 3]) { g.fill(ex, cy - 3, 3, 3, lit); g.pset(ex + 1, cy - 4, lit); }
       g.fill(cx - 3, cy + 2, 7, 2, lit);
@@ -256,7 +256,7 @@ export function lanternGate({ x, top, bottom, name = 'GHOST GATE', points = 250 
       }
       g.line(cx - reach, t - 1, cx + reach, t - 1, ink);
       g.line(cx - reach, t, cx + reach, t, IRON.body);
-      const flick = Math.floor((fx.time || 0) * 5) % 3;
+      const flick = Math.floor(Math.max(0, fx.time || 0) * 5) % 3;
       for (const lx of [cx - 4, cx + 4]) {
         g.line(lx, t + 1, lx, t + 3, ink);
         g.fill(lx - 1, t + 4, 3, 4, GLOW[flick]);
@@ -289,7 +289,7 @@ export function mausoleum({ x, w = 230, h = 70 }) {
       const dx = ((l + r) >> 1) - (dw >> 1);
       g.fill(dx, t + 14, dw, b - t - 13, [14, 10, 24]);
       g.rect(dx - 1, t + 13, dw + 2, b - t - 12, ink);
-      const flick = Math.floor((fx.time || 0) * 3) % 2;
+      const flick = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(dx + 4, b - 6, 4, 4, flick ? [120, 255, 170] : [80, 200, 130]);
       for (const cxp of [dx - 8, dx + dw + 6]) { g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.rect(cxp - 1, t + 5, 5, b - t - 4, ink); g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.line(cxp + 2, t + 6, cxp + 2, b - 1, STONE.dark); }
       g.text('RIP', (l + r) >> 1, t + 6, STONE.dark, 1, 'center');
@@ -324,7 +324,7 @@ export function mansion({ x }) {
       for (let i = 0; i < 14; i++) { g.fill(cx - 17 + i, ground - 90 + Math.abs(7 - i) * 2 + 1 - 7, 1, 14 - Math.abs(7 - i) * 2 + 6, edge); } // a pointed roof
       g.line(cx - 36, ground - 53, cx, ground - 66, ink);
       g.line(cx + 36, ground - 53, cx, ground - 66, ink);
-      const flick = Math.floor((fx.time || 0) * 2.5);
+      const flick = Math.floor(Math.max(0, fx.time || 0) * 2.5);
       const wins = [[-28, -44], [-16, -44], [10, -44], [22, -44], [-4, -68], [-26, -26], [18, -26]];
       wins.forEach(([wx, wy], i) => {
         const on = (i + flick) % 5 !== 0;

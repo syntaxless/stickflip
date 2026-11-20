@@ -19,7 +19,7 @@ export function water({ x, width }) {
     draw(g, fx = {}) {
       const [l, r] = [P(x), P(x + width) - 1];
       const top = P(WORLD.GROUND) - 1;
-      const t = Math.floor((fx.time || 0) * 3);
+      const t = Math.floor(Math.max(0, fx.time || 0) * 3);
       g.fill(l, top, r - l + 1, 90, DEEP);
       g.fill(l, top, r - l + 1, 9, MID);
       for (let px = l; px <= r; px++) {
