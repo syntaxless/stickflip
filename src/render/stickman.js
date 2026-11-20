@@ -67,9 +67,9 @@ function poly(g, tf, pts, color) {
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap.
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds black eyes.
 export function drawFigure(g, tf, p, opts = {}) {
-  const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false } = opts;
+  const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false } = opts;
   const ct = Math.cos(tilt);
   const st = Math.sin(tilt);
   // a point on the cap, offset (ox, oy) from the head in pose units
@@ -98,6 +98,13 @@ export function drawFigure(g, tf, p, opts = {}) {
     poly(g, tf, [cap(-9, -7), cap(9, -7)], PAL.ink);
     poly(g, tf, [cap(-7, -10), cap(7, -10)], PAL.ink);
     poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
+  }
+  if (eyes) {
+    // two black eyes on the front of the head, one pixel each
+    for (const ox of [-0.5, 1.5]) {
+      const e = tf(cap(ox * PX, -0.5 * PX));
+      g.pset(Math.round(e.x), Math.round(e.y), PAL.ink);
+    }
   }
   if (horns) {
     for (const side of [-1, 1]) {

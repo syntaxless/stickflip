@@ -112,7 +112,7 @@ const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60],
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 // Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
-const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true };
+const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true, eyes: true };
 const JUNK_RIVAL_DECK = [92, 168, 0];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
 const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
