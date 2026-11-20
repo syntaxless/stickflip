@@ -1090,7 +1090,7 @@ export class Renderer {
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor, !!junk);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -1163,7 +1163,7 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor, !!junk);
     // Junkyard's rival: while he leads he now and then looks back over his shoulder and laughs, with a bubble
     const laugh = junk && this.rivalAhead && this.time % 7 > 5.6;
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);

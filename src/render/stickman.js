@@ -127,7 +127,7 @@ export function drawFigure(g, tf, p, opts = {}) {
 // (0 = grip side up); seen side-on, so mid-flip it shows its width.
 // `wheels` false draws a snow skate instead (Frostbite): a thicker flat deck with upturned tips that sits
 // on the snow, no trucks and no wheels. The same poses, flips and spins.
-export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = true, wheelColor = PAL.wheel) {
+export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = true, wheelColor = PAL.wheel, bigWheels = false) {
   const c = Math.cos(spin);
   const thick = Math.abs(Math.sin(spin)) * 18;
   const y = -8 - lift;
@@ -158,6 +158,15 @@ export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = t
   // Wheels: 2x2 blocks under the trucks (on top when the board is upside down).
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));
+    if (bigWheels) {
+      // chunky 4x4 wheels with a black outline, bottom edge where the small wheels sat
+      const x0 = Math.round(w.x) - 2;
+      const y0 = Math.round(w.y) - (c < 0 ? 1 : 4);
+      g.fill(x0 - 1, y0 - 1, 6, 6, PAL.ink);
+      g.fill(x0, y0, 4, 4, wheelColor);
+      g.pset(x0, y0, PAL.ink === wheelColor ? PAL.ink : [255, 200, 225]); // a highlight
+      continue;
+    }
     g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, wheelColor); // sit on the ground, not in it
   }
 }
