@@ -1,6 +1,6 @@
 import { box } from './box.js';
 import { rail } from './rail.js';
-import { P, G, ink, hash, gate, pit } from './art.js';
+import { P, G, ink, hash, gate, pit, POOL_DEPTH } from './art.js';
 
 // Junkyard's own pieces (Stage 9): tyre heaps and stacks, fridges and washers, a wrecked car, a pit of
 // toxic sludge, a steel beam hung over it, a crane's wrecking ball. Chunky shaded pixel art like the rest:
@@ -135,7 +135,7 @@ export function sludgePit({ x, width }) {
     kind: 'water',
     paint(g, fx, { l, r, top }) {
       const t = fx.time || 0;
-      g.fill(l, top, r - l + 1, 90, SLUDGE.deep);
+      g.fill(l, top, r - l + 1, POOL_DEPTH, SLUDGE.deep);
       g.fill(l, top + 1, r - l + 1, 11, SLUDGE.mid);
       for (let px = l; px <= r; px++) {
         const wave = Math.floor(Math.sin(px * 0.3 + t * 2) * 1 + 1);
@@ -146,7 +146,7 @@ export function sludgePit({ x, width }) {
           g.pset(px, top + 11 - Math.round(ph * 10), ph > 0.85 ? SLUDGE.glow : SLUDGE.light);
         }
       }
-      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + 90, ink);
+      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + POOL_DEPTH, ink);
       // oil drums standing at the lips
       for (const [px, d] of [[l - 1, -1], [r + 1, 1]]) {
         const dx = px + d * 3 - 3;

@@ -1102,3 +1102,38 @@ test('every stage: below the street the picture is solid black or the pit\'s own
     }
   }
 });
+
+test('stages 7-10: pools, ponds, sludge and graves are only as deep as the street\'s ground strip, so nothing blue or green hangs into the touch area', async () => {
+  const { Renderer } = await import('../src/render/renderer.js');
+  const { WORLD } = await import('../src/config.js');
+  const H = 540;
+  const rd = new Renderer(gridFb(320, H));
+  rd.time = 1.1;
+  const street = Math.round(WORLD.GROUND / 3);
+  const below = street + 20 + 2; // just under the pool's bottom edge (POOL_DEPTH in src/obstacles/art.js)
+  for (const stage of STAGES.slice(6)) {
+    const game = new Game(stage);
+    for (let camX = 0; camX < Math.round(game.level.length / 3 || 2000); camX += 160) {
+      const fb = gridFb(320, H);
+      fb.ox = -camX;
+      rd.drawBackground(game, { x: camX, y: 0 }, fb);
+      for (const o of game.level.obstacles) o.draw(fb, { time: rd.time });
+      for (let x = 0; x < 320; x++) {
+        for (let y = below; y < H; y += 7) {
+          assert.equal(fb.cells[y * 320 + x], '0,0,0', `${stage.id} camera ${camX}: column ${x} row ${y} is below the pool depth but not black`);
+        }
+      }
+    }
+  }
+});
+
+test('every obstacle in every stage draws with a tiny negative time too (a first frame can report one) without throwing', () => {
+  for (const stage of STAGES) {
+    const game = new Game(stage);
+    for (let camX = 0; camX < Math.round(game.level.length / 3 || 2000); camX += 160) {
+      const fb = gridFb(320, 540);
+      fb.ox = -camX;
+      for (const o of game.level.obstacles) assert.doesNotThrow(() => o.draw(fb, { time: -0.0027 }), `${stage.id} camera ${camX} ${o.type}`);
+    }
+  }
+});

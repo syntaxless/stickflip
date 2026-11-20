@@ -2,6 +2,7 @@ import { WORLD } from '../config.js';
 import { PAL } from '../render/pixel.js';
 import { box } from './box.js';
 import { gap } from './gap.js';
+import { POOL_DEPTH } from './art.js';
 import { rail } from './rail.js';
 
 // Frostbite's own pieces (Stage 7): a snowman, ice blocks, a frozen pond with ice floes, a ski
@@ -86,7 +87,7 @@ export function iceBlock({ x, w = 60, h = 40 }) {
         const gx = l + Math.round((r - l) * f);
         for (let i = 0; i < Math.min(5, b - t - 5); i++) g.pset(gx - i, t + 4 + i, i % 2 ? ICE.lit : SNOW.white);
       }
-      const sparkle = Math.floor((fx.time || 0) * 2 + x) % 4;
+      const sparkle = Math.floor(Math.max(0, fx.time || 0) * 2 + x) % 4;
       if (sparkle === 0) g.pset(l + 3, t + 3, SNOW.lit);
     },
   };
@@ -109,15 +110,15 @@ export function icePond({ x, width, floes = [], deep = false }) {
       const top = P(G) - 1;
       const t = fx.time || 0;
       const [deepC, midC] = deep ? [[6, 14, 40], [14, 32, 78]] : [WATER.deep, WATER.mid];
-      g.fill(l, top, r - l + 1, 90, deepC);
+      g.fill(l, top, r - l + 1, POOL_DEPTH, deepC);
       g.fill(l, top + 2, r - l + 1, 9, midC);
       for (let px = l; px <= r; px++) {
         const wave = Math.floor(Math.sin(px * 0.4 + t * 2.4) * 0.8 + 0.8);
         g.pset(px, top + 2 + wave, WATER.light);
         if (hash(px, 17) % 11 === 0) g.pset(px, top + 5 + (hash(px, 2) % 4), WATER.light);
       }
-      g.line(l - 1, top, l - 1, top + 90, ink);
-      g.line(r + 1, top, r + 1, top + 90, ink);
+      g.line(l - 1, top, l - 1, top + POOL_DEPTH, ink);
+      g.line(r + 1, top, r + 1, top + POOL_DEPTH, ink);
       // jagged ice at each lip: a white shelf over the water, and (deep) icicles hanging under it
       for (let i = 0; i < 5; i++) {
         const len = 2 + ((hash(i, x) >> 3) % 3);
@@ -180,7 +181,7 @@ export function skiGate({ x, top, bottom, name = 'SLALOM GATE', points = 250 }) 
       }
       // the banner: a pennant strip waving a pixel between the pole tops
       const w = reach * 2 - 1;
-      const wave = Math.floor((fx.time || 0) * 3) % 2;
+      const wave = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(cx - reach + 1, t - 2 + wave, w, 4, [30, 80, 200]);
       g.rect(cx - reach, t - 3 + wave, w + 2, 6, ink);
       g.line(cx - reach + 1, t - 2 + wave, cx + reach - 1, t - 2 + wave, [120, 170, 255]);
@@ -220,7 +221,7 @@ export function cabin({ x, w = 240, h = 60 }) {
       g.rect(wx - 1, t + 7, 14, 10, ink);
       g.line(wx + 6, t + 8, wx + 6, t + 15, ink);
       g.line(wx, t + 11, wx + 11, t + 11, ink);
-      const flick = Math.floor((fx.time || 0) * 3) % 2;
+      const flick = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.pset(wx + 2 + flick, t + 9, [255, 246, 190]);
       const dx = l + Math.round((r - l) * 0.68);
       g.fill(dx, t + 6, 9, b - t - 5, LOG.dark);
@@ -277,7 +278,7 @@ export function summitFlag({ x }) {
       g.line(cx, top, cx, ground - 12, ink);
       g.line(cx - 1, top, cx - 1, ground - 12, SNOW.white);
       g.circle(cx - 1, top - 1, 1, [255, 214, 90], true);
-      const t = Math.floor((fx.time || 0) * 3);
+      const t = Math.floor(Math.max(0, fx.time || 0) * 3);
       for (let i = 0; i < 40; i++) {
         const wave = Math.round(Math.sin((i + t) * 0.5));
         for (let j = 0; j < 12; j++) g.pset(cx + i, top + 2 + j + wave, j === 0 || j === 11 || i === 39 ? ink : [214, 30, 40]);
