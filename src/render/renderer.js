@@ -112,7 +112,7 @@ const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60],
 // Hellride's rival: a pale skeleton with a bare head and red eyes (no cap, no horns).
 const RIVAL_LOOK = { color: [238, 232, 214], noCap: true, eyes: true, eyeColor: [255, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
-const RIVAL_WHEELS = [238, 232, 214]; // bone wheels, big and outlined like the Junkyard rival's
+const RIVAL_WHEELS = [238, 232, 214]; // bone wheels, drawn like the player's
 // Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
 const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true, eyes: true };
 const JUNK_RIVAL_DECK = [204, 146, 76]; // a wood-coloured board ...
@@ -1086,15 +1086,13 @@ export class Renderer {
     const look = who ? (junk ? JUNK_RIVAL_LOOK : RIVAL_LOOK) : {};
     const deck = who ? (junk ? JUNK_RIVAL_DECK : RIVAL_DECK) : PAL.deck;
     const wheelColor = junk ? JUNK_RIVAL_WHEELS : who ? RIVAL_WHEELS : PAL.wheel;
-    const bigWheels = !!who; // both rivals ride chunky wheels
-    const wheelShine = junk ? [255, 200, 225] : null;
     const poseOf = who ? this.rivalPose : this.pose;
     const squash = who ? 0 : this.squash;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor, bigWheels, wheelShine);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -1167,7 +1165,7 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor, bigWheels, wheelShine);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
     // Junkyard's and Hellride's rivals: while one leads he now and then looks back over his shoulder and laughs, with a bubble ("HA!" / "FOOL!")
     const laugh = who && (junk || game.level.hell) && this.rivalAhead && this.time % 7 > 5.6;
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
