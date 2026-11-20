@@ -67,7 +67,7 @@ function poly(g, tf, pts, color) {
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds an eye (black, or `opts.eyeColor`) (`'laugh'` looks back with a zig zag mouth).
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds an eye (black, or `opts.eyeColor`) (`'laugh'` turns the head full face to the player, with a zig zag mouth).
 export function drawFigure(g, tf, p, opts = {}) {
   const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false, eyeColor = PAL.ink } = opts;
   const ct = Math.cos(tilt);
@@ -109,15 +109,18 @@ export function drawFigure(g, tf, p, opts = {}) {
   if (eyes) {
     // a profile head shows one black eye at the front; `eyes: 'laugh'` turns it to look back over
     // the shoulder, with a zig zag mouth
-    const back = eyes === 'laugh';
-    const e = tf(cap((back ? -1.5 : 1.5) * PX, (back ? -1.5 : -0.5) * PX));
-    g.pset(Math.round(e.x), Math.round(e.y), eyeColor);
-    if (back) {
-      // a zig zag mouth, four black pixels stepping up and down (the profile head has none)
-      [-3.5, -2.5, -1.5, -0.5].forEach((ox, i) => {
-        const m = tf(cap(ox * PX, (i % 2 ? 2 : 1) * PX));
-        g.pset(Math.round(m.x), Math.round(m.y), PAL.ink);
-      });
+    if (eyes === 'laugh') {
+      // looking back at the player: the head turns full face, two eyes and a wide zig zag mouth
+      // (screen-space pixels on the 8x8 head, whose top left is (hx - 4, hy - 4))
+      const h = tf(p.head);
+      const hx = Math.round(h.x);
+      const hy = Math.round(h.y);
+      for (const ex of [-2, 1]) g.pset(hx + ex, hy - 2, eyeColor);
+      for (let i = 0; i < 6; i++) g.pset(hx - 3 + i, hy + (i % 2 ? 2 : 1), PAL.ink);
+    } else {
+      // a profile head shows one black eye at the front
+      const e = tf(cap(1.5 * PX, -0.5 * PX));
+      g.pset(Math.round(e.x), Math.round(e.y), eyeColor);
     }
   }
   if (horns) {

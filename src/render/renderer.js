@@ -120,6 +120,7 @@ const JUNK_RIVAL_WHEELS = [255, 105, 180]; // ... on pink wheels
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
 const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
+const LAUGH_FIRST = 1.6; // seconds the rival laughs back the first time he pulls ahead in a run
 const pad = (n, len = 6) => String(Math.max(0, n)).padStart(len, '0');
 
 export class Renderer {
@@ -144,6 +145,8 @@ export class Renderer {
     this.pulse = 0; // the combo readout swells for a moment when a trick is added
     this.buttons = [];
     this.time = 0;
+    this.rivalPassed = false;
+    this.laughUntil = 0;
   }
 
   // Turn game events into visual effects.
@@ -247,7 +250,7 @@ export class Renderer {
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) {
-      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.trackRival(game);
       this.drawSkater(game.rival.game, g, true, 'rival');
     } // behind the player
     this.drawSkater(game);
@@ -305,6 +308,20 @@ export class Renderer {
     return { x, y: Math.round(y / S) };
   }
 
+  // Whether the rival leads. The first time he pulls ahead in a run he laughs back at the player for
+  // LAUGH_FIRST seconds, so it is always seen; after that only the occasional laugh below.
+  trackRival(game) {
+    // (also while you lie in a bail: that is when he usually pulls ahead, and the laugh is meant to be seen)
+    const racing = game.phase === 'playing' || game.phase === 'bailed';
+    const ahead = racing && game.rival.game.sk.x > game.sk.x + 30;
+    if (game.phase === 'ready') this.rivalPassed = false; // a fresh run
+    if (ahead && !this.rivalPassed) {
+      this.rivalPassed = true;
+      this.laughUntil = this.time + LAUGH_FIRST;
+    }
+    this.rivalAhead = ahead;
+  }
+
   // The scene without the HUD (ground, obstacles and the rider) into another
   // framebuffer: main.js uses it to fill the bars around the game, so
   // whatever runs off the edge of the game (a rail, a ramp) carries on there,
@@ -317,7 +334,7 @@ export class Renderer {
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) {
-      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.trackRival(game);
       this.drawSkater(game.rival.game, g, false, 'rival');
     }
     this.drawSkater(game, g, false); // same pose as this frame's game picture
@@ -1167,7 +1184,7 @@ export class Renderer {
     }
     drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
     // Junkyard's and Hellride's rivals: while one leads he now and then looks back over his shoulder and laughs, with a bubble ("HA!" / "FOOL!")
-    const laugh = who && (junk || game.level.hell) && this.rivalAhead && this.time % 7 > 5.6;
+    const laugh = who && (junk || game.level.hell) && this.rivalAhead && (this.time < this.laughUntil || this.time % 7 > 5.6);
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
     if (laugh) {
       const h = base(poseOf.pose.head);
