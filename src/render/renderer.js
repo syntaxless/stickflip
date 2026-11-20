@@ -96,7 +96,7 @@ const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
 const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
 // The stages with a sky of their own (a level flag each; the picture is drawXSky).
-const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk'];
+const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk', 'haunt'];
 // Boardwalk (Stage 8): a bright seaside sky, a strip of sea on the horizon, a pier with a Ferris wheel,
 // a row of palms, gulls and a few puffs of cloud.
 const BEACH_BANDS = [[70, 160, 250], [96, 180, 255], [126, 200, 255], [158, 218, 255], [190, 232, 255], [220, 244, 255]];
@@ -105,6 +105,10 @@ const BEACH = { sea: [34, 130, 214], seaLit: [120, 200, 250], seaFar: [70, 156, 
 // smoke drifting up from a burning pile.
 const JUNK_BANDS = [[150, 120, 98], [168, 138, 108], [186, 154, 118], [204, 172, 130], [218, 188, 144], [230, 204, 160]];
 const JUNK = { far: [150, 124, 106], near: [112, 92, 82], crane: [92, 74, 66], smoke: [124, 108, 100], smokeLit: [150, 134, 122], rust: [132, 78, 52] };
+// Haunted Night (Stage 10): a twilight purple sky (top to horizon), a huge pale moon, stars, a haunted mansion
+// on a far hill, dead trees, a row of tombstones, ground mist and bats.
+const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140], [146, 86, 150], [182, 110, 158]];
+const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
@@ -684,6 +688,99 @@ export class Renderer {
         const x = tile * 480 + gx - gs;
         if (x < -8) continue;
         for (const [dx, dy] of [[0, 0], [-1, -flap], [-2, -1 - flap], [1, -flap], [2, -1 - flap]]) g.pset(x + dx, gy + dy, [24, 20, 24]);
+      }
+    }
+  }
+
+  // Haunted Night's sky: twilight purple bands, a huge moon with a halo, twinkling stars, a far hill with a haunted
+  // mansion (windows flickering), dead trees, a row of tombstones, bats flapping across and mist drifting along
+  // the ground.
+  drawHauntSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = HAUNT_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, HAUNT_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, HAUNT_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, HAUNT_BANDS[HAUNT_BANDS.length - 1]);
+    // stars: a sprinkle of single pixels that twinkle
+    const ss = shiftOf(0.02);
+    for (let i = 0; i < 46; i++) {
+      const h = hash(i, 91);
+      const sx = (((h % 640) - ss) % 640 + 640) % 640;
+      const sy = horizon - 150 + ((h >> 9) % 110);
+      if (sx < g.w && (Math.floor(t * 2 + i) % 5 !== 0)) g.pset(sx, sy, i % 4 ? [236, 230, 255] : [255, 240, 190]);
+    }
+    // the moon: a huge pale disc with craters and a violet halo
+    const mx = 232 - shiftOf(0.012);
+    const my = horizon - 96;
+    g.circle(mx, my, 34, HAUNT.moonHalo, true);
+    g.circle(mx, my, 30, [196, 162, 214], true);
+    g.circle(mx, my, 26, HAUNT.moon, true);
+    for (const [dx, dy, r] of [[-9, -8, 5], [8, 4, 6], [-3, 12, 3], [12, -12, 3]]) g.circle(mx + dx, my + dy, r, HAUNT.moonShade, true);
+    // a far hill with the mansion on it: towers, a pointed roof, windows that flicker
+    const hs = shiftOf(0.05);
+    for (let cell = Math.floor(hs / 520) - 1; cell * 520 - hs < g.w + 120; cell++) {
+      const hx = cell * 520 - hs + 80;
+      for (let i = -70; i <= 70; i++) g.fill(hx + i, horizon - Math.round(34 * Math.max(0, 1 - (i / 80) ** 2)) - 6, 1, 60, HAUNT.hill);
+      const by = horizon - 40;
+      g.fill(hx - 18, by - 22, 36, 24, HAUNT.tree);
+      g.fill(hx - 8, by - 38, 16, 16, HAUNT.tree);
+      for (let i = 0; i < 9; i++) g.fill(hx - 5 + i - 0, by - 48 + Math.abs(4 - i), 1, 10 - Math.abs(4 - i), HAUNT.tree);
+      g.fill(hx - 22, by - 14, 4, 16, HAUNT.tree);
+      g.fill(hx + 18, by - 14, 4, 16, HAUNT.tree);
+      const flick = Math.floor(t * 1.5 + cell);
+      [[-14, -16], [-6, -16], [4, -16], [12, -16], [-2, -32]].forEach(([wx, wy], i) => { if ((i + flick) % 4) g.fill(hx + wx, by + wy, 2, 3, HAUNT.win); });
+    }
+    // dead trees: bare trunks with crooked branches, in a repeating row
+    const ts = shiftOf(0.14);
+    for (let cell = Math.floor(ts / 110) - 1; cell * 110 - ts < g.w + 30; cell++) {
+      const h = hash(cell, 33);
+      if (h % 3 === 0) continue;
+      const tx = cell * 110 - ts + (h % 40);
+      const th = 22 + ((h >> 5) % 16);
+      g.fill(tx, horizon - th, 2, th, HAUNT.tree);
+      for (const [by2, dir] of [[th * 0.7, 1], [th * 0.5, -1], [th * 0.85, -1]]) {
+        const len = 6 + ((h >> 3) % 5);
+        for (let i = 1; i <= len; i++) g.pset(tx + 1 + dir * i, Math.round(horizon - by2 - i * 0.7), HAUNT.tree);
+      }
+    }
+    // a row of tombstones, nearer
+    const gs = shiftOf(0.28);
+    for (let cell = Math.floor(gs / 38) - 1; cell * 38 - gs < g.w + 12; cell++) {
+      const h = hash(cell, 47);
+      if (h % 2 === 0) continue;
+      const gx = cell * 38 - gs + (h % 14);
+      const gh = 6 + ((h >> 4) % 6);
+      g.fill(gx, horizon - gh, 6, gh, HAUNT.stone);
+      g.fill(gx + 1, horizon - gh - 1, 4, 1, HAUNT.stone);
+      if ((h >> 9) % 3 === 0) { g.fill(gx + 2, horizon - gh - 4, 2, 4, HAUNT.stone); g.fill(gx, horizon - gh - 2, 6, 1, HAUNT.stone); }
+    }
+    // bats: black Vs flapping across the moon
+    const bs = shiftOf(0.2);
+    for (let i = 0; i < 5; i++) {
+      const h = hash(i, 17);
+      const bx = ((((h % 560) + Math.round(t * (14 + (h % 8)))) % 560) + 560) % 560;
+      const by2 = horizon - 70 - ((h >> 8) % 70) + Math.round(Math.sin(t * 1.6 + i) * 4);
+      const flap = Math.floor(t * 6 + i) % 2;
+      for (let tile = Math.floor(bs / 560) - 1; tile * 560 + bx - bs < g.w + 8; tile++) {
+        const x = tile * 560 + bx - bs;
+        if (x < -8) continue;
+        for (const [dx, dy] of [[0, 0], [-1, -flap], [-2, -1 - flap], [-3, -flap], [1, -flap], [2, -1 - flap], [3, -flap]]) g.pset(x + dx, by2 + dy, [18, 12, 28]);
+      }
+    }
+    // ground mist: pale ragged streaks drifting slowly along the horizon
+    const ms = shiftOf(0.35);
+    for (let row = 0; row < 3; row++) {
+      for (let x = 0; x < g.w; x++) {
+        const wx = x + ms + Math.round(t * (3 + row * 2));
+        const n = hash(Math.floor(wx / 9) + row * 7, 61) % 7;
+        if (n < 2) g.pset(x, horizon - 1 - row * 2 - (n % 2), HAUNT.mist);
       }
     }
   }

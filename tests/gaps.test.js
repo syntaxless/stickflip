@@ -106,6 +106,15 @@ const SCRIPTS = {
   'car-leap': [[0, 'cs'], [0.6, 'cr']],
   'magnet-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'magnet-jump': [[0, 'cs'], [0.55, 'cr']],
+  'fence-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'coffin-hop': [[0.57, 'tap']], // a plain ollie lands on the coffin lid in the middle of the grave
+  'grave-leap': [[0, 'cs'], [0.71, 'cr']],
+  'pumpkin-hop': [[0.28, 'tap']], // land on the pumpkin and ride off its far side
+  'tomb-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'tomb-leap': [[0, 'cs'], [0.6, 'cr']],
+  'roof-drop-tomb': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
+  'gate-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'mansion-leap': [[0, 'cs'], [0.56, 'cr']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {
