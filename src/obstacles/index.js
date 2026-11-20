@@ -17,3 +17,7 @@ export { dumpTruck } from './dump-truck.js';
 export { hubba, curbCut, concreteSet, funBox, woodRamp, copCar } from './skatepark.js';
 export { toyBlocks, playSlide, sandbox, ballPit, seesaw, monkeyBars, blockTower, swingSet } from './playground.js';
 export { lavaPit, fireRing, barricade, finishArch, bridgeRail } from './hell.js';
+export { snowman, iceBlock, icePond, skiGate, cabin, snowRail, summitFlag } from './frost.js';
+export { sandDune, sandcastle, boardRail, seaGap, ropeRail, beachCart, deckChair, beachBall, surfRack, bunting, lifeguardTower, pierSign } from './boardwalk.js';
+export { tireHill, tireStack, appliance, carWreck, sludgePit, steelBeam, wreckBall } from './junkyard.js';
+export { gravestone, graveMound, fenceRail, openGrave, pumpkin, coffinUp, lanternGate, mausoleum, mansion } from './haunted.js';

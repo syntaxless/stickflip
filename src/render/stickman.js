@@ -67,9 +67,9 @@ function poly(g, tf, pts, color) {
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), and `opts.horns` adds two horns on the head.
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds an eye (black, or `opts.eyeColor`) (`'laugh'` looks back with a zig zag mouth).
 export function drawFigure(g, tf, p, opts = {}) {
-  const { k = 1, face = 1, tilt = 0, color = null, horns = null } = opts;
+  const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false, eyeColor = PAL.ink } = opts;
   const ct = Math.cos(tilt);
   const st = Math.sin(tilt);
   // a point on the cap, offset (ox, oy) from the head in pose units
@@ -93,24 +93,45 @@ export function drawFigure(g, tf, p, opts = {}) {
     }
     body(tf, color);
   } else body(tf, PAL.ink);
-  // cap: crown + peak, following the body's rotation
-  poly(g, tf, [cap(-9, -7), cap(9, -7)], PAL.ink);
-  poly(g, tf, [cap(-7, -10), cap(7, -10)], PAL.ink);
-  poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
-  if (horns) {
-    for (const side of [-1, 1]) {
-      const base = tf(cap(side * 8, -9));
-      const tip = tf(cap(side * 12, -22));
-      g.line(base.x, base.y, tip.x, tip.y, PAL.ink);
-      g.pset(base.x + (side > 0 ? -1 : 1), base.y - 1, horns);
-      g.pset(tip.x, tip.y, horns);
+  // cap: crown + peak, following the body's rotation (`opts.noCap` leaves a bare head)
+  if (!noCap) {
+    poly(g, tf, [cap(-9, -7), cap(9, -7)], PAL.ink);
+    poly(g, tf, [cap(-7, -10), cap(7, -10)], PAL.ink);
+    poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
+  }
+  if (eyes) {
+    // a profile head shows one black eye at the front; `eyes: 'laugh'` turns it to look back over
+    // the shoulder, with a zig zag mouth
+    const back = eyes === 'laugh';
+    const e = tf(cap((back ? -1.5 : 1.5) * PX, (back ? -1.5 : -0.5) * PX));
+    g.pset(Math.round(e.x), Math.round(e.y), eyeColor);
+    if (back) {
+      // a zig zag mouth, four black pixels stepping up and down (the profile head has none)
+      [-3.5, -2.5, -1.5, -0.5].forEach((ox, i) => {
+        const m = tf(cap(ox * PX, (i % 2 ? 2 : 1) * PX));
+        g.pset(Math.round(m.x), Math.round(m.y), PAL.ink);
+      });
     }
+  }
+  if (horns) {
+    // two chunky horns curving out of the top of the head (screen-space sprites, mirrored about the head's
+    // middle): red pixels inside a black outline. The head is an 8x8 blob whose top left is (hx - 4, hy - 4).
+    const h = tf(p.head);
+    const hx = Math.round(h.x);
+    const hy = Math.round(h.y);
+    const left = [[-3, -5], [-2, -5], [-4, -6], [-3, -6], [-4, -7], [-3, -7], [-5, -8], [-4, -8]];
+    const px = [];
+    for (const [x, y] of left) px.push([hx + x, hy + y], [hx - 1 - x, hy + y]);
+    for (const [x, y] of px) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) g.pset(x + dx, y + dy, PAL.ink);
+    for (const [x, y] of px) g.pset(x, y, horns);
   }
 }
 
 // Draws the board at the contact point. `spin` is the kickflip angle
 // (0 = grip side up); seen side-on, so mid-flip it shows its width.
-export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck) {
+// `wheels` false draws a snow skate instead (Frostbite): a thicker flat deck with upturned tips that sits
+// on the snow, no trucks and no wheels. The same poses, flips and spins.
+export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = true, wheelColor = PAL.wheel) {
   const c = Math.cos(spin);
   const thick = Math.abs(Math.sin(spin)) * 18;
   const y = -8 - lift;
@@ -122,21 +143,26 @@ export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck) {
     const bottom = Math.sin(spin) > 0;
     for (let o = -t; o <= t; o += 1.5) poly(g, tf, [pt(-26, y + o), pt(26, y + o)], bottom ? deck : PAL.ink);
     poly(g, tf, [pt(-26, y - t), pt(26, y - t), pt(26, y + t), pt(-26, y + t), pt(-26, y - t)], deck);
-    if (bottom) {
+    if (bottom && wheels) {
       for (const wx of [-16, 16]) {
         for (const wo of [-t + 2, t - 2]) {
           const w = tf(pt(wx, y + wo));
-          g.pset(w.x, w.y, PAL.wheel);
+          g.pset(w.x, w.y, wheelColor);
         }
       }
     }
     return;
   }
   poly(g, tf, [pt(-30, y - 5 * c), pt(-22, y), pt(22, y), pt(30, y - 5 * c)], deck);
+  if (!wheels) {
+    // the snow skate: the deck is thick and comes down to the snow (where the wheels would have been)
+    for (const o of [2.5, 5]) poly(g, tf, [pt(-22, y + o * c), pt(22, y + o * c)], deck);
+    return;
+  }
   // Wheels: 2x2 blocks under the trucks (on top when the board is upside down).
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));
-    g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, PAL.wheel); // sit on the ground, not in it
+    g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, wheelColor); // sit on the ground, not in it
   }
 }
 

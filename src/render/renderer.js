@@ -92,8 +92,31 @@ const HELL_BANDS = [[120, 16, 36], [158, 26, 40], [190, 42, 40], [222, 74, 42], 
 // the far wall of fire along the horizon: deep red body, hotter core, lighter tip (all brighter than the rider is dark)
 const HELL_FIRE = [[196, 46, 36], [226, 84, 40], [250, 140, 58]];
 const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
-const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
+// Frostbite (Stage 7): a pale winter sky (top to horizon), snow-capped mountains and a row of dark pines.
+const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
+const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
+// The stages with a sky of their own (a level flag each; the picture is drawXSky).
+const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk', 'haunt'];
+// Boardwalk (Stage 8): a bright seaside sky, a strip of sea on the horizon, a pier with a Ferris wheel,
+// a row of palms, gulls and a few puffs of cloud.
+const BEACH_BANDS = [[70, 160, 250], [96, 180, 255], [126, 200, 255], [158, 218, 255], [190, 232, 255], [220, 244, 255]];
+const BEACH = { sea: [34, 130, 214], seaLit: [120, 200, 250], seaFar: [70, 156, 230], wheel: [226, 120, 150], pier: [118, 98, 120], palm: [28, 120, 70], palmLit: [78, 178, 96], trunk: [128, 88, 52], cloud: [255, 255, 255], cloudShade: [214, 232, 250] };
+// Junkyard (Stage 9): a hazy dust-brown sky, heaps of scrap standing on the horizon, a crane with a magnet and
+// smoke drifting up from a burning pile.
+const JUNK_BANDS = [[150, 120, 98], [168, 138, 108], [186, 154, 118], [204, 172, 130], [218, 188, 144], [230, 204, 160]];
+const JUNK = { far: [150, 124, 106], near: [112, 92, 82], crane: [92, 74, 66], smoke: [124, 108, 100], smokeLit: [150, 134, 122], rust: [132, 78, 52] };
+// Haunted Night (Stage 10): a twilight purple sky (top to horizon), a huge pale moon, stars, a haunted mansion
+// on a far hill, dead trees, a row of tombstones, ground mist and bats.
+const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140], [146, 86, 150], [182, 110, 158]];
+const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
+// Hellride's rival: a pale skeleton with a bare head and red eyes (no cap, no horns).
+const RIVAL_LOOK = { color: [238, 232, 214], noCap: true, eyes: true, eyeColor: [255, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
+const RIVAL_WHEELS = [238, 232, 214]; // bone wheels, drawn like the player's
+// Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
+const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true, eyes: true };
+const JUNK_RIVAL_DECK = [204, 146, 76]; // a wood-coloured board ...
+const JUNK_RIVAL_WHEELS = [255, 105, 180]; // ... on pink wheels
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
 const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
@@ -223,7 +246,10 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
-    if (game.rival) this.drawSkater(game.rival.game, g, true, 'rival'); // behind the player
+    if (game.rival) {
+      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.drawSkater(game.rival.game, g, true, 'rival');
+    } // behind the player
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -290,7 +316,10 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
-    if (game.rival) this.drawSkater(game.rival.game, g, false, 'rival');
+    if (game.rival) {
+      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.drawSkater(game.rival.game, g, false, 'rival');
+    }
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -300,13 +329,15 @@ export class Renderer {
   // space, standing on the horizon (it moves with the camera's height).
   drawSkyline(g, game, cam) {
     if (game.level.clouds) this.drawClouds(g, cam);
-    if (!game.level.skyline && !game.level.moon && !game.level.hell) return;
+    const themed = THEMED_SKIES.find((k) => game.level[k]);
+    if (!game.level.skyline && !game.level.moon && !themed) return;
     const [ox, oy] = [g.ox, g.oy];
     g.oy = -cam.y;
     const horizon = P(WORLD.GROUND);
-    if (game.level.hell) {
+    if (themed) {
+      // a stage with its own picture behind it: it moves only a little with the camera's height
       g.oy = -Math.round((cam.py ?? cam.y) * 0.3) + (cam.top || 0);
-      this.drawHellSky(g, cam, horizon);
+      this[`draw${themed[0].toUpperCase()}${themed.slice(1)}Sky`](g, cam, horizon);
       g.ox = ox;
       g.oy = oy;
       return;
@@ -410,6 +441,358 @@ export class Renderer {
         if (x < -2) continue;
         g.pset(x, yy, EMBER[h % 3]);
         if (h % 5 === 0) g.pset(x + 1, yy, EMBER[1]);
+      }
+    }
+  }
+
+  // Frostbite's sky: pale bands deepening upward, a low white sun, two layers of snow-capped
+  // mountains, a row of pines, and snow drifting down in two layers (far flakes small and slow).
+  drawFrostSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = FROST_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, FROST_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, FROST_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, FROST_BANDS[FROST_BANDS.length - 1]);
+    // the sun: a pale disc low in the sky with a lighter halo ring
+    const sx = 70 - shiftOf(0.015);
+    const sy = horizon - 70;
+    g.circle(sx, sy, 15, [244, 248, 254], true);
+    g.circle(sx, sy, 11, [255, 255, 255], true);
+    // mountains: a blue body with a white snow cap on the high part (a jagged lower edge)
+    for (const [ridge, factor, body, rise, capLine] of [[RIDGE_FAR, 0.06, FROST.far, 34, 66], [RIDGE_NEAR, 0.14, FROST.near, 22, 38]]) {
+      const T = ridge.length;
+      const s = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const k = (((x + s) % T) + T) % T;
+        const h = ridge[k] + rise;
+        g.fill(x, horizon - h, 1, h + 60, body);
+        const cap = h - capLine + (hash(k >> 1, 3) % 4) - 1;
+        if (cap > 0) g.fill(x, horizon - h, 1, Math.min(cap, 22), FROST.cap);
+      }
+    }
+    // pines along the horizon: stacked tiers of triangle, snow on their shoulders, in a repeating row
+    const ps = shiftOf(0.3);
+    for (let cell = Math.floor(ps / 22) - 1; cell * 22 - ps < g.w + 22; cell++) {
+      const h = hash(cell, 61);
+      if (h % 4 === 0) continue;
+      const tx = cell * 22 - ps + (h % 9);
+      const th = 16 + ((h >> 4) % 12);
+      for (let row = 0; row < th; row++) {
+        const tier = row % 5; // each tier widens, then steps back in
+        const w = Math.min(6, 1 + (row >> 2) + (tier >> 1));
+        g.fill(tx - w, horizon - th + row, w * 2 + 1, 1, FROST.pine);
+        g.pset(tx - w, horizon - th + row, FROST.pineLit);
+        if (tier === 0 && row > 0) g.fill(tx - w, horizon - th + row, w * 2 + 1, 1, FROST.pineSnow);
+      }
+      g.fill(tx - 1, horizon - 1, 2, 3, [60, 44, 40]);
+    }
+    // snow: far flakes (single pixels, slow) and near flakes (2x2, quicker), drifting down and sideways
+    // through the sky's height (190 px above the horizon)
+    const t = this.time;
+    for (const [n, fall, drift, factor, size] of [[44, 9, 5, 0.1, 1], [26, 22, 12, 0.22, 2]]) {
+      const esh = shiftOf(factor);
+      const col = 300;
+      for (let i = 0; i < n; i++) {
+        const h = hash(i, 88 + size);
+        const u = (((h % col) + Math.round(t * drift * (0.6 + (h % 5) / 5))) % col + col) % col;
+        const v = ((h >> 9) % 190 + Math.round(t * fall * (0.7 + (h % 7) / 7))) % 190;
+        const y = horizon - 190 + v;
+        for (let tile = Math.floor(esh / col) - 1; tile * col + u - esh < g.w + 2; tile++) {
+          const x = tile * col + u - esh;
+          if (x < -2) continue;
+          g.fill(x, y, size, size, [255, 255, 255]);
+        }
+      }
+    }
+  }
+
+  // Boardwalk's sky: bright blue bands paling toward the horizon, a high sun, slow puffs of cloud, a strip of
+  // glittering sea with a pier and Ferris wheel standing in it, a row of palms, and gulls gliding across.
+  drawBeachSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = BEACH_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, BEACH_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, BEACH_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, BEACH_BANDS[BEACH_BANDS.length - 1]);
+    // the sun: a bright disc with a pale halo, high and left
+    const sx = 250 - shiftOf(0.01);
+    const sy = horizon - 118;
+    g.circle(sx, sy, 17, [200, 232, 255], true);
+    g.circle(sx, sy, 13, [255, 246, 190], true);
+    g.circle(sx, sy, 10, [255, 255, 235], true);
+    // clouds: flat-bottomed puffs drifting slowly (they also creep with time)
+    const cs = shiftOf(0.04) + Math.round(t * 2);
+    for (let cell = Math.floor(cs / 150) - 1; cell * 150 - cs < g.w + 150; cell++) {
+      const h = hash(cell, 71);
+      if (h % 3 === 0) continue;
+      const cx = cell * 150 - cs + (h % 60);
+      const cy = horizon - 70 - ((h >> 5) % 60);
+      for (const [dx, dy, r] of [[0, 0, 7], [9, -3, 9], [20, 0, 7], [-9, 2, 5]]) g.circle(cx + dx, cy + dy, r, BEACH.cloud, true);
+      g.fill(cx - 14, cy + 6, 40, 3, BEACH.cloudShade);
+      g.fill(cx - 14, cy + 9, 40, 4, BEACH_BANDS[3]);
+    }
+    // the sea: a band of deeper blue meeting the sky, glitter on it, slower than the street
+    const seaTop = horizon - 22;
+    g.fill(0, seaTop, g.w, 24, BEACH.seaFar);
+    g.fill(0, seaTop + 8, g.w, 16, BEACH.sea);
+    const ss = shiftOf(0.08);
+    for (let x = 0; x < g.w; x++) {
+      const wx = x + ss;
+      const w = hash(wx >> 1, 9) % 14;
+      if (w === 0) g.pset(x, seaTop + 3 + (hash(wx, 4) % 6) + Math.round(Math.sin(t * 2 + wx)), BEACH.seaLit);
+      if (w === 1) g.pset(x, seaTop + 12 + (hash(wx, 6) % 8), BEACH.seaLit);
+    }
+    g.fill(0, seaTop - 1, g.w, 1, [170, 214, 248]);
+    // a pier and a Ferris wheel standing in the sea, far away and faint
+    const ps = shiftOf(0.12);
+    for (let cell = Math.floor(ps / 420) - 1; cell * 420 - ps < g.w + 120; cell++) {
+      const px = cell * 420 - ps + 90 + (hash(cell, 3) % 60);
+      g.fill(px - 30, seaTop + 6, 90, 3, BEACH.pier); // the deck
+      for (let k = 0; k < 90; k += 9) g.fill(px - 30 + k, seaTop + 9, 2, 8, BEACH.pier); // piles
+      const wy = seaTop - 22;
+      g.circle(px + 12, wy, 19, BEACH.wheel);
+      g.circle(px + 12, wy, 18, BEACH.wheel);
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 + t * 0.15;
+        g.line(px + 12, wy, px + 12 + Math.round(Math.cos(a) * 18), wy + Math.round(Math.sin(a) * 18), BEACH.wheel);
+        g.fill(px + 11 + Math.round(Math.cos(a) * 18), wy - 1 + Math.round(Math.sin(a) * 18), 3, 3, k % 2 ? [255, 214, 90] : [255, 255, 255]);
+      }
+      g.line(px + 12, wy, px + 4, seaTop + 6, BEACH.wheel);
+      g.line(px + 12, wy, px + 20, seaTop + 6, BEACH.wheel);
+    }
+    // palms along the horizon: a leaning trunk and a crown of fronds, in a repeating row
+    const ls = shiftOf(0.3);
+    for (let cell = Math.floor(ls / 96) - 1; cell * 96 - ls < g.w + 40; cell++) {
+      const h = hash(cell, 53);
+      if (h % 3 === 0) continue;
+      const tx = cell * 96 - ls + (h % 30);
+      const th = 26 + ((h >> 4) % 12);
+      const lean = ((h >> 8) % 3) - 1;
+      for (let row = 0; row < th; row++) g.fill(tx + Math.round((row * lean) / 6) - (row < 3 ? 1 : 0), horizon - row, row < 3 ? 3 : 2, 1, BEACH.trunk);
+      const hx = tx + Math.round((th * lean) / 6);
+      const hy = horizon - th;
+      for (let k = 0; k < 7; k++) {
+        const a = Math.PI + (k / 6) * Math.PI; // fronds fan up and droop at the tips
+        const len = 11 + (k % 2) * 2;
+        for (let i = 1; i <= len; i++) {
+          const fxp = hx + Math.round(Math.cos(a) * i);
+          const fyp = hy + Math.round(Math.sin(a) * i * 0.6 + (i * i) / (len * 2.4));
+          g.pset(fxp, fyp, BEACH.palm);
+          g.pset(fxp, fyp - 1, i % 3 ? BEACH.palm : BEACH.palmLit);
+        }
+      }
+      g.fill(hx - 1, hy, 3, 2, [96, 62, 34]); // coconuts
+    }
+    // gulls: little white Vs gliding across, wings flapping
+    const gs = shiftOf(0.18);
+    for (let i = 0; i < 4; i++) {
+      const h = hash(i, 19);
+      const gx = ((((h % 500) + Math.round(t * (8 + (h % 6)))) % 500) + 500) % 500;
+      const gy = horizon - 90 - ((h >> 8) % 60) + Math.round(Math.sin(t * 0.8 + i) * 3);
+      const flap = Math.floor(t * 4 + i) % 2;
+      for (let tile = Math.floor(gs / 500) - 1; tile * 500 + gx - gs < g.w + 8; tile++) {
+        const x = tile * 500 + gx - gs;
+        if (x < -8) continue;
+        g.pset(x, gy, [255, 255, 255]);
+        g.pset(x - 1, gy - flap, [255, 255, 255]);
+        g.pset(x - 2, gy - 1 - flap, [255, 255, 255]);
+        g.pset(x + 1, gy - flap, [255, 255, 255]);
+        g.pset(x + 2, gy - 1 - flap, [255, 255, 255]);
+      }
+    }
+  }
+
+  // Junkyard's sky: dusty bands, a pale hazy sun, two layers of scrap heaps (cars and tyres sticking out of
+  // them), a crane with a magnet hanging from its arm, and smoke curling up from a far fire. Crows wheel about.
+  drawJunkSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = JUNK_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, JUNK_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, JUNK_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, JUNK_BANDS[JUNK_BANDS.length - 1]);
+    const sx = 240 - shiftOf(0.01);
+    g.circle(sx, horizon - 100, 15, [236, 214, 176], true);
+    g.circle(sx, horizon - 100, 11, [250, 236, 200], true);
+    // a crane: a lattice mast with an arm out to one side, a cable and a magnet; far away, in the haze
+    const cs = shiftOf(0.07);
+    for (let cell = Math.floor(cs / 460) - 1; cell * 460 - cs < g.w + 80; cell++) {
+      const cx = cell * 460 - cs + 120 + (hash(cell, 5) % 60);
+      for (let py = 0; py < 70; py++) {
+        g.pset(cx, horizon - py, JUNK.crane);
+        g.pset(cx + 4, horizon - py, JUNK.crane);
+        if (py % 5 === 0) g.line(cx, horizon - py, cx + 4, horizon - py - 5, JUNK.crane);
+      }
+      g.fill(cx - 36, horizon - 74, 62, 3, JUNK.crane); // the arm
+      g.line(cx - 36, horizon - 74, cx + 2, horizon - 84, JUNK.crane);
+      const swing = Math.round(Math.sin(t * 0.9 + cell) * 2);
+      g.line(cx - 30, horizon - 71, cx - 30 + swing, horizon - 46, JUNK.crane);
+      g.fill(cx - 35 + swing, horizon - 46, 11, 5, JUNK.crane); // the magnet
+      g.fill(cx - 34 + swing, horizon - 41, 9, 2, JUNK.rust);
+    }
+    // scrap heaps: two jagged layers, with the odd car body or tyre ring poking out
+    for (const [ridge, factor, body, rise] of [[RIDGE_FAR, 0.12, JUNK.far, 12], [RIDGE_NEAR, 0.26, JUNK.near, 8]]) {
+      const T = ridge.length;
+      const s = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const k = (((x + s) % T) + T) % T;
+        const h = ridge[k] + rise;
+        g.fill(x, horizon - h, 1, h + 60, body);
+        if (hash(k, 7) % 9 === 0) g.pset(x, horizon - h + 1, JUNK.rust);
+        if (hash(k >> 2, 13) % 14 === 0 && h > 12) g.pset(x, horizon - h + 3, JUNK_BANDS[2]);
+      }
+      if (factor > 0.2) {
+        // tyre rings poking out of the near heap
+        for (let cell = Math.floor(s / 70) - 1; cell * 70 - s < g.w + 10; cell++) {
+          const hh = hash(cell, 77);
+          if (hh % 3) continue;
+          const tx = cell * 70 - s + (hh % 30);
+          const k = ((((tx + s) % T) + T) % T);
+          const ty = horizon - ridge[k] - rise + 3;
+          g.circle(tx, ty, 3, [30, 30, 36]);
+        }
+      }
+    }
+    // smoke: puffs rising and spreading from a smouldering pile, in a repeating tile
+    const ss = shiftOf(0.2);
+    const col = 520;
+    for (let i = 0; i < 4; i++) {
+      const h = hash(i, 31);
+      const baseX = 60 + (h % 380);
+      for (let tile = Math.floor(ss / col) - 1; tile * col + baseX - ss < g.w + 20; tile++) {
+        const px0 = tile * col + baseX - ss;
+        for (let k = 0; k < 5; k++) {
+          const ph = ((t * 0.12 + k / 6 + (h % 50) / 50) % 1);
+          const py = horizon - 14 - Math.round(ph * 90);
+          const px = px0 + Math.round(Math.sin(ph * 5 + i) * 4) + Math.round(ph * 14);
+          const r = 1 + Math.round(ph * 3);
+          g.circle(px, py, r, k % 2 ? JUNK.smoke : JUNK.smokeLit, true);
+        }
+      }
+    }
+    // crows: little black Vs wheeling about
+    const gs = shiftOf(0.16);
+    for (let i = 0; i < 3; i++) {
+      const h = hash(i, 23);
+      const gx = ((((h % 480) + Math.round(t * (6 + (h % 5)))) % 480) + 480) % 480;
+      const gy = horizon - 80 - ((h >> 8) % 40) + Math.round(Math.sin(t * 0.7 + i) * 3);
+      const flap = Math.floor(t * 3 + i) % 2;
+      for (let tile = Math.floor(gs / 480) - 1; tile * 480 + gx - gs < g.w + 8; tile++) {
+        const x = tile * 480 + gx - gs;
+        if (x < -8) continue;
+        for (const [dx, dy] of [[0, 0], [-1, -flap], [-2, -1 - flap], [1, -flap], [2, -1 - flap]]) g.pset(x + dx, gy + dy, [24, 20, 24]);
+      }
+    }
+  }
+
+  // Haunted Night's sky: twilight purple bands, a huge moon with a halo, twinkling stars, a far hill with a haunted
+  // mansion (windows flickering), dead trees, a row of tombstones, bats flapping across and mist drifting along
+  // the ground.
+  drawHauntSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = HAUNT_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, HAUNT_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, HAUNT_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, HAUNT_BANDS[HAUNT_BANDS.length - 1]);
+    // stars: a sprinkle of single pixels that twinkle
+    const ss = shiftOf(0.02);
+    for (let i = 0; i < 46; i++) {
+      const h = hash(i, 91);
+      const sx = (((h % 640) - ss) % 640 + 640) % 640;
+      const sy = horizon - 150 + ((h >> 9) % 110);
+      if (sx < g.w && (Math.floor(t * 2 + i) % 5 !== 0)) g.pset(sx, sy, i % 4 ? [236, 230, 255] : [255, 240, 190]);
+    }
+    // the moon: a huge pale disc with craters and a violet halo
+    const mx = 232 - shiftOf(0.012);
+    const my = horizon - 96;
+    g.circle(mx, my, 34, HAUNT.moonHalo, true);
+    g.circle(mx, my, 30, [196, 162, 214], true);
+    g.circle(mx, my, 26, HAUNT.moon, true);
+    for (const [dx, dy, r] of [[-9, -8, 5], [8, 4, 6], [-3, 12, 3], [12, -12, 3]]) g.circle(mx + dx, my + dy, r, HAUNT.moonShade, true);
+    // a far hill with the mansion on it: towers, a pointed roof, windows that flicker
+    const hs = shiftOf(0.05);
+    for (let cell = Math.floor(hs / 520) - 1; cell * 520 - hs < g.w + 120; cell++) {
+      const hx = cell * 520 - hs + 80;
+      for (let i = -70; i <= 70; i++) g.fill(hx + i, horizon - Math.round(34 * Math.max(0, 1 - (i / 80) ** 2)) - 6, 1, 60, HAUNT.hill);
+      const by = horizon - 40;
+      g.fill(hx - 18, by - 22, 36, 24, HAUNT.tree);
+      g.fill(hx - 8, by - 38, 16, 16, HAUNT.tree);
+      for (let i = 0; i < 9; i++) g.fill(hx - 5 + i - 0, by - 48 + Math.abs(4 - i), 1, 10 - Math.abs(4 - i), HAUNT.tree);
+      g.fill(hx - 22, by - 14, 4, 16, HAUNT.tree);
+      g.fill(hx + 18, by - 14, 4, 16, HAUNT.tree);
+      const flick = Math.floor(t * 1.5 + cell);
+      [[-14, -16], [-6, -16], [4, -16], [12, -16], [-2, -32]].forEach(([wx, wy], i) => { if ((i + flick) % 4) g.fill(hx + wx, by + wy, 2, 3, HAUNT.win); });
+    }
+    // dead trees: bare trunks with crooked branches, in a repeating row
+    const ts = shiftOf(0.14);
+    for (let cell = Math.floor(ts / 110) - 1; cell * 110 - ts < g.w + 30; cell++) {
+      const h = hash(cell, 33);
+      if (h % 3 === 0) continue;
+      const tx = cell * 110 - ts + (h % 40);
+      const th = 22 + ((h >> 5) % 16);
+      g.fill(tx, horizon - th, 2, th, HAUNT.tree);
+      for (const [by2, dir] of [[th * 0.7, 1], [th * 0.5, -1], [th * 0.85, -1]]) {
+        const len = 6 + ((h >> 3) % 5);
+        for (let i = 1; i <= len; i++) g.pset(tx + 1 + dir * i, Math.round(horizon - by2 - i * 0.7), HAUNT.tree);
+      }
+    }
+    // a row of tombstones, nearer
+    const gs = shiftOf(0.28);
+    for (let cell = Math.floor(gs / 38) - 1; cell * 38 - gs < g.w + 12; cell++) {
+      const h = hash(cell, 47);
+      if (h % 2 === 0) continue;
+      const gx = cell * 38 - gs + (h % 14);
+      const gh = 6 + ((h >> 4) % 6);
+      g.fill(gx, horizon - gh, 6, gh, HAUNT.stone);
+      g.fill(gx + 1, horizon - gh - 1, 4, 1, HAUNT.stone);
+      if ((h >> 9) % 3 === 0) { g.fill(gx + 2, horizon - gh - 4, 2, 4, HAUNT.stone); g.fill(gx, horizon - gh - 2, 6, 1, HAUNT.stone); }
+    }
+    // bats: black Vs flapping across the moon
+    const bs = shiftOf(0.2);
+    for (let i = 0; i < 5; i++) {
+      const h = hash(i, 17);
+      const bx = ((((h % 560) + Math.round(t * (14 + (h % 8)))) % 560) + 560) % 560;
+      const by2 = horizon - 70 - ((h >> 8) % 70) + Math.round(Math.sin(t * 1.6 + i) * 4);
+      const flap = Math.floor(t * 6 + i) % 2;
+      for (let tile = Math.floor(bs / 560) - 1; tile * 560 + bx - bs < g.w + 8; tile++) {
+        const x = tile * 560 + bx - bs;
+        if (x < -8) continue;
+        for (const [dx, dy] of [[0, 0], [-1, -flap], [-2, -1 - flap], [-3, -flap], [1, -flap], [2, -1 - flap], [3, -flap]]) g.pset(x + dx, by2 + dy, [18, 12, 28]);
+      }
+    }
+    // ground mist: pale ragged streaks drifting slowly along the horizon
+    const ms = shiftOf(0.35);
+    for (let row = 0; row < 3; row++) {
+      for (let x = 0; x < g.w; x++) {
+        const wx = x + ms + Math.round(t * (3 + row * 2));
+        const n = hash(Math.floor(wx / 9) + row * 7, 61) % 7;
+        if (n < 2) g.pset(x, horizon - 1 - row * 2 - (n % 2), HAUNT.mist);
       }
     }
   }
@@ -534,10 +917,14 @@ export class Renderer {
         g.fill(x, top, 1, bottom - top, ink);
         // raised ground (ramps, banks, stair platforms) is solid earth down to where the street's own dirt ends
         this.drawGround(g, x, top, bottom, !!game.level.sidewalk, ASPHALT_H, GRASS_H, G + ASPHALT_H + GRASS_H + DIRT_H);
-      } else if (patches.length) {
+      } else {
+        // no ground here (a pit, pool, moat or chasm): plain black from the street down, so the sky never shows
+        // through under the water, balls or lava and bleeds into the touch area below the level. The pit's own
+        // drawing goes over this.
+        if (top >= bottom) g.fill(x, Math.min(G, bottom), 1, bottom - Math.min(G, bottom), ink);
         // a dirt-filled gap: a strip sunk a little below the street, no asphalt or grass
         const wx = x * S + S / 2;
-        if (patches.some((p) => wx >= p.x1 && wx < p.x2)) {
+        if (patches.length && patches.some((p) => wx >= p.x1 && wx < p.x2)) {
           g.fill(x, G + 2, 1, bottom - G - 2, ink);
           const kind = patches.find((p) => wx >= p.x1 && wx < p.x2)?.kind;
           if (kind === 'gravel') this.drawGravel(g, x, G + 2, Math.min(bottom, G + DIRT_H + GRASS_H + ASPHALT_H));
@@ -695,15 +1082,17 @@ export class Renderer {
   drawSkater(game, g = this.g, advance = true, who = null) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
-    const look = who ? RIVAL_LOOK : {};
-    const deck = who ? RIVAL_DECK : PAL.deck;
+    const junk = who && game.level.junk;
+    const look = who ? (junk ? JUNK_RIVAL_LOOK : RIVAL_LOOK) : {};
+    const deck = who ? (junk ? JUNK_RIVAL_DECK : RIVAL_DECK) : PAL.deck;
+    const wheelColor = junk ? JUNK_RIVAL_WHEELS : who ? RIVAL_WHEELS : PAL.wheel;
     const poseOf = who ? this.rivalPose : this.pose;
     const squash = who ? 0 : this.squash;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -776,8 +1165,22 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck);
-    drawFigure(g, squashX(base, bodySx), poseOf.pose, look);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
+    // Junkyard's and Hellride's rivals: while one leads he now and then looks back over his shoulder and laughs, with a bubble ("HA!" / "FOOL!")
+    const laugh = who && (junk || game.level.hell) && this.rivalAhead && this.time % 7 > 5.6;
+    drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
+    if (laugh) {
+      const h = base(poseOf.pose.head);
+      const x = Math.round(h.x) - 10;
+      const y = Math.round(h.y) - 22;
+      const word = junk ? 'HA!' : 'FOOL!';
+      const w = junk ? 22 : 33;
+      g.fill(x - 1, y - 1, w + 2, 13, PAL.ink);
+      g.fill(x, y, w, 11, [255, 255, 255]);
+      g.fill(x + 3, y + 11, 2, 2, PAL.ink); // the bubble's tail, pointing at his head
+      g.fill(x + 4, y + 11, 1, 1, [255, 255, 255]);
+      g.text(word, x + 2, y + 2, PAL.ink);
+    }
   }
 
   drawParticles() {
@@ -976,7 +1379,7 @@ export class Renderer {
         this.drawTable(opts.highScores, 62, -1, 11);
         tapY = 124;
       } else {
-        const title = game.rival ? 'HELLRIDE' : 'STICKFLIP';
+        const title = game.rival ? String(game.level.name || 'HELLRIDE').toUpperCase() : 'STICKFLIP';
         g.text(title, cx + 1, 39, ink, 4, 'center');
         g.text(title, cx, 38, red, 4, 'center');
         if (game.rival) g.text('FIRST TO THE FINISH WINS', cx, 70, red, 1, 'center');
@@ -1051,9 +1454,9 @@ export class Renderer {
   }
 
   // A box like the level-complete one, for the end-of-run screens.
-  panel(title) {
+  panel(title, top = 38, height = 136) {
     const g = this.g;
-    const [x, y, w, h] = [56, 38, 208, 136];
+    const [x, y, w, h] = [56, top, 208, height];
     g.fill(x, y, w, h, ink);
     g.rect(x, y, w, h, red);
     g.rect(x + 2, y + 2, w - 4, h - 4, red);
@@ -1113,11 +1516,18 @@ export class Renderer {
   // before has been finished.
   drawSelect(scr) {
     const cx = RES.W / 2;
-    const { y } = this.panel('STAGES');
-    const tight = scr.stages.length > 5; // six or more buttons: pack them closer
+    const n = scr.stages.length;
+    const two = n > 7; // eight or more: two columns (an odd last one sits centred at the bottom)
+    const tight = n > 5; // six or more buttons: pack them closer
+    const { y } = n > 6 ? this.panel('STAGES', 28, 148) : this.panel('STAGES'); // seven or more: the panel is taller
     scr.stages.forEach((st, i) => {
       const open = i < scr.unlocked;
-      this.button(`stage${i}`, open ? st.name.toUpperCase() : 'LOCKED', cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);
+      const label = open ? st.name.toUpperCase() : 'LOCKED';
+      if (two) {
+        const alone = i === n - 1 && n % 2 === 1;
+        const bx = alone ? cx - 45 : cx + (i % 2 ? 4 : -94);
+        this.button(`stage${i}`, label, bx, y + 32 + Math.floor(i / 2) * 18, 90, open);
+      } else this.button(`stage${i}`, label, cx - 45, y + (tight ? 28 + i * 16 : 32 + i * 20), 90, open);
     });
     // Opened from a stage's start or bail screen: a way back to it.
     if (scr.back) this.button('back', 'BACK', 61, 43, 40, true);

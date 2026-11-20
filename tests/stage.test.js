@@ -261,7 +261,7 @@ function ride3(index, taps) {
 test('stage 3 is the construction site: seven checkpoints', () => {
   assert.deepEqual(
     stage3.sections.map((s) => s.name),
-    ['Rock', 'Cone Row', 'Barrier Gap', 'Barricade', 'Scaffold Rail', 'Big Drop', 'Big Gap'],
+    ['Rock', 'Cone Row', 'Barrier Gap', 'Barricade', 'Scaffold Rail', 'Big Drop', 'Dumper'],
   );
   assert.equal(stage3.id, 'stage-3');
 });
@@ -269,7 +269,7 @@ test('stage 3 is the construction site: seven checkpoints', () => {
 test('stage 3: a timed ollie clears every checkpoint, and doing nothing bails', () => {
   const clears = [[0.85, 1.8], [0.8], [0.62, 1.57], [0.55, 1.5], [0.4, 0.95], [2.2], [0.9]];
   clears.forEach((taps, i) => {
-    // Big Gap (the last) is the slab, the gap and then the dump truck: two moves, see the truck tests below
+    // Dumper (the last) is the slab, the gap and then the dump truck: two moves, see the truck tests below
     if (i < 6) {
       const game = ride3(i, taps);
       assert.ok(game.phase === 'complete' || (game.phase === 'playing' && game.section === i + 1), `${stage3.sections[i].name} bailed: ${game.bailReason}`);
@@ -657,7 +657,7 @@ test('stage 3: the Barrier Gap barrier is longer, and the Big Drop sits farther 
   assert.ok(ramp.ground[0].x1 - railEnd >= 300, `${ramp.ground[0].x1 - railEnd} of street between the rail and the ramp`);
 });
 
-test('stage 3: the Big Gap kicker is a broken slab of concrete and the gap is filled with rubble', () => {
+test('stage 3: the Dumper kicker is a broken slab of concrete and the gap is filled with rubble', () => {
   const slab = stage3.obstacles.find((o) => o.type === 'broken-slab');
   assert.equal(slab.ground[0].material, 'concrete');
   assert.equal(stage3.obstacles.find((o) => o.type === 'broken-gap').dirt.kind, 'rubble');
@@ -1076,4 +1076,29 @@ test('3-7 dump truck: the dump is the same picture every time for the same age (
   };
   for (const age of [0.2, 0.5, 0.8]) assert.equal(pixels(age), pixels(age));
   assert.notEqual(pixels(0.2), pixels(0.8));
+});
+
+// ------------------------------------------- nothing but black below the level
+
+test('every stage: below the street the picture is solid black or the pit\'s own filling, never sky (pits, pools, lava, ball pit)', async () => {
+  const { Renderer } = await import('../src/render/renderer.js');
+  const { WORLD } = await import('../src/config.js');
+  const H = 540;
+  const rd = new Renderer(gridFb(320, H));
+  rd.time = 1.1;
+  const deep = Math.round(WORLD.GROUND / 3) + 100; // below the deepest pool or pit filling
+  for (const stage of STAGES) {
+    const game = new Game(stage);
+    for (let camX = 0; camX < Math.round(game.level.length / 3 || 2000); camX += 160) {
+      const fb = gridFb(320, H);
+      fb.ox = -camX; // the camera
+      rd.drawBackground(game, { x: camX, y: 0 }, fb);
+      for (const o of game.level.obstacles) o.draw(fb, { time: rd.time });
+      for (let x = 0; x < 320; x++) {
+        for (const y of [deep, deep + 60, H - 1]) {
+          assert.equal(fb.cells[y * 320 + x], '0,0,0', `${stage.id} camera ${camX}: column ${x} row ${y} below the level is not black`);
+        }
+      }
+    }
+  }
 });

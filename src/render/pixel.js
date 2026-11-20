@@ -52,6 +52,18 @@ const PALETTES = {
   // Hellride: a blood-orange sky (bands and mountains are painted over it), light ember-red text (the sky is dark at the top), black basalt ground
   // with a smoulder in the cracks, scorched "grass" and maroon rock.
   hell: { ...BASE, sky: [214, 68, 40], red: [255, 170, 130], ground: [58, 40, 48], kerb: [92, 62, 70], crack: [30, 16, 24], fleck: [226, 96, 36], grass: [96, 30, 22], blade: [160, 52, 24], shade: [52, 16, 16], dirt: [66, 26, 30], dirtLight: [96, 38, 34], dirtDark: [38, 14, 20], stone: [132, 70, 50], stoneDark: [80, 36, 34] },
+  // Frostbite: a pale blue winter sky, white snow for a surface (blue-grey shadow flecks), an icy
+  // layer under it, then frozen blue-slate earth. Dark red text reads on the pale sky.
+  frost: { ...BASE, sky: [182, 208, 242], red: [150, 0, 28], ground: [238, 244, 252], kerb: [150, 176, 214], crack: [118, 146, 196], fleck: [255, 255, 255], grass: [150, 196, 230], blade: [196, 228, 250], shade: [96, 140, 190], dirt: [72, 86, 116], dirtLight: [98, 114, 150], dirtDark: [48, 58, 84], stone: [154, 170, 194], stoneDark: [98, 110, 134] },
+  // Boardwalk: a bright seaside sky, wooden planks for a surface, pale sand for the "grass" layer and
+  // sandy earth under it. Dark red text reads on the sky.
+  beach: { ...BASE, sky: [118, 200, 255], red: [170, 0, 20], ground: [206, 152, 96], kerb: [232, 184, 128], crack: [150, 100, 58], fleck: [226, 178, 120], grass: [236, 214, 150], blade: [252, 238, 186], shade: [204, 176, 112], dirt: [188, 150, 98], dirtLight: [212, 178, 124], dirtDark: [146, 112, 70], stone: [238, 228, 204], stoneDark: [176, 156, 118] },
+  // Junkyard: a hazy dust-brown sky, packed grey-brown dirt and gravel for a surface, oily olive scrub for
+  // the "grass" layer, rusty earth under it. Dark red text reads on the sky.
+  junk: { ...BASE, sky: [198, 168, 130], red: [128, 0, 8], ground: [118, 106, 96], kerb: [150, 136, 122], crack: [80, 70, 62], fleck: [150, 136, 120], grass: [96, 98, 50], blade: [150, 142, 64], shade: [64, 64, 36], dirt: [118, 72, 46], dirtLight: [146, 94, 58], dirtDark: [80, 48, 32], stone: [150, 150, 158], stoneDark: [92, 92, 102] },
+  // Haunted Night: a twilight purple sky (light text, the top is dark), a pale stone path for a surface, sickly
+  // green turf for the "grass" layer, dark soil under it with bone-pale stones.
+  haunt: { ...BASE, sky: [92, 64, 140], red: [255, 150, 170], ground: [112, 102, 130], kerb: [140, 130, 160], crack: [72, 64, 90], fleck: [138, 128, 156], grass: [58, 96, 66], blade: [96, 150, 80], shade: [34, 60, 44], dirt: [74, 52, 60], dirtLight: [98, 70, 76], dirtDark: [46, 32, 40], stone: [190, 184, 170], stoneDark: [120, 114, 104] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 

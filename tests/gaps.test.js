@@ -78,6 +78,43 @@ const SCRIPTS = {
   'devil-stairs': [[0.97, 'tap']],
   'hellmouth-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'hellmouth-jump': [[0, 'cs'], [0.53, 'cr']], // a plain ollie falls short: it takes a charge (or the turbo)
+  'sled-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'floe-hop': [[0.57, 'tap']], // a plain ollie lands on the floe in the middle of the pond
+  'pond-leap': [[0, 'cs'], [0.71, 'cr']], // or a charged one flies the whole pond
+  'ice-grind': [[0.15, 'tap'], [0.15, 'hold']],
+  'slide-grind': [[0.38, 'tap'], [1.18, 'tap'], [1.18, 'hold']], // over the first block, then lock the second
+  'cabin-grind': [[0.45, 'tap'], [0.45, 'hold']],
+  'cabin-leap': [[0, 'cs'], [0.6, 'cr']],
+  'roof-drop': [[0.36, 'tap'], [1.36, 'tap']], // up onto the roof, then ollie off its end
+  'ice-bridge': [[0.5, 'tap'], [0.5, 'hold']],
+  'crevasse-jump': [[0, 'cs'], [0.56, 'cr']],
+  'board-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'rope-grind': [[0.6, 'tap'], [0.6, 'hold']],
+  'sea-leap': [[0, 'cs'], [0.67, 'cr']],
+  'cart-grind': [[0.2, 'tap'], [0.2, 'hold']],
+  'chair-slide': [[0.3, 'tap'], [1.3, 'tap'], [1.3, 'hold']], // over the cart, then lock the chair
+  'tower-grind': [[0.45, 'tap'], [0.45, 'hold']],
+  'tower-leap': [[0, 'cs'], [0.55, 'cr']],
+  'tower-drop': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
+  'pier-bridge': [[0.5, 'tap'], [0.5, 'hold']],
+  'pier-leap': [[0, 'cs'], [0.56, 'cr']],
+  'scrap-grind': [[0.58, 'tap'], [0.58, 'hold']],
+  'sludge-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'pipe-grind': [[0.4, 'tap'], [0.4, 'hold']],
+  'sludge-leap': [[0.65, 'tap']], // a plain ollie through the wrecking ball's opening and over the pit
+  'car-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'car-leap': [[0, 'cs'], [0.6, 'cr']],
+  'magnet-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'magnet-jump': [[0, 'cs'], [0.55, 'cr']],
+  'fence-grind': [[0.61, 'tap'], [0.61, 'hold']],
+  'coffin-hop': [[0.57, 'tap']], // a plain ollie lands on the coffin lid in the middle of the grave
+  'grave-leap': [[0, 'cs'], [0.71, 'cr']],
+  'pumpkin-hop': [[0.28, 'tap']], // land on the pumpkin and ride off its far side
+  'tomb-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'tomb-leap': [[0, 'cs'], [0.6, 'cr']],
+  'roof-drop-tomb': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
+  'gate-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'mansion-leap': [[0, 'cs'], [0.56, 'cr']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

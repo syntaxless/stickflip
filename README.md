@@ -143,8 +143,10 @@ its own top 5.
 Each stage has its own look: Stages 1 and 2 have a lighter blue sky (#6EB4FF) with
 slow parallax clouds and asphalt; Stage 3 a light grey sky with a faint parallax
 city and a concrete sidewalk; Stage 4 a bright blue sky and a red rubber-mat
-surface; Stage 5 a sunset sky with a dusk skyline. Under the surface every stage
-has a thin grass layer, chunky muted-brown dirt and then plain black.
+surface; Stage 5 a sunset sky with a dusk skyline; Stage 6 a blood-orange sky and lava; Stage 7 a pale
+winter sky with snow-capped mountains, pines and falling snow, and a snow surface. Under the surface every
+stage has a thin grass layer, chunky muted-brown dirt and then plain black (Stage 7's are an icy blue layer
+and frozen blue-slate earth).
 
 **Stage 1** is a rock, then the six original levels in order, joined by a bank
 (a good way past the rail, so you can land first) up to Five Stair's platform
@@ -190,7 +192,7 @@ it), Cone Row (three traffic cones, one ollie clears them), Barrier Gap (a long
 jersey barrier you can ollie onto or grind, then a gap right behind it),
 Barricade (two sawhorses: two jumps), Scaffold Rail (grind the top pipe), Big Drop
 (a concrete platform to roll or jump off, with a traffic barrel at the bottom:
-land and ollie the barrel, or take one charged ollie over both) and Big Gap (a
+land and ollie the barrel, or take one charged ollie over both) and Dumper (a
 broken slab of sidewalk as the kicker and a 240-unit gap full of rubble). Road signs
 stand behind the action as decor.
 
@@ -224,6 +226,47 @@ yours, quicker when you pull ahead, easing off when you fall behind), and it tak
 its line, so riding its line cleanly beats it by about half a second and manuals win by a lot. The
 race rules are in `src/rival.js` and `Game` (`race`, `lose()`, `finish()`), the pieces in
 `src/obstacles/hell.js`. Its Game Center board is `stickflip.stage6`.
+
+**Stage 7: Frostbite** (a frozen mountain pass, not a race; a first pass). It opens once Stage 6 is
+finished, has its own top 5 (`stage-7`) and Game Center board `stickflip.stage7`. Snowdrifts (three drifts, then a snowman to
+ollie), Sled Run (a wooden sled kicker and a snowy rail: SLED GRIND), Frozen Pond (a 295-wide pond with an ice
+floe in the middle: hop to the floe and hop off again, FLOE HOP, or charge one long jump, POND LEAP), Ice
+Hurdles (two ice blocks: ollie them, or grind either top edge), Slalom (an ice block, then a ski gate you
+can jump through for a bonus; head above the banner is a bail), Cabin Roof (ollie up onto a log cabin's
+snowy roof and ride, grind or fly it) and Crevasse Jump (a sled kicker, a 320-wide crevasse and an arched
+rail across it, ICE BRIDGE, or a charged ollie, CREVASSE JUMP; the summit flag stands past it). The look
+is `frost: true` (the sky, mountains, pines and snow in `Renderer.drawFrostSky`) with the `frost` palette,
+and the pieces are in `src/obstacles/frost.js`. Timing windows: `node scripts/stage-windows.mjs 7`. The rider is on a snow
+skate (`snowSkate: true` on the stage): a thick flat deck with upturned tips and no wheels or trucks, in every pose,
+flip, grind and bail. Only the drawing changes (`drawBoard`'s `wheels` flag); play is identical.
+
+**Stage 8: Boardwalk** (a sunny seaside promenade, not a race). It opens once Stage 7 is finished, has its
+own top 5 (`stage-8`) and Game Center board `stickflip.stage8`. Sand
+Dunes (two dunes, then a sandcastle), Pier Rail (a wooden kicker and a lifebuoy rail: BOARD GRIND), Sea Gap
+(a 260-wide gap over the sea with a rope rail across it: ROPE GRIND, or a charged ollie, SEA LEAP), Ice
+Cream Cart (ollie or grind the cart, then the deck chair: CART GRIND, CHAIR SLIDE), Bunting (a beach ball,
+a string of flags you can jump through, a surfboard rack, a gold string), Lifeguard Tower (ride, grind,
+drop off or fly it) and Pier End (kicker, a 320-wide gap and an arched rail: PIER BRIDGE or PIER LEAP).
+The look is `beach: true` (`Renderer.drawBeachSky`) with the `beach` palette; pieces are in
+`src/obstacles/boardwalk.js`. Timing windows: `node scripts/stage-windows.mjs 8`.
+
+**Stage 9: Junkyard** (a second race, harder than Hellride). It opens once Stage 8 is finished, has its own
+top 5 (`stage-9`) and Game Center board `stickflip.stage9`. Same
+rival system as Hellride (`src/rival.js`), but its rival cruises at your pace and barely eases off
+(`race: { pace, easeOffMax }`), so you need the turbo from grinds and named gaps to win. Nine checkpoints: Tyre
+Heaps, Scrap Rail, Sludge Pit (a steel beam over toxic sludge), Fridge Row, Pipe Bar, Wrecking Ball (a crane's ball
+to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `junk: true`
+(`Renderer.drawJunkSky`) with the `junk` palette; pieces are in `src/obstacles/junkyard.js`. The rival's cues:
+`node scripts/solve-rival.mjs 9 --write`. Timing windows: `node scripts/stage-windows.mjs 9`.
+
+**Stage 10: Haunted Night** (a graveyard, not a race). It opens once Stage 9 is finished, has its own top 5
+(`stage-10`) and Game Center board `stickflip.stage10`. Tombstones (stones, a
+grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
+295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
+pumpkin, PUMPKIN HOP, then a standing coffin), Lantern Gates (jump through for GHOST GATE / WILL-O-WISP; head
+above the bar is a bail), Mausoleum (ride, grind, drop off or fly the roof) and Mansion Gate (a kicker, a 320-wide moat
+and an arched fence: GATE GRIND, or MANSION LEAP). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
+`haunt` palette; pieces are in `src/obstacles/haunted.js`. Timing windows: `node scripts/stage-windows.mjs 10`.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
@@ -360,7 +403,7 @@ tests/                  node:test suites
    `endAfterQuarter` to end the stage when the rider has ridden back down a
    quarter pipe; `finishLeft` to end on a ride back to the left; `race: { finishAt }`
    for a race against a rival (see Stage 6), `boost: true` (+ `speedReturn`) for the turbo,
-   `hell: true` for Hellride's sky, `gameCenter: false` for a stage with no Game Center board.
+   `hell: true` for Hellride's sky, `frost: true` for Frostbite's, `gameCenter: false` for a stage with no Game Center board.
 3. Append it to `STAGES` in `src/stages/index.js` (stage id `stage-N`, which is also
    the shared leaderboard key and the Game Center leaderboard `stickflip.stageN`).
 4. Add timed-ollie clears for each checkpoint to `tests/stage.test.js` and a line per
@@ -415,8 +458,8 @@ What's different in the app:
 
 - Always landscape, full screen, iPhone only.
 - Posts to the same Supabase leaderboard as the live site, plus one Game Center
-  leaderboard per stage: `stickflip.stage1` through `stickflip.stage5`, opened from a
-  GAME CENTER button on the high-score table. Create all five (score type: integer,
+  leaderboard per stage: `stickflip.stage1` through `stickflip.stage10`, opened from a
+  GAME CENTER button on the high-score table. Create all ten (score type: integer,
   high to low) in App Store Connect with exactly those IDs.
 - Haptics on pops, landings, grinds, bails and level clears (`src/native.js` +
   `ios/App/App/StickflipPlugin.swift`).
