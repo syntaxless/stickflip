@@ -111,6 +111,9 @@ const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140],
 const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
+// Junkyard's rival is acid green: a vivid toxic yellow-green figure (red horns kept) on a darker green deck.
+const JUNK_RIVAL_LOOK = { color: [157, 255, 0], horns: [214, 30, 30] };
+const JUNK_RIVAL_DECK = [92, 168, 0];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
 const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
@@ -1070,8 +1073,9 @@ export class Renderer {
   drawSkater(game, g = this.g, advance = true, who = null) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
-    const look = who ? RIVAL_LOOK : {};
-    const deck = who ? RIVAL_DECK : PAL.deck;
+    const junk = who && game.level.junk;
+    const look = who ? (junk ? JUNK_RIVAL_LOOK : RIVAL_LOOK) : {};
+    const deck = who ? (junk ? JUNK_RIVAL_DECK : RIVAL_DECK) : PAL.deck;
     const poseOf = who ? this.rivalPose : this.pose;
     const squash = who ? 0 : this.squash;
 
