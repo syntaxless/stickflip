@@ -62,6 +62,13 @@ function poly(g, tf, pts, color) {
   }
 }
 
+// Viking horn pixels, relative to the head centre (the head spans x -4..3, y -4..3).
+const HORN_FRONT = [[-5, -1], [-6, -1], [-5, -2], [-6, -2], [-7, -2], [-6, -3], [-7, -3], [-8, -3], [-7, -4], [-8, -4], [-8, -5], [-8, -6]];
+const HORN_FRONT_SHADE = [[-5, -1], [-6, -1], [-7, -2], [-8, -3]];
+const HORN_SIDE = [[-2, -4], [-1, -4], [-2, -5], [-1, -5], [-1, -6], [0, -6], [0, -7], [1, -7], [1, -8], [2, -8], [3, -8]];
+const HORN_SIDE_SHADE = [[-2, -4], [-1, -5], [0, -6]];
+const HORN_SHADE = [200, 196, 188];
+
 // Draws the stick figure (no board) as a black silhouette: 1-pixel limbs,
 // a solid round head and a cap.
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
@@ -124,16 +131,20 @@ export function drawFigure(g, tf, p, opts = {}) {
     }
   }
   if (horns) {
-    // two chunky horns curving out of the top of the head (screen-space sprites, mirrored about the head's
-    // middle): red pixels inside a black outline. The head is an 8x8 blob whose top left is (hx - 4, hy - 4).
+    // Viking helmet horns (white pixels inside a black outline), screen-space sprites on the head's 8x8 blob
+    // (top left (hx - 4, hy - 4)). Facing the player (`eyes: 'laugh'`) both horns show, one each side, sweeping
+    // out and up. In profile the near horn rises from the ear and curves forward, the far one hides behind it.
     const h = tf(p.head);
     const hx = Math.round(h.x);
     const hy = Math.round(h.y);
-    const left = [[-3, -5], [-2, -5], [-4, -6], [-3, -6], [-4, -7], [-3, -7], [-5, -8], [-4, -8]];
-    const px = [];
-    for (const [x, y] of left) px.push([hx + x, hy + y], [hx - 1 - x, hy + y]);
+    const front = eyes === 'laugh';
+    const sprite = front ? HORN_FRONT : HORN_SIDE;
+    const shaded = front ? HORN_FRONT_SHADE : HORN_SIDE_SHADE;
+    const at = (x, y) => (front ? [[hx + x, hy + y], [hx - 1 - x, hy + y]] : [[face > 0 ? hx + x : hx - 1 - x, hy + y]]);
+    const px = sprite.flatMap(([x, y]) => at(x, y));
     for (const [x, y] of px) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) g.pset(x + dx, y + dy, PAL.ink);
     for (const [x, y] of px) g.pset(x, y, horns);
+    for (const [x, y] of shaded.flatMap(([sx, sy]) => at(sx, sy))) g.pset(x, y, HORN_SHADE); // a grey underside gives the curve some body
   }
 }
 

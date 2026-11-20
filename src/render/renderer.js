@@ -116,8 +116,8 @@ const JUNK = { far: [150, 124, 106], near: [112, 92, 82], crane: [92, 74, 66], s
 // on a far hill, dead trees, a row of tombstones, ground mist and bats.
 const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140], [146, 86, 150], [182, 110, 158]];
 const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
-// Hellride's rival: a pale skeleton with a bare head and red eyes (no cap, no horns).
-const RIVAL_LOOK = { color: [238, 232, 214], noCap: true, eyes: true, eyeColor: [255, 30, 30] };
+// Hellride's rival: a pale skeleton with a bare head, red eyes and white Viking horns (no cap).
+const RIVAL_LOOK = { color: [238, 232, 214], noCap: true, horns: [255, 255, 255], eyes: true, eyeColor: [255, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 const RIVAL_WHEELS = [238, 232, 214]; // bone wheels, drawn like the player's
 // Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
@@ -1106,7 +1106,7 @@ export class Renderer {
   }
 
   // `advance` false redraws this frame's pose without moving the animation on.
-  // `who` 'rival' draws the rival's Game (a pale skeleton with horns on a dark red board).
+  // `who` 'rival' draws the rival's Game (a pale skeleton with white Viking horns on a dark red board).
   drawSkater(game, g = this.g, advance = true, who = null) {
     const s = game.sk;
     const dt = this.frameDt || 1 / 60;
