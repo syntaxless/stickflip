@@ -1165,7 +1165,7 @@ export class Renderer {
     }
     drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
     // Junkyard's rival: while he leads he now and then looks back over his shoulder and laughs, with a bubble
-    const laugh = junk && this.rivalAhead && this.time % 7 > -1;
+    const laugh = junk && this.rivalAhead && this.time % 7 > 5.6;
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
     if (laugh) {
       const h = base(poseOf.pose.head);
