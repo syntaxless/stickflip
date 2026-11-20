@@ -7,6 +7,10 @@ import { gap } from './gap.js';
 export const P = (v) => Math.round(v / 3);
 export const G = WORLD.GROUND;
 export const { ink } = PAL;
+// How deep a pool, pit or pond is drawn: the same as the street's strip of ground beside it (asphalt, grass and
+// dirt), like a cross-section. Everything below that is the plain black the background draws, so a pool never
+// sticks down into the touch area under the level.
+export const POOL_DEPTH = 20;
 
 export const hash = (a, b) => {
   let h = (a * 374761393 + b * 668265263) | 0;

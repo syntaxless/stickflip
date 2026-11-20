@@ -243,7 +243,7 @@ export class Renderer {
 
   draw(game, dt, opts = {}) {
     const g = this.g;
-    this.time += dt;
+    this.time += Math.max(0, dt); // a first frame can report a tiny negative dt; obstacle art indexes colour tables by time % n
     this.frameDt = dt;
     this.step(game, dt);
 

@@ -208,7 +208,7 @@ function drawCar(g, l, r, b, barY, fx, cop = true) {
   const BLACK = [30, 30, 38];
   const RED = [255, 60, 60];
   const BLUE = [70, 110, 255];
-  const flash = Math.floor((fx.time || 0) * 5) % 2;
+  const flash = Math.floor(Math.max(0, fx.time || 0) * 5) % 2;
   blit(g, CAR_SPRITE, l, b - 31); // the car itself is a pixel-grid sprite (cop-sprites.js)
   if (cop) {
     // the cop at the wheel, on the driver's side (the car's left, which is on the right as you look at it)

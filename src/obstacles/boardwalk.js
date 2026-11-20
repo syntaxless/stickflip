@@ -1,6 +1,6 @@
 import { box } from './box.js';
 import { rail } from './rail.js';
-import { P, G, ink, hash, gate, pit } from './art.js';
+import { P, G, ink, hash, gate, pit, POOL_DEPTH } from './art.js';
 
 // Boardwalk's own pieces (Stage 8): sand dunes, a sandcastle, a lifebuoy rail, a sea gap with a
 // rope rail, an ice cream cart, a deck chair, a beach ball, a surfboard rack, bunting, a lifeguard
@@ -66,7 +66,7 @@ export function sandcastle({ x, w = 45, h = 66 }) {
       g.pset(cx - 1, b - 13, [255, 190, 190]);
       g.pset(cx + 1, b - 13, [255, 190, 190]);
       g.line(cx, t - 9, cx, t - 1, ink); // flag
-      const wave = Math.floor((fx.time || 0) * 3) % 2;
+      const wave = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(cx + 1, t - 9 + wave, 5, 3, RED);
       g.rect(cx + 1, t - 10 + wave, 6, 5, ink);
       g.fill(cx + 1, t - 9 + wave, 5, 3, RED);
@@ -104,7 +104,7 @@ export function seaGap({ x, width }) {
     kind: 'water',
     paint(g, fx, { l, r, top }) {
       const t = fx.time || 0;
-      g.fill(l, top, r - l + 1, 90, SEA.deep);
+      g.fill(l, top, r - l + 1, POOL_DEPTH, SEA.deep);
       g.fill(l, top + 2, r - l + 1, 10, SEA.mid);
       for (let px = l; px <= r; px++) {
         const wave = Math.floor(Math.sin(px * 0.35 + t * 2.6) * 0.9 + 0.9);
@@ -112,7 +112,7 @@ export function seaGap({ x, width }) {
         if (hash(px, 17) % 10 === 0) g.pset(px, top + 6 + (hash(px, 2) % 4), SEA.light);
         if (hash(px, 31) % 17 === 0) g.pset(px, top + 2 + wave - 1, SEA.foam);
       }
-      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + 90, ink);
+      for (const px of [l - 1, r + 1]) g.line(px, top, px, top + POOL_DEPTH, ink);
       // the boards' ends: a dark plank edge at each lip, and foam in the corners
       for (const [px, d] of [[l, 1], [r, -1]]) {
         for (let i = 0; i < 4; i++) g.fill(px + d * i, top, 1, 3 - (i >> 1), WOOD.b);
@@ -120,10 +120,10 @@ export function seaGap({ x, width }) {
       }
       // piles: a few wooden posts standing in the water
       for (let px = l + 24; px < r - 10; px += 30) {
-        g.fill(px, top + 4, 3, 40, WOOD.dark);
-        g.line(px, top + 4, px, top + 40, WOOD.b);
-        g.line(px - 1, top + 4, px - 1, top + 40, ink);
-        g.line(px + 3, top + 4, px + 3, top + 40, ink);
+        g.fill(px, top + 4, 3, POOL_DEPTH - 6, WOOD.dark);
+        g.line(px, top + 4, px, top + POOL_DEPTH - 2, WOOD.b);
+        g.line(px - 1, top + 4, px - 1, top + POOL_DEPTH - 2, ink);
+        g.line(px + 3, top + 4, px + 3, top + POOL_DEPTH - 2, ink);
         g.fill(px - 1, top + 3 + Math.round(Math.sin(t * 2 + px)), 5, 1, SEA.foam);
       }
     },
@@ -298,7 +298,7 @@ export function bunting({ x, top, bottom, name = 'BEACH FLAG', points = 250 }) {
         g.fill(px - 2, ground, 5, 1, ink);
         g.fill(px - 1, ground - 1, 3, 1, SAND.body);
       }
-      const sway = Math.floor((fx.time || 0) * 2.5) % 2;
+      const sway = Math.floor(Math.max(0, fx.time || 0) * 2.5) % 2;
       g.line(cx - reach, t - 1, cx + reach, t - 1, ink);
       for (let i = 0; i < 5; i++) {
         const fx0 = cx - reach + 1 + i * 2 + (i > 1 ? 1 : 0);
@@ -338,7 +338,7 @@ export function lifeguardTower({ x, w = 190, h = 76 }) {
       // a flag on the roof
       const cx = r - 10;
       g.line(cx, t - 14, cx, t - 3, ink);
-      const wave = Math.floor((fx.time || 0) * 3) % 2;
+      const wave = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(cx + 1, t - 14 + wave, 7, 4, YELLOW);
       g.rect(cx + 1, t - 15 + wave, 8, 6, ink);
       g.fill(cx + 1, t - 14 + wave, 7, 4, YELLOW);
@@ -365,7 +365,7 @@ export function pierSign({ x }) {
       g.fill(cx - 25, top - 12, 51, 14, [30, 70, 150]);
       g.rect(cx - 26, top - 13, 53, 16, ink);
       g.text('PIER 8', cx, top - 9, WHITE, 1, 'center');
-      const phase = Math.floor((fx.time || 0) * 4);
+      const phase = Math.floor(Math.max(0, fx.time || 0) * 4);
       for (let i = 0; i < 26; i++) {
         const lit = (i + phase) % 3 === 0;
         g.pset(cx - 24 + i * 2, top - 12, lit ? YELLOW : [150, 120, 40]);

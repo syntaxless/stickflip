@@ -107,7 +107,7 @@ export function barricade({ x, w = 60, h = 40 }) {
       g.line(l + 1, t + 2, l + Math.round((r - l) * 0.55), t + 2, ROCK.lit);
       g.line(l + 1, b - 1, r - 1, b - 1, ROCK.dark);
       // glowing cracks that breathe
-      const glow = Math.floor((fx.time || 0) * 2 + x) % 2;
+      const glow = Math.floor(Math.max(0, fx.time || 0) * 2 + x) % 2;
       for (const [fx0, fy0, len] of [[0.25, 0.3, 5], [0.62, 0.45, 4], [0.45, 0.7, 3]]) {
         const cxp = l + Math.round((r - l) * fx0);
         const cyp = t + Math.round((b - t) * fy0);
@@ -135,7 +135,7 @@ export function finishArch({ x, height = 330 }) {
       }
       // the banner: black and white squares, waving a pixel
       const w = reach * 2 - 2;
-      const t = Math.floor((fx.time || 0) * 3);
+      const t = Math.floor(Math.max(0, fx.time || 0) * 3);
       for (let i = 0; i < w; i++) {
         const wave = Math.round(Math.sin((i + t) * 0.5));
         for (let j = 0; j < 8; j++) {
