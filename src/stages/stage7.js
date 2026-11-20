@@ -20,5 +20,4 @@ export default stage({
   palette: 'frost',
   frost: true, // the sky and the ground
   snowSkate: true, // a snow skate: no wheels or trucks, same tricks (the board is only drawn differently)
-  gameCenter: false, // no Game Center board yet: create stickflip.stage7 in App Store Connect, then drop this
 });
