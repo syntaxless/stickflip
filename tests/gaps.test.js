@@ -98,6 +98,14 @@ const SCRIPTS = {
   'tower-drop': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
   'pier-bridge': [[0.5, 'tap'], [0.5, 'hold']],
   'pier-leap': [[0, 'cs'], [0.56, 'cr']],
+  'scrap-grind': [[0.58, 'tap'], [0.58, 'hold']],
+  'sludge-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'pipe-grind': [[0.4, 'tap'], [0.4, 'hold']],
+  'sludge-leap': [[0.65, 'tap']], // a plain ollie through the wrecking ball's opening and over the pit
+  'car-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'car-leap': [[0, 'cs'], [0.6, 'cr']],
+  'magnet-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'magnet-jump': [[0, 'cs'], [0.55, 'cr']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

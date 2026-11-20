@@ -58,6 +58,9 @@ const PALETTES = {
   // Boardwalk: a bright seaside sky, wooden planks for a surface, pale sand for the "grass" layer and
   // sandy earth under it. Dark red text reads on the sky.
   beach: { ...BASE, sky: [118, 200, 255], red: [170, 0, 20], ground: [206, 152, 96], kerb: [232, 184, 128], crack: [150, 100, 58], fleck: [226, 178, 120], grass: [236, 214, 150], blade: [252, 238, 186], shade: [204, 176, 112], dirt: [188, 150, 98], dirtLight: [212, 178, 124], dirtDark: [146, 112, 70], stone: [238, 228, 204], stoneDark: [176, 156, 118] },
+  // Junkyard: a hazy dust-brown sky, packed grey-brown dirt and gravel for a surface, oily olive scrub for
+  // the "grass" layer, rusty earth under it. Dark red text reads on the sky.
+  junk: { ...BASE, sky: [198, 168, 130], red: [128, 0, 8], ground: [118, 106, 96], kerb: [150, 136, 122], crack: [80, 70, 62], fleck: [150, 136, 120], grass: [96, 98, 50], blade: [150, 142, 64], shade: [64, 64, 36], dirt: [118, 72, 46], dirtLight: [146, 94, 58], dirtDark: [80, 48, 32], stone: [150, 150, 158], stoneDark: [92, 92, 102] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
 

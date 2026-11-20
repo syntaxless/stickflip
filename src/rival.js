@@ -66,9 +66,9 @@ export class Rival {
   // still when the player is ahead, easing off when the player has fallen behind.
   pace(playerX) {
     const d = playerX - this.game.sk.x; // > 0: the player is ahead
-    let k = RACE.RIVAL_PACE;
+    let k = this.level.race.pace ?? RACE.RIVAL_PACE; // a harder race can set its own pace and mercy
     if (d > 0) k += Math.min(RACE.CATCH_UP_MAX, d * RACE.CATCH_UP);
-    else k -= Math.min(RACE.EASE_OFF_MAX, -d * RACE.EASE_OFF);
+    else k -= Math.min(this.level.race.easeOffMax ?? RACE.EASE_OFF_MAX, -d * RACE.EASE_OFF);
     return k;
   }
 

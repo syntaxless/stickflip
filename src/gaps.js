@@ -70,4 +70,13 @@ export const GAPS = [
   { id: 'tower-drop', stage: 'stage-8', section: 5, name: 'TOWER DROP', points: 350, from: [360, 550], to: [550, 960], on: 'land' },
   { id: 'pier-bridge', stage: 'stage-8', section: 6, name: 'PIER BRIDGE', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
   { id: 'pier-leap', stage: 'stage-8', section: 6, name: 'PIER LEAP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
+  // ---- Stage 9 (Junkyard; a race, so each one also kicks the turbo in)
+  { id: 'scrap-grind', stage: 'stage-9', section: 1, name: 'SCRAP GRIND', points: 450, from: [200, 300], to: [470, 730], on: 'grind' },
+  { id: 'sludge-grind', stage: 'stage-9', section: 2, name: 'SLUDGE GRIND', points: 400, from: null, to: [300, 600], on: 'grind' },
+  { id: 'pipe-grind', stage: 'stage-9', section: 4, name: 'PIPE GRIND', points: 350, from: null, to: [340, 530], on: 'grind' },
+  { id: 'sludge-leap', stage: 'stage-9', section: 5, name: 'SLUDGE LEAP', points: 300, from: [100, 330], to: [530, 960], on: 'land' },
+  { id: 'car-grind', stage: 'stage-9', section: 6, name: 'CAR GRIND', points: 400, from: null, to: [360, 580], on: 'grind' },
+  { id: 'car-leap', stage: 'stage-9', section: 6, name: 'CAR LEAP', points: 500, from: [150, 360], to: [580, 960], on: 'land' },
+  { id: 'magnet-grind', stage: 'stage-9', section: 7, name: 'MAGNET GRIND', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
+  { id: 'magnet-jump', stage: 'stage-9', section: 7, name: 'MAGNET JUMP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
 ];
