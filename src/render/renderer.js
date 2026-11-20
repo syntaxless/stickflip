@@ -109,8 +109,10 @@ const JUNK = { far: [150, 124, 106], near: [112, 92, 82], crane: [92, 74, 66], s
 // on a far hill, dead trees, a row of tombstones, ground mist and bats.
 const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140], [146, 86, 150], [182, 110, 158]];
 const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
-const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
+// Hellride's rival: a pale skeleton with red horns and red eyes, no cap.
+const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30], noCap: true, eyes: true, eyeColor: [255, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
+const RIVAL_WHEELS = [238, 232, 214]; // bone wheels, big and outlined like the Junkyard rival's
 // Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
 const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true, eyes: true };
 const JUNK_RIVAL_DECK = [204, 146, 76]; // a wood-coloured board ...
@@ -1083,14 +1085,16 @@ export class Renderer {
     const junk = who && game.level.junk;
     const look = who ? (junk ? JUNK_RIVAL_LOOK : RIVAL_LOOK) : {};
     const deck = who ? (junk ? JUNK_RIVAL_DECK : RIVAL_DECK) : PAL.deck;
-    const wheelColor = junk ? JUNK_RIVAL_WHEELS : PAL.wheel;
+    const wheelColor = junk ? JUNK_RIVAL_WHEELS : who ? RIVAL_WHEELS : PAL.wheel;
+    const bigWheels = !!who; // both rivals ride chunky wheels
+    const wheelShine = junk ? [255, 200, 225] : null;
     const poseOf = who ? this.rivalPose : this.pose;
     const squash = who ? 0 : this.squash;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor, !!junk);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor, bigWheels, wheelShine);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -1163,19 +1167,21 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor, !!junk);
-    // Junkyard's rival: while he leads he now and then looks back over his shoulder and laughs, with a bubble
-    const laugh = junk && this.rivalAhead && this.time % 7 > 5.6;
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor, bigWheels, wheelShine);
+    // Junkyard's and Hellride's rivals: while one leads he now and then looks back over his shoulder and laughs, with a bubble ("HA!" / "FOOL!")
+    const laugh = who && (junk || game.level.hell) && this.rivalAhead && this.time % 7 > 5.6;
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
     if (laugh) {
       const h = base(poseOf.pose.head);
       const x = Math.round(h.x) - 10;
       const y = Math.round(h.y) - 22;
-      g.fill(x - 1, y - 1, 24, 13, PAL.ink);
-      g.fill(x, y, 22, 11, [255, 255, 255]);
+      const word = junk ? 'HA!' : 'FOOL!';
+      const w = junk ? 22 : 33;
+      g.fill(x - 1, y - 1, w + 2, 13, PAL.ink);
+      g.fill(x, y, w, 11, [255, 255, 255]);
       g.fill(x + 3, y + 11, 2, 2, PAL.ink); // the bubble's tail, pointing at his head
       g.fill(x + 4, y + 11, 1, 1, [255, 255, 255]);
-      g.text('HA!', x + 2, y + 2, PAL.ink);
+      g.text(word, x + 2, y + 2, PAL.ink);
     }
   }
 
