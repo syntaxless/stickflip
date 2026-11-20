@@ -118,6 +118,8 @@ const openNextStage = (i) => {
 //   { type: 'scores', score, highlight, t }    the table
 //   { type: 'select', t }                      the stage list
 let screen = null;
+const RACE_BEAT = 1.6; // seconds on the beaten rival before the score screen
+let raceBeat = 0;
 let raceWon = null; // { lead, bonus } once a race is won, until the run's end screen has shown it
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
 
@@ -243,6 +245,7 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
   store.set('checkpoint', checkpoint);
   const level = secret ? SECRET : LEVELS[i];
   const prev = game;
+  raceBeat = 0;
   game = new Game(level, entry, checkpoint);
   // A finger still down from the last screen keeps charging on this one.
   if (entry && prev?.sk.charge && game.startCharge()) {
@@ -340,7 +343,10 @@ const stagesAvailable = () => unlocked > 1 && levelIndex !== SECRET_INDEX;
 
 function press(clientX, clientY) {
   if (screen) return screenPress(clientX, clientY);
-  if (game.phase === 'complete') return; // between screens / end of the run
+  if (game.phase === 'complete') {
+    if (raceBeat > 0 && raceBeat < RACE_BEAT - 0.5) raceBeat = 0.001; // a tap skips the rival's moment (not a last tap of the race)
+    return; // between screens / end of the run
+  }
   if (game.phase === 'beaten') {
     // the rival won: a tap races again from the very start
     game.tap();
@@ -606,8 +612,14 @@ function frame(now) {
         game.best = e.score;
         store.set(`best:${game.level.id}`, e.score);
       }
-      flip = true;
+      // A race won: the camera cuts to the beaten rival for a moment ("HOW‽") before the score screen.
+      if (game.rival && game.raceResult?.won) raceBeat = RACE_BEAT;
+      else flip = true;
     }
+  }
+  if (raceBeat > 0 && !screen && game.phase === 'complete') {
+    raceBeat -= dt;
+    if (raceBeat <= 0) flip = true;
   }
   audio.play(events, game);
   haptics(events);

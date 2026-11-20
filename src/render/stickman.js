@@ -62,12 +62,19 @@ function poly(g, tf, pts, color) {
   }
 }
 
+// Viking horn pixels, relative to the head centre (the head spans x -4..3, y -4..3).
+const HORN_FRONT = [[-5, -1], [-6, -1], [-5, -2], [-6, -2], [-7, -2], [-6, -3], [-7, -3], [-8, -3], [-7, -4], [-8, -4], [-8, -5], [-8, -6]];
+const HORN_FRONT_SHADE = [[-5, -1], [-6, -1], [-7, -2], [-8, -3]];
+const HORN_SIDE = [[-2, -4], [-1, -4], [-2, -5], [-1, -5], [-1, -6], [0, -6], [0, -7], [1, -7], [1, -8], [2, -8], [3, -8]];
+const HORN_SIDE_SHADE = [[-2, -4], [-1, -5], [0, -6]];
+const HORN_SHADE = [200, 196, 188];
+
 // Draws the stick figure (no board) as a black silhouette: 1-pixel limbs,
 // a solid round head and a cap.
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds an eye (black, or `opts.eyeColor`) (`'laugh'` looks back with a zig zag mouth).
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds an eye (black, or `opts.eyeColor`) (`'laugh'` turns the head full face to the player, with a zig zag mouth).
 export function drawFigure(g, tf, p, opts = {}) {
   const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false, eyeColor = PAL.ink } = opts;
   const ct = Math.cos(tilt);
@@ -85,12 +92,19 @@ export function drawFigure(g, tf, p, opts = {}) {
     for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, c, true);
   };
   if (color) {
+    // the outline stops at the soles, so it never paints over the deck and wheels under the feet: the figure then
+    // stands on its board exactly like the black rider (whose plain figure has no outline to spill)
+    const sole = Math.round(Math.max(tf(p.footF).y, tf(p.footB).y));
+    // (only while the feet are the lowest part: upside down in a backflip the outline must stay whole)
+    const lowest = Math.max(...Object.values(p).map((j) => tf(j).y));
+    if (sole >= Math.round(lowest)) g.maxY = sole - 1 + g.oy;
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1]]) {
       body((q) => {
         const r = tf(q);
         return { x: r.x + dx, y: r.y + dy };
       }, PAL.ink);
     }
+    g.maxY = Infinity;
     body(tf, color);
   } else body(tf, PAL.ink);
   // cap: crown + peak, following the body's rotation (`opts.noCap` leaves a bare head)
@@ -102,28 +116,35 @@ export function drawFigure(g, tf, p, opts = {}) {
   if (eyes) {
     // a profile head shows one black eye at the front; `eyes: 'laugh'` turns it to look back over
     // the shoulder, with a zig zag mouth
-    const back = eyes === 'laugh';
-    const e = tf(cap((back ? -1.5 : 1.5) * PX, (back ? -1.5 : -0.5) * PX));
-    g.pset(Math.round(e.x), Math.round(e.y), eyeColor);
-    if (back) {
-      // a zig zag mouth, four black pixels stepping up and down (the profile head has none)
-      [-3.5, -2.5, -1.5, -0.5].forEach((ox, i) => {
-        const m = tf(cap(ox * PX, (i % 2 ? 2 : 1) * PX));
-        g.pset(Math.round(m.x), Math.round(m.y), PAL.ink);
-      });
+    if (eyes === 'laugh') {
+      // looking back at the player: the head turns full face, two eyes and a wide zig zag mouth
+      // (screen-space pixels on the 8x8 head, whose top left is (hx - 4, hy - 4))
+      const h = tf(p.head);
+      const hx = Math.round(h.x);
+      const hy = Math.round(h.y);
+      for (const ex of [-2, 1]) g.pset(hx + ex, hy - 2, eyeColor);
+      for (let i = 0; i < 6; i++) g.pset(hx - 3 + i, hy + (i % 2 ? 2 : 1), PAL.ink);
+    } else {
+      // a profile head shows one black eye at the front
+      const e = tf(cap(1.5 * PX, -0.5 * PX));
+      g.pset(Math.round(e.x), Math.round(e.y), eyeColor);
     }
   }
   if (horns) {
-    // two chunky horns curving out of the top of the head (screen-space sprites, mirrored about the head's
-    // middle): red pixels inside a black outline. The head is an 8x8 blob whose top left is (hx - 4, hy - 4).
+    // Viking helmet horns (white pixels inside a black outline), screen-space sprites on the head's 8x8 blob
+    // (top left (hx - 4, hy - 4)). Facing the player (`eyes: 'laugh'`) both horns show, one each side, sweeping
+    // out and up. In profile the near horn rises from the ear and curves forward, the far one hides behind it.
     const h = tf(p.head);
     const hx = Math.round(h.x);
     const hy = Math.round(h.y);
-    const left = [[-3, -5], [-2, -5], [-4, -6], [-3, -6], [-4, -7], [-3, -7], [-5, -8], [-4, -8]];
-    const px = [];
-    for (const [x, y] of left) px.push([hx + x, hy + y], [hx - 1 - x, hy + y]);
+    const front = eyes === 'laugh';
+    const sprite = front ? HORN_FRONT : HORN_SIDE;
+    const shaded = front ? HORN_FRONT_SHADE : HORN_SIDE_SHADE;
+    const at = (x, y) => (front ? [[hx + x, hy + y], [hx - 1 - x, hy + y]] : [[face > 0 ? hx + x : hx - 1 - x, hy + y]]);
+    const px = sprite.flatMap(([x, y]) => at(x, y));
     for (const [x, y] of px) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) g.pset(x + dx, y + dy, PAL.ink);
     for (const [x, y] of px) g.pset(x, y, horns);
+    for (const [x, y] of shaded.flatMap(([sx, sy]) => at(sx, sy))) g.pset(x, y, HORN_SHADE); // a grey underside gives the curve some body
   }
 }
 
