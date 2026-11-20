@@ -67,7 +67,7 @@ function poly(g, tf, pts, color) {
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds a black eye (`'laugh'` looks back, mouth open).
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds a black eye (`'laugh'` looks back with a zig zag mouth).
 export function drawFigure(g, tf, p, opts = {}) {
   const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false } = opts;
   const ct = Math.cos(tilt);
@@ -101,15 +101,16 @@ export function drawFigure(g, tf, p, opts = {}) {
   }
   if (eyes) {
     // a profile head shows one black eye at the front; `eyes: 'laugh'` turns it to look back over
-    // the shoulder, with an open mouth
+    // the shoulder, with a zig zag mouth
     const back = eyes === 'laugh';
-    const e = tf(cap((back ? -1.5 : 1.5) * PX, -0.5 * PX));
+    const e = tf(cap((back ? -1.5 : 1.5) * PX, (back ? -1.5 : -0.5) * PX));
     g.pset(Math.round(e.x), Math.round(e.y), PAL.ink);
     if (back) {
-      for (const ox of [-2.5, -0.5]) {
-        const m = tf(cap(ox * PX, 2 * PX));
+      // a zig zag mouth, four black pixels stepping up and down (the profile head has none)
+      [-3.5, -2.5, -1.5, -0.5].forEach((ox, i) => {
+        const m = tf(cap(ox * PX, (i % 2 ? 2 : 1) * PX));
         g.pset(Math.round(m.x), Math.round(m.y), PAL.ink);
-      }
+      });
     }
   }
   if (horns) {
