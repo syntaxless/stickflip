@@ -85,12 +85,19 @@ export function drawFigure(g, tf, p, opts = {}) {
     for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.circle(h.x + ox - 1, h.y + oy - 1, 3, c, true);
   };
   if (color) {
+    // the outline stops at the soles, so it never paints over the deck and wheels under the feet: the figure then
+    // stands on its board exactly like the black rider (whose plain figure has no outline to spill)
+    const sole = Math.round(Math.max(tf(p.footF).y, tf(p.footB).y));
+    // (only while the feet are the lowest part: upside down in a backflip the outline must stay whole)
+    const lowest = Math.max(...Object.values(p).map((j) => tf(j).y));
+    if (sole >= Math.round(lowest)) g.maxY = sole - 1 + g.oy;
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1]]) {
       body((q) => {
         const r = tf(q);
         return { x: r.x + dx, y: r.y + dy };
       }, PAL.ink);
     }
+    g.maxY = Infinity;
     body(tf, color);
   } else body(tf, PAL.ink);
   // cap: crown + peak, following the body's rotation (`opts.noCap` leaves a bare head)

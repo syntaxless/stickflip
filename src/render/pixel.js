@@ -145,6 +145,7 @@ export class Pix {
     // Camera offset in pixels, added to everything drawn (scrolling levels).
     this.ox = 0;
     this.oy = 0;
+    this.maxY = Infinity;
   }
 
   clear(c = PAL.sky) {
@@ -164,7 +165,7 @@ export class Pix {
   pset(x, y, c) {
     x = Math.round(x) + this.ox;
     y = Math.round(y) + this.oy;
-    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h || y > this.maxY) return; // maxY: an optional lowest row (outlines)
     const i = (y * this.w + x) * 4;
     this.data[i] = c[0];
     this.data[i + 1] = c[1];
