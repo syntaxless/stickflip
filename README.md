@@ -249,6 +249,15 @@ drop off or fly it) and Pier End (kicker, a 320-wide gap and an arched rail: PIE
 The look is `beach: true` (`Renderer.drawBeachSky`) with the `beach` palette; pieces are in
 `src/obstacles/boardwalk.js`. Timing windows: `node scripts/stage-windows.mjs 8`.
 
+**Stage 9: Junkyard** (a second race, harder than Hellride). It opens once Stage 8 is finished, has its own
+top 5 (`stage-9`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage9`). Same
+rival system as Hellride (`src/rival.js`), but its rival cruises at your pace and barely eases off
+(`race: { pace, easeOffMax }`), so you need the turbo from grinds and named gaps to win. Nine checkpoints: Tyre
+Heaps, Scrap Rail, Sludge Pit (a steel beam over toxic sludge), Fridge Row, Pipe Bar, Wrecking Ball (a crane's ball
+to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `junk: true`
+(`Renderer.drawJunkSky`) with the `junk` palette; pieces are in `src/obstacles/junkyard.js`. The rival's cues:
+`node scripts/solve-rival.mjs 9 --write`. Timing windows: `node scripts/stage-windows.mjs 9`.
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
 off the kicker to clear the whole rail and land in the long bank that starts right

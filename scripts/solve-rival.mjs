@@ -6,7 +6,9 @@ import { Rival } from '../src/rival.js';
 import { STAGES } from '../src/stages/index.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const base = STAGES[5];
+// The race stage to solve: `node scripts/solve-rival.mjs [stage] [--write]` (6 = Hellride, 9 = Junkyard).
+const STAGE_N = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) || 6);
+const base = STAGES[STAGE_N - 1];
 const W = 960;
 export const PACES = [0.97, 1.0, 1.04, 1.08];
 
@@ -57,20 +59,37 @@ export { window1, mid, okAll };
 // earlier cues fixed. `stop` is where it must be safely rolling again.
 const tap = (x, lead) => [{ x, lead, act: 'tap' }];
 const tapLock = (x, lead) => [{ x, lead, act: 'tap' }, { x: x + 1, act: 'lock' }];
-const PLAN = [
-  { section: 0, name: 'barricade', at: 800, build: tap },
-  { section: 1, name: 'kicker rail', at: 200, build: tapLock },
-  { section: 2, name: 'moat rail', at: 300, build: tapLock },
-  { section: 3, name: 'hurdle 1', at: 340, build: tap, stop: 730 },
-  { section: 3, name: 'hurdle 2', at: 780, build: tap },
-  { section: 4, name: 'bone bar', at: 340, build: tapLock },
-  { section: 5, name: 'fire pit', at: 330, build: tap },
-  { section: 6, name: 'stairs grind', at: 420, build: tapLock },
-  { section: 7, name: 'hellmouth rail', at: 310, build: tapLock },
-  { section: 8, name: 'tall block', at: 380, build: tap, stop: 700 },
-];
-
-const FILES = ['hell-bumps', 'hell-rail', 'hell-moat', 'hell-hurdles', 'hell-bar', 'hell-fire-pit', 'hell-stairs', 'hell-mouth', 'hell-finish'];
+const PLANS = {
+  6: [
+    { section: 0, name: 'barricade', at: 800, build: tap },
+    { section: 1, name: 'kicker rail', at: 200, build: tapLock },
+    { section: 2, name: 'moat rail', at: 300, build: tapLock },
+    { section: 3, name: 'hurdle 1', at: 340, build: tap, stop: 730 },
+    { section: 3, name: 'hurdle 2', at: 780, build: tap },
+    { section: 4, name: 'bone bar', at: 340, build: tapLock },
+    { section: 5, name: 'fire pit', at: 330, build: tap },
+    { section: 6, name: 'stairs grind', at: 420, build: tapLock },
+    { section: 7, name: 'hellmouth rail', at: 310, build: tapLock },
+    { section: 8, name: 'tall block', at: 380, build: tap, stop: 700 },
+  ],
+  9: [
+    { section: 0, name: 'tyre stack', at: 800, build: tap },
+    { section: 1, name: 'scrap rail', at: 200, build: tapLock },
+    { section: 2, name: 'sludge beam', at: 300, build: tapLock },
+    { section: 3, name: 'fridge', at: 340, build: tap, stop: 730 },
+    { section: 3, name: 'washer', at: 780, build: tap },
+    { section: 4, name: 'pipe bar', at: 340, build: tapLock },
+    { section: 5, name: 'wrecking ball', at: 330, build: tap },
+    { section: 6, name: 'car roof', at: 360, build: tap },
+    { section: 7, name: 'magnet beam', at: 310, build: tapLock },
+    { section: 8, name: 'tall stack', at: 380, build: tap, stop: 700 },
+  ],
+};
+const PLAN = PLANS[STAGE_N];
+const FILES = {
+  6: ['hell-bumps', 'hell-rail', 'hell-moat', 'hell-hurdles', 'hell-bar', 'hell-fire-pit', 'hell-stairs', 'hell-mouth', 'hell-finish'],
+  9: ['junk-tires', 'junk-rail', 'junk-sludge', 'junk-appliances', 'junk-bar', 'junk-crane', 'junk-car', 'junk-magnet', 'junk-finish'],
+}[STAGE_N];
 const fmt = (c) => `{ x: ${c.x}${c.lead !== undefined ? `, lead: ${c.lead}` : ''}, act: '${c.act}' }`;
 
 // Rewrites the `cues:` line of each section file (src/levels/hell-*.js), x relative to the section.
@@ -83,7 +102,7 @@ function writeCues(cues) {
     const src = readFileSync(path, 'utf8');
     writeFileSync(path, /^ {2}cues: .*$/m.test(src) ? src.replace(/^ {2}cues: .*$/m, line) : src.replace(/^( {2}name: .*\n)/m, `$1${line}\n`));
   });
-  console.log('cues written to src/levels/hell-*.js');
+  console.log('cues written to the section files in src/levels/');
 }
 
 if (process.argv[1].endsWith('solve-rival.mjs')) {

@@ -96,11 +96,15 @@ const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
 const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
 // The stages with a sky of their own (a level flag each; the picture is drawXSky).
-const THEMED_SKIES = ['hell', 'frost', 'beach'];
+const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk'];
 // Boardwalk (Stage 8): a bright seaside sky, a strip of sea on the horizon, a pier with a Ferris wheel,
 // a row of palms, gulls and a few puffs of cloud.
 const BEACH_BANDS = [[70, 160, 250], [96, 180, 255], [126, 200, 255], [158, 218, 255], [190, 232, 255], [220, 244, 255]];
 const BEACH = { sea: [34, 130, 214], seaLit: [120, 200, 250], seaFar: [70, 156, 230], wheel: [226, 120, 150], pier: [118, 98, 120], palm: [28, 120, 70], palmLit: [78, 178, 96], trunk: [128, 88, 52], cloud: [255, 255, 255], cloudShade: [214, 232, 250] };
+// Junkyard (Stage 9): a hazy dust-brown sky, heaps of scrap standing on the horizon, a crane with a magnet and
+// smoke drifting up from a burning pile.
+const JUNK_BANDS = [[150, 120, 98], [168, 138, 108], [186, 154, 118], [204, 172, 130], [218, 188, 144], [230, 204, 160]];
+const JUNK = { far: [150, 124, 106], near: [112, 92, 82], crane: [92, 74, 66], smoke: [124, 108, 100], smokeLit: [150, 134, 122], rust: [132, 78, 52] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
@@ -591,6 +595,95 @@ export class Renderer {
         g.pset(x - 2, gy - 1 - flap, [255, 255, 255]);
         g.pset(x + 1, gy - flap, [255, 255, 255]);
         g.pset(x + 2, gy - 1 - flap, [255, 255, 255]);
+      }
+    }
+  }
+
+  // Junkyard's sky: dusty bands, a pale hazy sun, two layers of scrap heaps (cars and tyres sticking out of
+  // them), a crane with a magnet hanging from its arm, and smoke curling up from a far fire. Crows wheel about.
+  drawJunkSky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = JUNK_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, JUNK_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, JUNK_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, JUNK_BANDS[JUNK_BANDS.length - 1]);
+    const sx = 240 - shiftOf(0.01);
+    g.circle(sx, horizon - 100, 15, [236, 214, 176], true);
+    g.circle(sx, horizon - 100, 11, [250, 236, 200], true);
+    // a crane: a lattice mast with an arm out to one side, a cable and a magnet; far away, in the haze
+    const cs = shiftOf(0.07);
+    for (let cell = Math.floor(cs / 460) - 1; cell * 460 - cs < g.w + 80; cell++) {
+      const cx = cell * 460 - cs + 120 + (hash(cell, 5) % 60);
+      for (let py = 0; py < 70; py++) {
+        g.pset(cx, horizon - py, JUNK.crane);
+        g.pset(cx + 4, horizon - py, JUNK.crane);
+        if (py % 5 === 0) g.line(cx, horizon - py, cx + 4, horizon - py - 5, JUNK.crane);
+      }
+      g.fill(cx - 36, horizon - 74, 62, 3, JUNK.crane); // the arm
+      g.line(cx - 36, horizon - 74, cx + 2, horizon - 84, JUNK.crane);
+      const swing = Math.round(Math.sin(t * 0.9 + cell) * 2);
+      g.line(cx - 30, horizon - 71, cx - 30 + swing, horizon - 46, JUNK.crane);
+      g.fill(cx - 35 + swing, horizon - 46, 11, 5, JUNK.crane); // the magnet
+      g.fill(cx - 34 + swing, horizon - 41, 9, 2, JUNK.rust);
+    }
+    // scrap heaps: two jagged layers, with the odd car body or tyre ring poking out
+    for (const [ridge, factor, body, rise] of [[RIDGE_FAR, 0.12, JUNK.far, 12], [RIDGE_NEAR, 0.26, JUNK.near, 8]]) {
+      const T = ridge.length;
+      const s = shiftOf(factor);
+      for (let x = 0; x < g.w; x++) {
+        const k = (((x + s) % T) + T) % T;
+        const h = ridge[k] + rise;
+        g.fill(x, horizon - h, 1, h + 60, body);
+        if (hash(k, 7) % 9 === 0) g.pset(x, horizon - h + 1, JUNK.rust);
+        if (hash(k >> 2, 13) % 14 === 0 && h > 12) g.pset(x, horizon - h + 3, JUNK_BANDS[2]);
+      }
+      if (factor > 0.2) {
+        // tyre rings poking out of the near heap
+        for (let cell = Math.floor(s / 70) - 1; cell * 70 - s < g.w + 10; cell++) {
+          const hh = hash(cell, 77);
+          if (hh % 3) continue;
+          const tx = cell * 70 - s + (hh % 30);
+          const k = ((((tx + s) % T) + T) % T);
+          const ty = horizon - ridge[k] - rise + 3;
+          g.circle(tx, ty, 3, [30, 30, 36]);
+        }
+      }
+    }
+    // smoke: puffs rising and spreading from a smouldering pile, in a repeating tile
+    const ss = shiftOf(0.2);
+    const col = 520;
+    for (let i = 0; i < 4; i++) {
+      const h = hash(i, 31);
+      const baseX = 60 + (h % 380);
+      for (let tile = Math.floor(ss / col) - 1; tile * col + baseX - ss < g.w + 20; tile++) {
+        const px0 = tile * col + baseX - ss;
+        for (let k = 0; k < 5; k++) {
+          const ph = ((t * 0.12 + k / 6 + (h % 50) / 50) % 1);
+          const py = horizon - 14 - Math.round(ph * 90);
+          const px = px0 + Math.round(Math.sin(ph * 5 + i) * 4) + Math.round(ph * 14);
+          const r = 1 + Math.round(ph * 3);
+          g.circle(px, py, r, k % 2 ? JUNK.smoke : JUNK.smokeLit, true);
+        }
+      }
+    }
+    // crows: little black Vs wheeling about
+    const gs = shiftOf(0.16);
+    for (let i = 0; i < 3; i++) {
+      const h = hash(i, 23);
+      const gx = ((((h % 480) + Math.round(t * (6 + (h % 5)))) % 480) + 480) % 480;
+      const gy = horizon - 80 - ((h >> 8) % 40) + Math.round(Math.sin(t * 0.7 + i) * 3);
+      const flap = Math.floor(t * 3 + i) % 2;
+      for (let tile = Math.floor(gs / 480) - 1; tile * 480 + gx - gs < g.w + 8; tile++) {
+        const x = tile * 480 + gx - gs;
+        if (x < -8) continue;
+        for (const [dx, dy] of [[0, 0], [-1, -flap], [-2, -1 - flap], [1, -flap], [2, -1 - flap]]) g.pset(x + dx, gy + dy, [24, 20, 24]);
       }
     }
   }
@@ -1161,7 +1254,7 @@ export class Renderer {
         this.drawTable(opts.highScores, 62, -1, 11);
         tapY = 124;
       } else {
-        const title = game.rival ? 'HELLRIDE' : 'STICKFLIP';
+        const title = game.rival ? String(game.level.name || 'HELLRIDE').toUpperCase() : 'STICKFLIP';
         g.text(title, cx + 1, 39, ink, 4, 'center');
         g.text(title, cx, 38, red, 4, 'center');
         if (game.rival) g.text('FIRST TO THE FINISH WINS', cx, 70, red, 1, 'center');
