@@ -258,6 +258,15 @@ to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `ju
 (`Renderer.drawJunkSky`) with the `junk` palette; pieces are in `src/obstacles/junkyard.js`. The rival's cues:
 `node scripts/solve-rival.mjs 9 --write`. Timing windows: `node scripts/stage-windows.mjs 9`.
 
+**Stage 10: Haunted Night** (a graveyard, not a race). It opens once Stage 9 is finished, has its own top 5
+(`stage-10`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage10`). Tombstones (stones, a
+grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
+295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
+pumpkin, PUMPKIN HOP, then a standing coffin), Lantern Gates (jump through for GHOST GATE / WILL-O-WISP; head
+above the bar is a bail), Mausoleum (ride, grind, drop off or fly the roof) and Mansion Gate (a kicker, a 320-wide moat
+and an arched fence: GATE GRIND, or MANSION LEAP). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
+`haunt` palette; pieces are in `src/obstacles/haunted.js`. Timing windows: `node scripts/stage-windows.mjs 10`.
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
 off the kicker to clear the whole rail and land in the long bank that starts right
