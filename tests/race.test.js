@@ -294,3 +294,18 @@ test('the renderer draws Hellride (sky, rival, race bar, lose and ready screens)
   rd.draw(lost, 1 / 60, {});
   assert.ok(cells);
 });
+
+// The rival has his say once the race is decided (renderer.js draws the bubble).
+test('the rival says "YOU LOSE!" when he wins and "HOW‽" when he loses, and nothing mid-race', async () => {
+  const { rivalWords: say } = await import('../src/render/renderer.js');
+  const { glyph } = await import('../src/render/pixel.js');
+  assert.equal(say(new Game(hell)), null, 'before the start');
+  const lost = race(null).game;
+  assert.equal(lost.phase, 'beaten');
+  assert.equal(say(lost), 'YOU LOSE!');
+  const won = race(1.0).game;
+  assert.equal(won.phase, 'complete');
+  assert.equal(say(won), 'HOW‽');
+  assert.equal(say(new Game(STAGES[4])), null, 'no rival, no bubble');
+  assert.notEqual(glyph('‽'), glyph('?'), 'the pixel font has its own interrobang');
+});

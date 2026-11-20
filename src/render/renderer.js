@@ -11,6 +11,13 @@ import { squashOf, RAG_SIZE } from '../ragdoll.js';
 // nearest-neighbour so every pixel stays chunky.
 
 const S = 3;
+// What the rival says on the result screens (the race is decided), or null.
+export const rivalWords = (game) => {
+  if (!game.rival) return null;
+  if (game.phase === 'beaten') return 'YOU LOSE!';
+  if (game.phase === 'complete' && game.raceResult?.won) return 'HOW\u203d';
+  return null;
+};
 const P = (v) => Math.round(v / S);
 // A world position snapped to a whole game pixel. The rider's anchor is drawn
 // snapped, so its limbs round the same way every frame instead of shimmering.
@@ -248,6 +255,7 @@ export class Renderer {
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) {
       this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.rivalSay = rivalWords(game);
       this.drawSkater(game.rival.game, g, true, 'rival');
     } // behind the player
     this.drawSkater(game);
@@ -293,7 +301,9 @@ export class Renderer {
   // Camera position in pixels. Fixed-screen levels never move it.
   camera(game) {
     if (game.width <= WORLD.W) return { x: 0, y: 0 };
-    const s = game.sk;
+    // The race is decided: cut to the rival (at the finish line if he won), who says his piece.
+    const cut = rivalWords(game) ? game.rival.game.sk : null;
+    const s = cut || game.sk;
     const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
     // Look ahead the way the rider is going (back to the left after a quarter pipe).
@@ -318,6 +328,7 @@ export class Renderer {
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
     if (game.rival) {
       this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.rivalSay = rivalWords(game);
       this.drawSkater(game.rival.game, g, false, 'rival');
     }
     this.drawSkater(game, g, false); // same pose as this frame's game picture
@@ -1167,20 +1178,24 @@ export class Renderer {
     }
     drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
     // Junkyard's and Hellride's rivals: while one leads he now and then looks back over his shoulder and laughs, with a bubble ("HA!" / "FOOL!")
-    const laugh = who && (junk || game.level.hell) && this.rivalAhead && this.time % 7 > 5.6;
+    const laugh = who && (junk || game.level.hell) && (this.rivalSay === 'YOU LOSE!' || (this.rivalAhead && this.time % 7 > 5.6));
     drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
-    if (laugh) {
+    // Once the race is decided the rival says so: "YOU LOSE!" if he beat you, "HOW‽" if you beat him
+    const say = who && this.rivalSay;
+    if (laugh || say) {
       const h = base(poseOf.pose.head);
-      const x = Math.round(h.x) - 10;
-      const y = Math.round(h.y) - 22;
-      const word = junk ? 'HA!' : 'FOOL!';
-      const w = junk ? 22 : 33;
-      g.fill(x - 1, y - 1, w + 2, 13, PAL.ink);
-      g.fill(x, y, w, 11, [255, 255, 255]);
-      g.fill(x + 3, y + 11, 2, 2, PAL.ink); // the bubble's tail, pointing at his head
-      g.fill(x + 4, y + 11, 1, 1, [255, 255, 255]);
-      g.text(word, x + 2, y + 2, PAL.ink);
+      this.drawBubble(g, say || (junk ? 'HA!' : 'FOOL!'), Math.round(h.x) - 10, Math.round(h.y) - 22);
     }
+  }
+
+  // A pixel speech bubble with its tail pointing down at (x + 4, y + 13): white, black outline, black text.
+  drawBubble(g, word, x, y) {
+    const w = g.textWidth(word) + 4;
+    g.fill(x - 1, y - 1, w + 2, 13, PAL.ink);
+    g.fill(x, y, w, 11, [255, 255, 255]);
+    g.fill(x + 3, y + 11, 2, 2, PAL.ink); // the bubble's tail, pointing at his head
+    g.fill(x + 4, y + 11, 1, 1, [255, 255, 255]);
+    g.text(word, x + 2, y + 2, PAL.ink);
   }
 
   drawParticles() {
@@ -1387,13 +1402,15 @@ export class Renderer {
       }
       if (this.blink()) g.text('TAP TO START', cx, tapY, red, 1, 'center');
     } else if (game.phase === 'beaten') {
-      // the rival crossed the line first
-      g.text('RIVAL WINS!', cx + 1, 39, ink, 3, 'center');
-      g.text('RIVAL WINS!', cx, 38, red, 3, 'center');
-      g.text('SUCKS TO SUCK', cx, 64, red, 1, 'center');
-      const spot = loserSpot(cx);
+      // the rival crossed the line first. The camera has cut to him at the finish gantry on the right,
+      // so the words keep to the left of it.
+      const bx = game.width > WORLD.W ? 124 : cx;
+      g.text('RIVAL WINS!', bx + 1, 39, ink, 3, 'center');
+      g.text('RIVAL WINS!', bx, 38, red, 3, 'center');
+      g.text('SUCKS TO SUCK', bx, 64, red, 1, 'center');
+      const spot = loserSpot(bx);
       drawSticker(g, spot.x, spot.y, 'LOSER', spot.opts);
-      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO RACE AGAIN', cx, 82, red, 1, 'center');
+      if (game.phaseTime >= PHYS.BAIL_RETRY_DELAY && this.blink()) g.text('TAP TO RACE AGAIN', bx, 82, red, 1, 'center');
     } else if (game.phase === 'bailed') {
       g.text('BAIL!', cx + 1, 39, ink, 3, 'center');
       g.text('BAIL!', cx, 38, red, 3, 'center');
