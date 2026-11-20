@@ -237,7 +237,9 @@ can jump through for a bonus; head above the banner is a bail), Cabin Roof (olli
 snowy roof and ride, grind or fly it) and Crevasse Jump (a sled kicker, a 320-wide crevasse and an arched
 rail across it, ICE BRIDGE, or a charged ollie, CREVASSE JUMP; the summit flag stands past it). The look
 is `frost: true` (the sky, mountains, pines and snow in `Renderer.drawFrostSky`) with the `frost` palette,
-and the pieces are in `src/obstacles/frost.js`. Timing windows: `node scripts/stage-windows.mjs 7`.
+and the pieces are in `src/obstacles/frost.js`. Timing windows: `node scripts/stage-windows.mjs 7`. The rider is on a snow
+skate (`snowSkate: true` on the stage): a thick flat deck with upturned tips and no wheels or trucks, in every pose,
+flip, grind and bail. Only the drawing changes (`drawBoard`'s `wheels` flag); play is identical.
 
 **Stage 8: Boardwalk** (a sunny seaside promenade, not a race). It opens once Stage 7 is finished, has its
 own top 5 (`stage-8`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage8`). Sand

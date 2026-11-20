@@ -1078,7 +1078,7 @@ export class Renderer {
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -1151,7 +1151,7 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate);
     drawFigure(g, squashX(base, bodySx), poseOf.pose, look);
   }
 
