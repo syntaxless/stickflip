@@ -67,7 +67,7 @@ test('stage 9 is Junkyard: a nine-section race with turbo, its own palette and s
   assert.equal(junk.palette, 'junk');
   assert.equal(junk.junk, true);
   assert.equal(STAGES.indexOf(junk), 8, 'the stage after Boardwalk');
-  assert.equal(junk.gameCenter, false, 'needs stickflip.stage9 in App Store Connect first');
+  assert.notEqual(junk.gameCenter, false, 'has a Game Center board');
   assert.ok(new Game(junk).rival, 'a race has a rival');
 });
 

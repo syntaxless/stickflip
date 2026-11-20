@@ -50,7 +50,7 @@ test('stage 10 is Haunted Night: seven checkpoints, no race, no turbo, its own p
 
 test('stage 10 follows the others: opens after stage 9, has no Game Center board yet', () => {
   assert.equal(STAGES.indexOf(haunt), 9, 'the last stage so far');
-  assert.equal(haunt.gameCenter, false, 'needs stickflip.stage10 in App Store Connect first');
+  assert.notEqual(haunt.gameCenter, false, 'has a Game Center board');
 });
 
 test('stage 10 has named gap bonuses, each with a distinct id, 300+ points', () => {

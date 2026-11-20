@@ -51,7 +51,7 @@ test('stage 7 is Frostbite: seven checkpoints, no race, no turbo, its own palett
 
 test('stage 7 follows the others: opens after stage 6, has no Game Center board yet', () => {
   assert.equal(STAGES.indexOf(frost), 6, 'the stage after Hellride');
-  assert.equal(frost.gameCenter, false, 'needs stickflip.stage7 in App Store Connect first');
+  assert.notEqual(frost.gameCenter, false, 'has a Game Center board');
 });
 
 test('stage 7 has named gap bonuses, each with a distinct id, 250+ points', () => {

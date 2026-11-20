@@ -228,8 +228,7 @@ race rules are in `src/rival.js` and `Game` (`race`, `lose()`, `finish()`), the 
 `src/obstacles/hell.js`. Its Game Center board is `stickflip.stage6`.
 
 **Stage 7: Frostbite** (a frozen mountain pass, not a race; a first pass). It opens once Stage 6 is
-finished, has its own top 5 (`stage-7`) and no Game Center board yet (`gameCenter: false`; create
-`stickflip.stage7` in App Store Connect and drop the flag). Snowdrifts (three drifts, then a snowman to
+finished, has its own top 5 (`stage-7`) and Game Center board `stickflip.stage7`. Snowdrifts (three drifts, then a snowman to
 ollie), Sled Run (a wooden sled kicker and a snowy rail: SLED GRIND), Frozen Pond (a 295-wide pond with an ice
 floe in the middle: hop to the floe and hop off again, FLOE HOP, or charge one long jump, POND LEAP), Ice
 Hurdles (two ice blocks: ollie them, or grind either top edge), Slalom (an ice block, then a ski gate you
@@ -242,7 +241,7 @@ skate (`snowSkate: true` on the stage): a thick flat deck with upturned tips and
 flip, grind and bail. Only the drawing changes (`drawBoard`'s `wheels` flag); play is identical.
 
 **Stage 8: Boardwalk** (a sunny seaside promenade, not a race). It opens once Stage 7 is finished, has its
-own top 5 (`stage-8`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage8`). Sand
+own top 5 (`stage-8`) and Game Center board `stickflip.stage8`. Sand
 Dunes (two dunes, then a sandcastle), Pier Rail (a wooden kicker and a lifebuoy rail: BOARD GRIND), Sea Gap
 (a 260-wide gap over the sea with a rope rail across it: ROPE GRIND, or a charged ollie, SEA LEAP), Ice
 Cream Cart (ollie or grind the cart, then the deck chair: CART GRIND, CHAIR SLIDE), Bunting (a beach ball,
@@ -252,7 +251,7 @@ The look is `beach: true` (`Renderer.drawBeachSky`) with the `beach` palette; pi
 `src/obstacles/boardwalk.js`. Timing windows: `node scripts/stage-windows.mjs 8`.
 
 **Stage 9: Junkyard** (a second race, harder than Hellride). It opens once Stage 8 is finished, has its own
-top 5 (`stage-9`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage9`). Same
+top 5 (`stage-9`) and Game Center board `stickflip.stage9`. Same
 rival system as Hellride (`src/rival.js`), but its rival cruises at your pace and barely eases off
 (`race: { pace, easeOffMax }`), so you need the turbo from grinds and named gaps to win. Nine checkpoints: Tyre
 Heaps, Scrap Rail, Sludge Pit (a steel beam over toxic sludge), Fridge Row, Pipe Bar, Wrecking Ball (a crane's ball
@@ -261,7 +260,7 @@ to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `ju
 `node scripts/solve-rival.mjs 9 --write`. Timing windows: `node scripts/stage-windows.mjs 9`.
 
 **Stage 10: Haunted Night** (a graveyard, not a race). It opens once Stage 9 is finished, has its own top 5
-(`stage-10`) and no Game Center board yet (`gameCenter: false`; create `stickflip.stage10`). Tombstones (stones, a
+(`stage-10`) and Game Center board `stickflip.stage10`. Tombstones (stones, a
 grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
 295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
 pumpkin, PUMPKIN HOP, then a standing coffin), Lantern Gates (jump through for GHOST GATE / WILL-O-WISP; head
@@ -459,8 +458,8 @@ What's different in the app:
 
 - Always landscape, full screen, iPhone only.
 - Posts to the same Supabase leaderboard as the live site, plus one Game Center
-  leaderboard per stage: `stickflip.stage1` through `stickflip.stage5`, opened from a
-  GAME CENTER button on the high-score table. Create all five (score type: integer,
+  leaderboard per stage: `stickflip.stage1` through `stickflip.stage10`, opened from a
+  GAME CENTER button on the high-score table. Create all ten (score type: integer,
   high to low) in App Store Connect with exactly those IDs.
 - Haptics on pops, landings, grinds, bails and level clears (`src/native.js` +
   `ios/App/App/StickflipPlugin.swift`).

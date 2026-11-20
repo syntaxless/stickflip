@@ -51,7 +51,7 @@ test('stage 8 is Boardwalk: seven checkpoints, no race, no turbo, its own palett
 
 test('stage 8 follows the others: opens after stage 7, has no Game Center board yet', () => {
   assert.equal(STAGES.indexOf(beach), 7, 'the stage after Frostbite');
-  assert.equal(beach.gameCenter, false, 'needs stickflip.stage8 in App Store Connect first');
+  assert.notEqual(beach.gameCenter, false, 'has a Game Center board');
 });
 
 test('stage 8 has named gap bonuses, each with a distinct id, 300+ points', () => {

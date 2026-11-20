@@ -24,5 +24,4 @@ export default stage({
   camTop: 100,
   palette: 'junk',
   junk: true, // the sky and the ground
-  gameCenter: false, // no Game Center board yet: create stickflip.stage9 in App Store Connect, then drop this
 });
