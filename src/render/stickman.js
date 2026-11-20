@@ -67,7 +67,7 @@ function poly(g, tf, pts, color) {
 // `opts.k` scales the cap to the joints' units (1 = pose units); `opts.face` mirrors it
 // (-1 = facing left); `opts.tilt` turns it with a tumbling head (the ragdoll).
 // `opts.color` draws the limbs and head in another colour with a black outline (the
-// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds black eyes.
+// rival in Hellride is a pale skeleton), `opts.horns` adds two horns on the head and `opts.noCap` drops the cap and `opts.eyes` adds a black eye (`'laugh'` looks back, mouth open).
 export function drawFigure(g, tf, p, opts = {}) {
   const { k = 1, face = 1, tilt = 0, color = null, horns = null, noCap = false, eyes = false } = opts;
   const ct = Math.cos(tilt);
@@ -100,10 +100,16 @@ export function drawFigure(g, tf, p, opts = {}) {
     poly(g, tf, [cap(6, -4), cap(17 + PX, -4)], PAL.ink); // the peak, one pixel longer
   }
   if (eyes) {
-    // two black eyes on the front of the head, one pixel each
-    for (const ox of [-0.5, 1.5]) {
-      const e = tf(cap(ox * PX, -0.5 * PX));
-      g.pset(Math.round(e.x), Math.round(e.y), PAL.ink);
+    // a profile head shows one black eye at the front; `eyes: 'laugh'` turns it to look back over
+    // the shoulder, with an open mouth
+    const back = eyes === 'laugh';
+    const e = tf(cap((back ? -1.5 : 1.5) * PX, -0.5 * PX));
+    g.pset(Math.round(e.x), Math.round(e.y), PAL.ink);
+    if (back) {
+      for (const ox of [-2.5, -0.5]) {
+        const m = tf(cap(ox * PX, 2 * PX));
+        g.pset(Math.round(m.x), Math.round(m.y), PAL.ink);
+      }
     }
   }
   if (horns) {
@@ -121,7 +127,7 @@ export function drawFigure(g, tf, p, opts = {}) {
 // (0 = grip side up); seen side-on, so mid-flip it shows its width.
 // `wheels` false draws a snow skate instead (Frostbite): a thicker flat deck with upturned tips that sits
 // on the snow, no trucks and no wheels. The same poses, flips and spins.
-export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = true) {
+export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = true, wheelColor = PAL.wheel) {
   const c = Math.cos(spin);
   const thick = Math.abs(Math.sin(spin)) * 18;
   const y = -8 - lift;
@@ -137,7 +143,7 @@ export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = t
       for (const wx of [-16, 16]) {
         for (const wo of [-t + 2, t - 2]) {
           const w = tf(pt(wx, y + wo));
-          g.pset(w.x, w.y, PAL.wheel);
+          g.pset(w.x, w.y, wheelColor);
         }
       }
     }
@@ -152,7 +158,7 @@ export function drawBoard(g, tf, spin = 0, lift = 0, deck = PAL.deck, wheels = t
   // Wheels: 2x2 blocks under the trucks (on top when the board is upside down).
   for (const wx of [-16, 16]) {
     const w = tf(pt(wx, y + 5 * c));
-    g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, PAL.wheel); // sit on the ground, not in it
+    g.fill(Math.round(w.x) - 1, Math.round(w.y) - (c < 0 ? 0 : 1), 2, 2, wheelColor); // sit on the ground, not in it
   }
 }
 
