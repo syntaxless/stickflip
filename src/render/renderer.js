@@ -111,9 +111,10 @@ const HAUNT_BANDS = [[44, 30, 92], [62, 40, 110], [84, 52, 128], [112, 66, 140],
 const HAUNT = { hill: [74, 52, 104], hillNear: [54, 38, 82], tree: [38, 26, 60], stone: [64, 50, 92], win: [255, 214, 110], moon: [246, 242, 214], moonShade: [214, 208, 176], moonHalo: [150, 120, 190], mist: [190, 170, 214] };
 const RIVAL_LOOK = { color: [238, 232, 214], horns: [214, 30, 30] };
 const RIVAL_DECK = [140, 10, 24];
-// Junkyard's rival is acid green: a vivid toxic yellow-green figure (red horns kept) on a darker green deck.
-const JUNK_RIVAL_LOOK = { color: [157, 255, 0], horns: [214, 30, 30] };
-const JUNK_RIVAL_DECK = [92, 168, 0];
+// Junkyard's rival is acid green: a vivid toxic yellow-green figure with a plain bare head (no horns, no cap) on a darker green deck.
+const JUNK_RIVAL_LOOK = { color: [157, 255, 0], noCap: true, eyes: true };
+const JUNK_RIVAL_DECK = [204, 146, 76]; // a wood-coloured board ...
+const JUNK_RIVAL_WHEELS = [255, 105, 180]; // ... on pink wheels
 const EMBER = [[255, 236, 120], [255, 170, 40], [255, 110, 20]];
 const LAVA_BALLS = [[255, 236, 120], [255, 170, 40], [255, 110, 20], [214, 56, 14]];
 const SPECIAL_LIFE = 1.3; // seconds a special's banner lives
@@ -243,7 +244,10 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
-    if (game.rival) this.drawSkater(game.rival.game, g, true, 'rival'); // behind the player
+    if (game.rival) {
+      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.drawSkater(game.rival.game, g, true, 'rival');
+    } // behind the player
     this.drawSkater(game);
     this.drawParticles();
     g.ox = 0;
@@ -310,7 +314,10 @@ export class Renderer {
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
-    if (game.rival) this.drawSkater(game.rival.game, g, false, 'rival');
+    if (game.rival) {
+      this.rivalAhead = game.phase === 'playing' && game.rival.game.sk.x > game.sk.x + 30;
+      this.drawSkater(game.rival.game, g, false, 'rival');
+    }
     this.drawSkater(game, g, false); // same pose as this frame's game picture
     g.ox = 0;
     g.oy = 0;
@@ -1076,13 +1083,14 @@ export class Renderer {
     const junk = who && game.level.junk;
     const look = who ? (junk ? JUNK_RIVAL_LOOK : RIVAL_LOOK) : {};
     const deck = who ? (junk ? JUNK_RIVAL_DECK : RIVAL_DECK) : PAL.deck;
+    const wheelColor = junk ? JUNK_RIVAL_WHEELS : PAL.wheel;
     const poseOf = who ? this.rivalPose : this.pose;
     const squash = who ? 0 : this.squash;
 
     if (s.mode === 'bail' && s.bail) {
       const b = s.bail;
       // the board tumbles end over end on its own
-      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate);
+      drawBoard(g, makeTransform(snap(b.bx), b.by, b.bang), 0, 0, deck, !game.level.snowSkate, wheelColor);
       // the ragdoll's joints are in world units: 3 world units to a pixel
       const r = b.rag;
       const pts = r.pts;
@@ -1155,8 +1163,20 @@ export class Renderer {
         lift = 0;
       }
     }
-    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate);
-    drawFigure(g, squashX(base, bodySx), poseOf.pose, look);
+    drawBoard(g, squashX(base, boardSx), spin, lift, deck, !game.level.snowSkate, wheelColor);
+    // Junkyard's rival: while he leads he now and then looks back over his shoulder and laughs, with a bubble
+    const laugh = junk && this.rivalAhead && this.time % 7 > 5.6;
+    drawFigure(g, squashX(base, bodySx), poseOf.pose, laugh ? { ...look, eyes: 'laugh' } : look);
+    if (laugh) {
+      const h = base(poseOf.pose.head);
+      const x = Math.round(h.x) - 10;
+      const y = Math.round(h.y) - 22;
+      g.fill(x - 1, y - 1, 24, 13, PAL.ink);
+      g.fill(x, y, 22, 11, [255, 255, 255]);
+      g.fill(x + 3, y + 11, 2, 2, PAL.ink); // the bubble's tail, pointing at his head
+      g.fill(x + 4, y + 11, 1, 1, [255, 255, 255]);
+      g.text('HA!', x + 2, y + 2, PAL.ink);
+    }
   }
 
   drawParticles() {
