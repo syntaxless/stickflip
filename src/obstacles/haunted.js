@@ -283,27 +283,27 @@ export function vampireCoffin({ x, w = 210, h = 46 }) {
     ...block,
     type: 'vampire-coffin',
     draw(g, fx = {}) {
-      const open = fx.open ?? null;
+      const open = fx.open ?? null; // seconds since a grind knocked the lid loose, or null: still shut
       const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
       const feet = 4;
       const bot = b - feet;
       const cut = (py) => Math.max(0, 4 - Math.min(py - t, bot - py)); // the chamfered corners
+      const LID = 5; // rows of the lid slab on top
+      // the coffin box: dark inside once the lid is off
       for (let py = t; py <= bot; py++) {
         const c = cut(py);
-        g.fill(l + c, py, r - l + 1 - c * 2, 1, VAMP.body);
+        const lidRow = py < t + LID;
+        g.fill(l + c, py, r - l + 1 - c * 2, 1, open !== null && lidRow ? [14, 8, 22] : VAMP.body);
         g.pset(l + c - 1, py, ink);
         g.pset(r - c + 1, py, ink);
       }
-      g.line(l + 4, t - 1, r - 4, t - 1, ink);
       g.line(l + 4, bot + 1, r - 4, bot + 1, ink);
-      g.line(l + 4, t, r - 4, t, VAMP.lit);
       g.line(l + 4, bot, r - 4, bot, VAMP.dark);
-      g.line(l + 5, t + 2, r - 5, t + 2, VAMP.trim); // the trim, top and bottom
       g.line(l + 5, bot - 2, r - 5, bot - 2, VAMP.trim);
-      for (let px = l + 9; px < r - 6; px += 9) { g.pset(px, t + 5, VAMP.lit); g.pset(px, bot - 5, VAMP.lit); } // studs
+      for (let px = l + 9; px < r - 6; px += 9) g.pset(px, bot - 5, VAMP.lit); // studs
       // the skull plate
       const cx = (l + r) >> 1;
-      const my = (t + bot) >> 1;
+      const my = ((t + LID + bot) >> 1) + 1;
       g.fill(cx - 3, my - 3, 7, 5, VAMP.bone);
       g.fill(cx - 2, my + 2, 5, 2, VAMP.bone);
       g.fill(cx - 2, my - 2, 2, 2, VAMP.dark);
@@ -313,22 +313,32 @@ export function vampireCoffin({ x, w = 210, h = 46 }) {
       g.pset(cx + 1, my + 3, VAMP.dark);
       // two stone feet
       for (const fxp of [l + 8, r - 18]) { g.fill(fxp, bot + 1, 11, feet, STONE.body); g.rect(fxp - 1, bot + 1, 13, feet + 1, ink); g.line(fxp, bot + 1, fxp + 10, bot + 1, STONE.lit); }
+      // the lid: a slab with a lit top and a purple trim line. Shut, it sits flush on top; after the grind
+      // it slides off the far end (0.5s), tips over the edge and drops to the street.
+      const len = r - l - 7;
+      let lx = l + 4;
+      let ly = t;
+      if (open !== null) {
+        const slide = Math.min(1, open / 0.5);
+        lx += Math.round((1 - (1 - slide) * (1 - slide)) * (len * 0.8));
+        const fall = Math.max(0, open - 0.5);
+        ly = Math.min(b - LID + 1, t + Math.round(fall * fall * 150));
+      }
+      g.fill(lx, ly, len, LID, VAMP.body);
+      g.rect(lx - 1, ly - 1, len + 2, LID + 2, ink);
+      g.line(lx, ly, lx + len - 1, ly, VAMP.lit);
+      g.line(lx, ly + 2, lx + len - 1, ly + 2, VAMP.trim);
+      g.line(lx, ly + LID - 1, lx + len - 1, ly + LID - 1, VAMP.dark);
       if (open === null) return;
-      // the lid knocked ajar: a dark gap along the top with a red glow in it, the lid slid off to one side
-      const slide = Math.min(16, Math.round(open * 40));
-      g.fill(l + 6, t, 22 + slide, 3, [14, 8, 22]);
-      for (let px = l + 8; px < l + 6 + 22 + slide; px += 5) g.pset(px, t + 1, [255, 60, 60]);
-      g.fill(l + 28 + slide, t - 3, 30, 4, VAMP.body); // the lid, lifted
-      g.rect(l + 28 + slide, t - 4, 30, 5, ink);
-      g.line(l + 29 + slide, t - 3, l + 56 + slide, t - 3, VAMP.lit);
-      // the bats: a black flock that pours out of the gap, fans out and flaps away
+      // a red glow in the open box, then the bats pour out of it, fan out and flap away
+      if (open > 0.15) for (let px = l + 8; px < r - 8; px += 6) g.pset(px, t + 2, (fx.time || 0) * 6 % 2 < 1 ? [255, 60, 60] : [200, 30, 40]);
       for (let i = 0; i < BATS; i++) {
-        const tt = open - i * 0.07;
+        const tt = open - 0.3 - i * 0.07;
         if (tt <= 0) continue;
         const ang = -Math.PI * (0.18 + 0.64 * (((i * 7) % BATS) / (BATS - 1))); // upward fan
         const sp = 26 + (hash(i, 3) % 22);
-        const bx = Math.round(l + 14 + Math.cos(ang) * sp * tt + Math.sin(tt * 6 + i) * 2 + tt * 14);
-        const by = Math.round(t - 2 + Math.sin(ang) * sp * tt * 1.1);
+        const bx = Math.round(l + 20 + (i * 11) % 60 + Math.cos(ang) * sp * tt + Math.sin(tt * 6 + i) * 2);
+        const by = Math.round(t + 1 + Math.sin(ang) * sp * tt * 1.1);
         const up = Math.floor((fx.time || 0) * 9 + i) % 2 === 0;
         g.pset(bx, by, ink); g.pset(bx - 1, by, ink); g.pset(bx + 1, by, ink); // body
         const wy = up ? by - 1 : by + 1;
