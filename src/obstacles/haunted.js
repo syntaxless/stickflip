@@ -211,24 +211,21 @@ export function pumpkin({ x, w = 50, h = 36 }) {
       const flick = Math.floor(Math.max(0, fx.time || 0) * 4) % 3;
       const lit = GLOW[flick % 3];
       for (const ex of [cx - 5, cx + 3]) { g.fill(ex, cy - 3, 3, 3, lit); g.pset(ex + 1, cy - 4, lit); }
-      g.fill(cx - 3, cy + 2, 7, 2, lit);
-      g.pset(cx - 2, cy + 4, lit);
-      g.pset(cx + 2, cy + 4, lit);
+      // a zig zag mouth, like the rivals': a chunky glowing zigzag across the lower face
+      for (let i = 0; i < 11; i++) {
+        const my = cy + 1 + [0, 1, 2, 1][i % 4];
+        g.pset(cx - 5 + i, my, lit);
+        g.pset(cx - 5 + i, my + 1, lit);
+      }
     },
   };
 }
 
-// A coffin stood on its end, lid on. A tall solid hurdle: ollie it. Three looks to pick from (`kind`):
-// 'classic' a hexagonal wooden coffin with a brass cross, 'vampire' a black coffin with purple trim and a
-// skull plate, 'sarcophagus' a carved stone one with moss.
-const COFFIN_KINDS = {
-  classic: { body: WOOD.a, lit: WOOD.lit, dark: WOOD.dark, panel: WOOD.b, trim: [190, 150, 90], mark: [236, 214, 150], taper: 0.62 },
-  vampire: { body: [52, 42, 70], lit: [104, 90, 140], dark: [24, 18, 38], panel: [36, 28, 52], trim: [150, 90, 200], mark: [236, 232, 240], taper: 0.62 },
-  sarcophagus: { body: STONE.body, lit: STONE.lit, dark: STONE.dark, panel: [124, 120, 140], trim: STONE.lit, mark: STONE.dark, taper: 0.9 },
-};
-export function coffinUp({ x, w = 57, h = 86, kind = 'classic' }) {
+// A coffin stood on its end, lid on: dark wood, a brass cross, handle studs. A tall solid hurdle: ollie it.
+const COFFIN = { body: WOOD.a, lit: WOOD.lit, dark: WOOD.dark, panel: WOOD.b, trim: [190, 150, 90], mark: [236, 214, 150], taper: 0.62 };
+export function coffinUp({ x, w = 57, h = 86 }) {
   const block = box({ x, w, h });
-  const C = COFFIN_KINDS[kind] || COFFIN_KINDS.classic;
+  const C = COFFIN;
   return {
     ...block,
     type: 'coffin-up',
@@ -236,11 +233,9 @@ export function coffinUp({ x, w = 57, h = 86, kind = 'classic' }) {
       const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
       const cx = (l + r) >> 1;
       const full = (r - l) / 2;
-      // half-width per row: a hexagon (narrow head, wide shoulders, tapering foot); the sarcophagus is a
-      // squarer slab with a rounded top
+      // half-width per row: a hexagon (narrow head, wide shoulders, tapering foot)
       const halfAt = (py) => {
         const k = (py - t) / (b - t);
-        if (kind === 'sarcophagus') return Math.round(full * (k < 0.06 ? 0.7 + k * 5 : 1));
         if (k < 0.2) return Math.round(full * (0.55 + (k / 0.2) * 0.45));
         return Math.round(full * (1 - ((k - 0.2) / 0.8) * (1 - C.taper)));
       };
@@ -266,26 +261,82 @@ export function coffinUp({ x, w = 57, h = 86, kind = 'classic' }) {
       g.rect(cx - ph - 1, pt - 1, ph * 2 + 3, pb - pt + 2, C.dark);
       g.line(cx - ph, pt, cx + ph, pt, C.dark);
       g.line(cx - ph, pb - 1, cx + ph, pb - 1, C.lit);
-      if (kind === 'vampire') {
-        // a skull plate and a pair of fangs, trim studs down the sides
-        g.fill(cx - 3, pt + 5, 7, 6, C.mark);
-        g.fill(cx - 2, pt + 11, 5, 2, C.mark);
-        g.fill(cx - 2, pt + 7, 2, 2, C.dark);
-        g.fill(cx + 1, pt + 7, 2, 2, C.dark);
-        g.pset(cx, pt + 10, C.dark);
-        g.pset(cx - 1, pt + 12, C.dark);
-        g.pset(cx + 1, pt + 12, C.dark);
-        for (const sy of [pt + 18, pt + 24]) { g.pset(cx - ph + 2, sy, C.trim); g.pset(cx + ph - 2, sy, C.trim); }
-        g.line(cx - ph + 1, pb - 4, cx + ph - 1, pb - 4, C.trim);
-      } else {
-        // a cross on the lid
-        g.line(cx, pt + 3, cx, pt + 14, C.mark);
-        g.line(cx - 3, pt + 6, cx + 3, pt + 6, C.mark);
-        g.line(cx + 1, pt + 4, cx + 1, pt + 14, C.dark);
-        if (kind === 'sarcophagus') for (let px = l + 2; px < r - 2; px += 5) g.pset(px, b - 2, STONE.moss);
-        else for (const hy of [pt + 20, pt + 26]) { g.pset(cx - ph + 1, hy, C.trim); g.pset(cx + ph - 1, hy, C.trim); } // handle studs
-      }
+      // a cross on the lid
+      g.line(cx, pt + 3, cx, pt + 14, C.mark);
+      g.line(cx - 3, pt + 6, cx + 3, pt + 6, C.mark);
+      g.line(cx + 1, pt + 4, cx + 1, pt + 14, C.dark);
+      for (const hy of [pt + 20, pt + 26]) { g.pset(cx - ph + 1, hy, C.trim); g.pset(cx + ph - 1, hy, C.trim); } // handle studs
       g.line(l + 2, b, r - 2, b, ink);
+    },
+  };
+}
+
+// The vampire's coffin, lying on its side on two stone feet at the very end of the stage: black with purple
+// trim and a skull plate. Ollie up on it and grind its edge: the grind knocks the lid ajar and a flock of
+// bats pours out (see Game.startGrind and `fx.open`). Roll off the end and drop back to the street.
+const VAMP = { body: [52, 42, 70], lit: [104, 90, 140], dark: [24, 18, 38], trim: [150, 90, 200], bone: [236, 232, 240] };
+const BATS = 11;
+export function vampireCoffin({ x, w = 210, h = 46 }) {
+  const block = box({ x, w, h, landable: true, grindable: true });
+  block.surfaces[0].opens = true;
+  return {
+    ...block,
+    type: 'vampire-coffin',
+    draw(g, fx = {}) {
+      const open = fx.open ?? null;
+      const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
+      const feet = 4;
+      const bot = b - feet;
+      const cut = (py) => Math.max(0, 4 - Math.min(py - t, bot - py)); // the chamfered corners
+      for (let py = t; py <= bot; py++) {
+        const c = cut(py);
+        g.fill(l + c, py, r - l + 1 - c * 2, 1, VAMP.body);
+        g.pset(l + c - 1, py, ink);
+        g.pset(r - c + 1, py, ink);
+      }
+      g.line(l + 4, t - 1, r - 4, t - 1, ink);
+      g.line(l + 4, bot + 1, r - 4, bot + 1, ink);
+      g.line(l + 4, t, r - 4, t, VAMP.lit);
+      g.line(l + 4, bot, r - 4, bot, VAMP.dark);
+      g.line(l + 5, t + 2, r - 5, t + 2, VAMP.trim); // the trim, top and bottom
+      g.line(l + 5, bot - 2, r - 5, bot - 2, VAMP.trim);
+      for (let px = l + 9; px < r - 6; px += 9) { g.pset(px, t + 5, VAMP.lit); g.pset(px, bot - 5, VAMP.lit); } // studs
+      // the skull plate
+      const cx = (l + r) >> 1;
+      const my = (t + bot) >> 1;
+      g.fill(cx - 3, my - 3, 7, 5, VAMP.bone);
+      g.fill(cx - 2, my + 2, 5, 2, VAMP.bone);
+      g.fill(cx - 2, my - 2, 2, 2, VAMP.dark);
+      g.fill(cx + 1, my - 2, 2, 2, VAMP.dark);
+      g.pset(cx, my, VAMP.dark);
+      g.pset(cx - 1, my + 3, VAMP.dark);
+      g.pset(cx + 1, my + 3, VAMP.dark);
+      // two stone feet
+      for (const fxp of [l + 8, r - 18]) { g.fill(fxp, bot + 1, 11, feet, STONE.body); g.rect(fxp - 1, bot + 1, 13, feet + 1, ink); g.line(fxp, bot + 1, fxp + 10, bot + 1, STONE.lit); }
+      if (open === null) return;
+      // the lid knocked ajar: a dark gap along the top with a red glow in it, the lid slid off to one side
+      const slide = Math.min(16, Math.round(open * 40));
+      g.fill(l + 6, t, 22 + slide, 3, [14, 8, 22]);
+      for (let px = l + 8; px < l + 6 + 22 + slide; px += 5) g.pset(px, t + 1, [255, 60, 60]);
+      g.fill(l + 28 + slide, t - 3, 30, 4, VAMP.body); // the lid, lifted
+      g.rect(l + 28 + slide, t - 4, 30, 5, ink);
+      g.line(l + 29 + slide, t - 3, l + 56 + slide, t - 3, VAMP.lit);
+      // the bats: a black flock that pours out of the gap, fans out and flaps away
+      for (let i = 0; i < BATS; i++) {
+        const tt = open - i * 0.07;
+        if (tt <= 0) continue;
+        const ang = -Math.PI * (0.18 + 0.64 * (((i * 7) % BATS) / (BATS - 1))); // upward fan
+        const sp = 26 + (hash(i, 3) % 22);
+        const bx = Math.round(l + 14 + Math.cos(ang) * sp * tt + Math.sin(tt * 6 + i) * 2 + tt * 14);
+        const by = Math.round(t - 2 + Math.sin(ang) * sp * tt * 1.1);
+        const up = Math.floor((fx.time || 0) * 9 + i) % 2 === 0;
+        g.pset(bx, by, ink); g.pset(bx - 1, by, ink); g.pset(bx + 1, by, ink); // body
+        const wy = up ? by - 1 : by + 1;
+        g.pset(bx - 2, wy, ink); g.pset(bx - 3, up ? wy - 1 : wy + 1, ink);
+        g.pset(bx + 2, wy, ink); g.pset(bx + 3, up ? wy - 1 : wy + 1, ink);
+        g.pset(bx, by - 1, ink); // ears
+        g.pset(bx - 1, by - 1, [255, 60, 60]);
+      }
     },
   };
 }
