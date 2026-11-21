@@ -5,5 +5,5 @@ import { pumpkin, coffinUp } from '../obstacles/index.js';
 export default {
   id: 'haunt-patch',
   name: 'Pumpkin Patch',
-  obstacles: [pumpkin({ x: 330, w: 99, h: 36 }), coffinUp({ x: 720 })],
+  obstacles: [pumpkin({ x: 330, w: 60, h: 48 }), coffinUp({ x: 720 })],
 };

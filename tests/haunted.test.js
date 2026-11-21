@@ -37,9 +37,9 @@ function play(i, acts, tmax = 6) {
 }
 const cleared = (r, i) => r.g.phase === 'complete' || r.g.sk.x > (i === 6 ? haunt.width - 40 : haunt.sections[i + 1].x + 150);
 
-test('stage 10 is Haunted Night: seven checkpoints, no race, no turbo, its own palette and sky', () => {
+test('stage 10 is Graveyard: seven checkpoints, no race, no turbo, its own palette and sky', () => {
   assert.equal(haunt.id, 'stage-10');
-  assert.equal(haunt.name, 'Haunted Night');
+  assert.equal(haunt.name, 'Graveyard');
   assert.deepEqual(names, ['Tombstones', 'Crypt Fence', 'Open Grave', 'Pumpkin Patch', 'Lantern Gates', 'Mausoleum', 'Mansion Gate']);
   assert.equal(haunt.race, undefined);
   assert.ok(!haunt.boost);

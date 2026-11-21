@@ -13,7 +13,7 @@ import gate from '../levels/haunt-gate.js';
 // Opens when Stage 9 is finished, like every other stage.
 export default stage({
   id: 'stage-10',
-  name: 'Haunted Night',
+  name: 'Graveyard',
   sections: [stones, crypt, grave, patch, gates, tomb, gate],
   starts: { 2: 10 }, // 10-3 spawns further back: more run-up to the open grave
   camTop: 100,

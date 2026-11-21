@@ -54,21 +54,34 @@ export function gravestone({ x, w = 40, h = 40, kind = 'round' }) {
         for (let py = t + 8; py < b - 6; py += 5) g.pset(cx, py, STONE.dark); // carved lines
         return;
       }
-      // rounded headstone
-      for (let py = t; py <= b; py++) {
-        const rad = (r - l) / 2;
-        const inset = py - t < rad ? Math.round(rad - Math.sqrt(Math.max(0, rad * rad - (rad - (py - t)) * (rad - (py - t))))) : 0;
+      // rounded headstone: a slab with a small arched top on a low base, a carved cross inside (no lettering
+      // to run off the edge of a narrow stone)
+      const baseH = 2;
+      const ARCH = [3, 2, 1, 1, 0]; // how far in each of the top rows sits
+      const half = (r - l) / 2;
+      let prev = ARCH[0];
+      for (let py = t; py <= b - baseH; py++) {
+        const inset = Math.min(ARCH[py - t] ?? 0, Math.floor(half) - 2);
         g.fill(l + inset, py, r - l + 1 - inset * 2, 1, STONE.body);
-        g.pset(l + inset - 1, py, ink);
-        g.pset(r - inset + 1, py, ink);
+        for (let o = Math.min(inset, prev); o <= Math.max(inset, prev); o++) { g.pset(l + o - 1, py, ink); g.pset(r - o + 1, py, ink); }
         g.pset(l + inset, py, STONE.lit);
+        if (py - t > 1) g.pset(l + inset + 1, py, STONE.lit);
         g.pset(r - inset, py, STONE.dark);
+        if (py - t > 1) g.pset(r - inset - 1, py, STONE.dark);
+        prev = inset;
       }
-      g.line(l + 3, t - 1, r - 3, t - 1, ink);
-      g.line(l + 4, t, r - 4, t, STONE.lit);
-      g.text('RIP', cx, t + 5, STONE.dark, 1, 'center');
-      for (let px = l + 2; px < r - 1; px += 4) g.pset(px, b - 1, STONE.moss);
-      g.line(l, b, r, b, ink);
+      g.line(l + ARCH[0], t - 1, r - ARCH[0], t - 1, ink);
+      g.line(l + ARCH[0] + 1, t, r - ARCH[0] - 1, t, STONE.lit);
+      // the carved cross, in the upper half of the slab
+      const cy = t + 4;
+      g.fill(cx, cy, 1, 5, STONE.dark);
+      g.fill(cx - 1, cy + 1, 3, 1, STONE.dark);
+      // the base: one pixel wider each side, a darker foot
+      g.fill(l - 1, b - baseH + 1, r - l + 3, baseH, STONE.dark);
+      g.line(l - 1, b - baseH + 1, r + 1, b - baseH + 1, STONE.body);
+      g.rect(l - 2, b - baseH, r - l + 5, baseH + 1, ink);
+      g.line(l - 1, b - baseH + 1, r + 1, b - baseH + 1, STONE.body);
+      for (let px = l + 1; px < r; px += 4) g.pset(px, b - baseH - 1, STONE.moss); // a little moss at the foot
     },
   };
 }
@@ -205,29 +218,73 @@ export function pumpkin({ x, w = 50, h = 36 }) {
   };
 }
 
-// A coffin stood on its end, lid on. A tall solid hurdle: ollie it.
-export function coffinUp({ x, w = 46, h = 86 }) {
+// A coffin stood on its end, lid on. A tall solid hurdle: ollie it. Three looks to pick from (`kind`):
+// 'classic' a hexagonal wooden coffin with a brass cross, 'vampire' a black coffin with purple trim and a
+// skull plate, 'sarcophagus' a carved stone one with moss.
+const COFFIN_KINDS = {
+  classic: { body: WOOD.a, lit: WOOD.lit, dark: WOOD.dark, panel: WOOD.b, trim: [190, 150, 90], mark: [236, 214, 150], taper: 0.62 },
+  vampire: { body: [52, 42, 70], lit: [104, 90, 140], dark: [24, 18, 38], panel: [36, 28, 52], trim: [150, 90, 200], mark: [236, 232, 240], taper: 0.62 },
+  sarcophagus: { body: STONE.body, lit: STONE.lit, dark: STONE.dark, panel: [124, 120, 140], trim: STONE.lit, mark: STONE.dark, taper: 0.9 },
+};
+export function coffinUp({ x, w = 57, h = 86, kind = 'classic' }) {
   const block = box({ x, w, h });
+  const C = COFFIN_KINDS[kind] || COFFIN_KINDS.classic;
   return {
     ...block,
     type: 'coffin-up',
     draw(g) {
       const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
       const cx = (l + r) >> 1;
-      for (let py = t; py <= b; py++) {
+      const full = (r - l) / 2;
+      // half-width per row: a hexagon (narrow head, wide shoulders, tapering foot); the sarcophagus is a
+      // squarer slab with a rounded top
+      const halfAt = (py) => {
         const k = (py - t) / (b - t);
-        const half = Math.round((r - l) / 2 * (k < 0.22 ? 0.55 + k * 2 : k < 0.45 ? 1 : 0.8));
-        g.fill(cx - half, py, half * 2 + 1, 1, WOOD.a);
-        g.pset(cx - half - 1, py, ink);
-        g.pset(cx + half + 1, py, ink);
-        g.pset(cx - half, py, WOOD.lit);
-        g.pset(cx + half, py, WOOD.dark);
+        if (kind === 'sarcophagus') return Math.round(full * (k < 0.06 ? 0.7 + k * 5 : 1));
+        if (k < 0.2) return Math.round(full * (0.55 + (k / 0.2) * 0.45));
+        return Math.round(full * (1 - ((k - 0.2) / 0.8) * (1 - C.taper)));
+      };
+      let prev = halfAt(t);
+      for (let py = t; py <= b; py++) {
+        const half = halfAt(py);
+        g.fill(cx - half, py, half * 2 + 1, 1, C.body);
+        // the outline follows the slanted sides without gaps
+        for (let o = Math.min(half, prev) + 1; o <= Math.max(half, prev) + 1; o++) { g.pset(cx - o, py, ink); g.pset(cx + o, py, ink); }
+        g.pset(cx - half, py, C.lit);
+        g.pset(cx - half + 1, py, C.lit);
+        g.pset(cx + half, py, C.dark);
+        g.pset(cx + half - 1, py, C.dark);
+        prev = half;
       }
-      g.line(cx - 3, t - 1, cx + 3, t - 1, ink);
-      g.line(cx - 1, t + 10, cx + 1, t + 10, [220, 200, 150]); // a cross on the lid
-      g.line(cx, t + 6, cx, t + 16, [220, 200, 150]);
-      g.line(cx - 4, t + 11, cx + 4, t + 11, [220, 200, 150]);
-      for (const hy of [t + 22, t + 34]) g.fill(cx - 8, hy, 3, 2, [190, 170, 110]); // handles
+      g.line(cx - halfAt(t), t - 1, cx + halfAt(t), t - 1, ink);
+      g.line(cx - halfAt(t) + 1, t, cx + halfAt(t) - 1, t, C.lit);
+      // the lid panel, inset with a bevel
+      const pt = t + 6;
+      const pb = b - 6;
+      const ph = Math.max(3, halfAt(pb) - 3);
+      g.fill(cx - ph, pt, ph * 2 + 1, pb - pt, C.panel);
+      g.rect(cx - ph - 1, pt - 1, ph * 2 + 3, pb - pt + 2, C.dark);
+      g.line(cx - ph, pt, cx + ph, pt, C.dark);
+      g.line(cx - ph, pb - 1, cx + ph, pb - 1, C.lit);
+      if (kind === 'vampire') {
+        // a skull plate and a pair of fangs, trim studs down the sides
+        g.fill(cx - 3, pt + 5, 7, 6, C.mark);
+        g.fill(cx - 2, pt + 11, 5, 2, C.mark);
+        g.fill(cx - 2, pt + 7, 2, 2, C.dark);
+        g.fill(cx + 1, pt + 7, 2, 2, C.dark);
+        g.pset(cx, pt + 10, C.dark);
+        g.pset(cx - 1, pt + 12, C.dark);
+        g.pset(cx + 1, pt + 12, C.dark);
+        for (const sy of [pt + 18, pt + 24]) { g.pset(cx - ph + 2, sy, C.trim); g.pset(cx + ph - 2, sy, C.trim); }
+        g.line(cx - ph + 1, pb - 4, cx + ph - 1, pb - 4, C.trim);
+      } else {
+        // a cross on the lid
+        g.line(cx, pt + 3, cx, pt + 14, C.mark);
+        g.line(cx - 3, pt + 6, cx + 3, pt + 6, C.mark);
+        g.line(cx + 1, pt + 4, cx + 1, pt + 14, C.dark);
+        if (kind === 'sarcophagus') for (let px = l + 2; px < r - 2; px += 5) g.pset(px, b - 2, STONE.moss);
+        else for (const hy of [pt + 20, pt + 26]) { g.pset(cx - ph + 1, hy, C.trim); g.pset(cx + ph - 1, hy, C.trim); } // handle studs
+      }
       g.line(l + 2, b, r - 2, b, ink);
     },
   };
@@ -292,7 +349,13 @@ export function mausoleum({ x, w = 230, h = 70 }) {
       const flick = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(dx + 4, b - 6, 4, 4, flick ? [120, 255, 170] : [80, 200, 130]);
       for (const cxp of [dx - 8, dx + dw + 6]) { g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.rect(cxp - 1, t + 5, 5, b - t - 4, ink); g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.line(cxp + 2, t + 6, cxp + 2, b - 1, STONE.dark); }
-      g.text('RIP', (l + r) >> 1, t + 6, STONE.dark, 1, 'center');
+      // a plain lintel plaque over the door with a small carved cross (no lettering over the brickwork)
+      const lx = dx - 4;
+      g.fill(lx, t + 6, dw + 8, 6, STONE.lit);
+      g.rect(lx - 1, t + 5, dw + 10, 8, ink);
+      g.fill(lx, t + 6, dw + 8, 6, STONE.lit);
+      g.fill(lx + (dw + 8) / 2 - 1, t + 7, 1, 4, STONE.dark);
+      g.fill(lx + (dw + 8) / 2 - 2, t + 8, 3, 1, STONE.dark);
       // a gargoyle crouched on the far corner of the roof
       const gx = r - 8;
       g.fill(gx, t - 9, 6, 6, STONE.body);
