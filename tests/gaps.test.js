@@ -115,6 +115,7 @@ const SCRIPTS = {
   'roof-drop-tomb': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
   'gate-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'mansion-leap': [[0, 'cs'], [0.56, 'cr']],
+  'vampire-grind': [[0.5, 'tap'], [0.5, 'hold']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

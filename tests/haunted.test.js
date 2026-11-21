@@ -37,10 +37,10 @@ function play(i, acts, tmax = 6) {
 }
 const cleared = (r, i) => r.g.phase === 'complete' || r.g.sk.x > (i === 6 ? haunt.width - 40 : haunt.sections[i + 1].x + 150);
 
-test('stage 10 is Haunted Night: seven checkpoints, no race, no turbo, its own palette and sky', () => {
+test('stage 10 is Graveyard: eight checkpoints, no race, no turbo, its own palette and sky', () => {
   assert.equal(haunt.id, 'stage-10');
-  assert.equal(haunt.name, 'Haunted Night');
-  assert.deepEqual(names, ['Tombstones', 'Crypt Fence', 'Open Grave', 'Pumpkin Patch', 'Lantern Gates', 'Mausoleum', 'Mansion Gate']);
+  assert.equal(haunt.name, 'Graveyard');
+  assert.deepEqual(names, ['Tombstones', 'Crypt Fence', 'Open Grave', 'Pumpkin Patch', 'Lantern Gates', 'Mausoleum', 'Mansion Gate', 'Vampire Coffin']);
   assert.equal(haunt.race, undefined);
   assert.ok(!haunt.boost);
   assert.equal(haunt.palette, 'haunt');
@@ -128,6 +128,14 @@ test('10-7: lock the arched fence over the moat, or fly it with a charged ollie;
   assert.ok(play(6, [[0.5, 'tap'], [0.5, 'hold']], 5).earned.includes('GATE GRIND'));
   assert.ok(play(6, [[0, 'cs'], [0.56, 'cr']], 5).earned.includes('MANSION LEAP'));
   assert.ok(!play(6, [[0.5, 'tap']], 5).earned.includes('MANSION LEAP'));
+});
+
+test('10-8: grinding the vampire coffin knocks its lid off and lets the bats out; ollie it or roll into it and you bail', () => {
+  const r = play(7, [[0.5, 'tap'], [0.5, 'hold']], 5);
+  assert.ok(r.earned.includes('VAMPIRE GRIND'), JSON.stringify(r.earned));
+  assert.notEqual(r.g.openAt, null, 'the lid came off');
+  assert.equal(play(7, [], 4).g.phase, 'bailed');
+  assert.equal(play(7, [[0.45, 'tap']], 5).g.openAt, null, 'riding it without a grind leaves the lid on');
 });
 
 const stubCtx = { createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} };

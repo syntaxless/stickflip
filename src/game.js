@@ -117,6 +117,7 @@ export class Game {
     this.recent = []; // names of the last SCORE.RUN_WINDOW banked tricks of the run (for the repeat decay)
     this.gapsDone = new Set(); // named gaps earned this attempt
     this.boomAt = null; // when the cop car blew up (game time), or null
+    this.openAt = null; // when a grind knocked the vampire coffin's lid off (game time), or null
     this.dumpAt = null; // when the dump truck's bed was grounded and began to dump (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
@@ -794,6 +795,11 @@ export class Game {
     if (surface.dumps && this.dumpAt === null) {
       this.dumpAt = this.time;
       this.emit('dump');
+    }
+    // a surface that opens (the vampire's coffin) lets its bats out the moment you lock on
+    if (surface.opens && this.openAt === null) {
+      this.openAt = this.time;
+      this.emit('open');
     }
     this.boost(BOOST.GRIND);
     this.checkGaps('grind');
