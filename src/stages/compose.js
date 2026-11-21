@@ -61,10 +61,14 @@ export function shift(o, dx, lo = -Infinity, hi = Infinity) {
     })
     .filter((m) => m.x2 > m.x1);
   const px = dx / 3; // world units to pixels
+  const surfaces = o.surfaces.map((s) => moveX(s, dx));
+  // A low solid's `slappy` is its own top surface: it moves with the surface it came from (left behind
+  // in section coordinates it threw a slappying rider back to the start of the stage).
+  const moved = new Map(o.surfaces.map((s, i) => [s, surfaces[i]]));
   return {
     ...o,
-    surfaces: o.surfaces.map((s) => moveX(s, dx)),
-    solids: o.solids.map((r) => ({ ...r, x: r.x + dx })),
+    surfaces,
+    solids: o.solids.map((r) => ({ ...r, x: r.x + dx, ...(r.slappy && { slappy: moved.get(r.slappy) ?? moveX(r.slappy, dx) }) })),
     hazards: (o.hazards || []).map((h) => ({ ...h, x: h.x + dx })),
     ground,
     // regions the renderer looks up by world x (splash on a bail, dirt-filled gap)
