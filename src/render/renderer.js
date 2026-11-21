@@ -255,7 +255,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt });
     if (game.rival) {
       this.trackRival(game);
       this.rivalSay = rivalWords(game);
@@ -342,7 +342,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt });
     if (game.rival) {
       this.trackRival(game);
       this.rivalSay = rivalWords(game);
@@ -1490,11 +1490,20 @@ export class Renderer {
   // A box like the level-complete one, for the end-of-run screens.
   panel(title, top = 38, height = 136) {
     const g = this.g;
-    const [x, y, w, h] = [56, top, 208, height];
+    // The box grows to fit a long title (with a little padding either side); if even the widest box
+    // can't hold it at the big size, the title drops to the small size instead of running off.
+    const PAD = 10;
+    const maxW = RES.W - 8;
+    let scale = 2;
+    if (g.textWidth(title, 2) + PAD * 2 > maxW) scale = 1;
+    const w = Math.min(maxW, Math.max(208, g.textWidth(title, scale) + PAD * 2));
+    const x = Math.round((RES.W - w) / 2);
+    const y = top;
+    const h = height;
     g.fill(x, y, w, h, ink);
     g.rect(x, y, w, h, red);
     g.rect(x + 2, y + 2, w - 4, h - 4, red);
-    g.text(title, RES.W / 2, y + 9, red, 2, 'center');
+    g.text(title, RES.W / 2, y + (scale === 2 ? 9 : 12), red, scale, 'center');
     return { x, y, w, h };
   }
 

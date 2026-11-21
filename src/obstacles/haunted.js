@@ -54,21 +54,34 @@ export function gravestone({ x, w = 40, h = 40, kind = 'round' }) {
         for (let py = t + 8; py < b - 6; py += 5) g.pset(cx, py, STONE.dark); // carved lines
         return;
       }
-      // rounded headstone
-      for (let py = t; py <= b; py++) {
-        const rad = (r - l) / 2;
-        const inset = py - t < rad ? Math.round(rad - Math.sqrt(Math.max(0, rad * rad - (rad - (py - t)) * (rad - (py - t))))) : 0;
+      // rounded headstone: a slab with a small arched top on a low base, a carved cross inside (no lettering
+      // to run off the edge of a narrow stone)
+      const baseH = 2;
+      const ARCH = [3, 2, 1, 1, 0]; // how far in each of the top rows sits
+      const half = (r - l) / 2;
+      let prev = ARCH[0];
+      for (let py = t; py <= b - baseH; py++) {
+        const inset = Math.min(ARCH[py - t] ?? 0, Math.floor(half) - 2);
         g.fill(l + inset, py, r - l + 1 - inset * 2, 1, STONE.body);
-        g.pset(l + inset - 1, py, ink);
-        g.pset(r - inset + 1, py, ink);
+        for (let o = Math.min(inset, prev); o <= Math.max(inset, prev); o++) { g.pset(l + o - 1, py, ink); g.pset(r - o + 1, py, ink); }
         g.pset(l + inset, py, STONE.lit);
+        if (py - t > 1) g.pset(l + inset + 1, py, STONE.lit);
         g.pset(r - inset, py, STONE.dark);
+        if (py - t > 1) g.pset(r - inset - 1, py, STONE.dark);
+        prev = inset;
       }
-      g.line(l + 3, t - 1, r - 3, t - 1, ink);
-      g.line(l + 4, t, r - 4, t, STONE.lit);
-      g.text('RIP', cx, t + 5, STONE.dark, 1, 'center');
-      for (let px = l + 2; px < r - 1; px += 4) g.pset(px, b - 1, STONE.moss);
-      g.line(l, b, r, b, ink);
+      g.line(l + ARCH[0], t - 1, r - ARCH[0], t - 1, ink);
+      g.line(l + ARCH[0] + 1, t, r - ARCH[0] - 1, t, STONE.lit);
+      // the carved cross, in the upper half of the slab
+      const cy = t + 4;
+      g.fill(cx, cy, 1, 5, STONE.dark);
+      g.fill(cx - 1, cy + 1, 3, 1, STONE.dark);
+      // the base: one pixel wider each side, a darker foot
+      g.fill(l - 1, b - baseH + 1, r - l + 3, baseH, STONE.dark);
+      g.line(l - 1, b - baseH + 1, r + 1, b - baseH + 1, STONE.body);
+      g.rect(l - 2, b - baseH, r - l + 5, baseH + 1, ink);
+      g.line(l - 1, b - baseH + 1, r + 1, b - baseH + 1, STONE.body);
+      for (let px = l + 1; px < r; px += 4) g.pset(px, b - baseH - 1, STONE.moss); // a little moss at the foot
     },
   };
 }
@@ -198,37 +211,142 @@ export function pumpkin({ x, w = 50, h = 36 }) {
       const flick = Math.floor(Math.max(0, fx.time || 0) * 4) % 3;
       const lit = GLOW[flick % 3];
       for (const ex of [cx - 5, cx + 3]) { g.fill(ex, cy - 3, 3, 3, lit); g.pset(ex + 1, cy - 4, lit); }
-      g.fill(cx - 3, cy + 2, 7, 2, lit);
-      g.pset(cx - 2, cy + 4, lit);
-      g.pset(cx + 2, cy + 4, lit);
+      // a zig zag mouth, like the rivals': a chunky glowing zigzag across the lower face
+      for (let i = 0; i < 11; i++) {
+        const my = cy + 1 + [0, 1, 2, 1][i % 4];
+        g.pset(cx - 5 + i, my, lit);
+        g.pset(cx - 5 + i, my + 1, lit);
+      }
     },
   };
 }
 
-// A coffin stood on its end, lid on. A tall solid hurdle: ollie it.
-export function coffinUp({ x, w = 46, h = 86 }) {
+// A coffin stood on its end, lid on: dark wood, a brass cross, handle studs. A tall solid hurdle: ollie it.
+const COFFIN = { body: WOOD.a, lit: WOOD.lit, dark: WOOD.dark, panel: WOOD.b, trim: [190, 150, 90], mark: [236, 214, 150], taper: 0.62 };
+export function coffinUp({ x, w = 57, h = 86 }) {
   const block = box({ x, w, h });
+  const C = COFFIN;
   return {
     ...block,
     type: 'coffin-up',
     draw(g) {
       const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
       const cx = (l + r) >> 1;
-      for (let py = t; py <= b; py++) {
+      const full = (r - l) / 2;
+      // half-width per row: a hexagon (narrow head, wide shoulders, tapering foot)
+      const halfAt = (py) => {
         const k = (py - t) / (b - t);
-        const half = Math.round((r - l) / 2 * (k < 0.22 ? 0.55 + k * 2 : k < 0.45 ? 1 : 0.8));
-        g.fill(cx - half, py, half * 2 + 1, 1, WOOD.a);
-        g.pset(cx - half - 1, py, ink);
-        g.pset(cx + half + 1, py, ink);
-        g.pset(cx - half, py, WOOD.lit);
-        g.pset(cx + half, py, WOOD.dark);
+        if (k < 0.2) return Math.round(full * (0.55 + (k / 0.2) * 0.45));
+        return Math.round(full * (1 - ((k - 0.2) / 0.8) * (1 - C.taper)));
+      };
+      let prev = halfAt(t);
+      for (let py = t; py <= b; py++) {
+        const half = halfAt(py);
+        g.fill(cx - half, py, half * 2 + 1, 1, C.body);
+        // the outline follows the slanted sides without gaps
+        for (let o = Math.min(half, prev) + 1; o <= Math.max(half, prev) + 1; o++) { g.pset(cx - o, py, ink); g.pset(cx + o, py, ink); }
+        g.pset(cx - half, py, C.lit);
+        g.pset(cx - half + 1, py, C.lit);
+        g.pset(cx + half, py, C.dark);
+        g.pset(cx + half - 1, py, C.dark);
+        prev = half;
       }
-      g.line(cx - 3, t - 1, cx + 3, t - 1, ink);
-      g.line(cx - 1, t + 10, cx + 1, t + 10, [220, 200, 150]); // a cross on the lid
-      g.line(cx, t + 6, cx, t + 16, [220, 200, 150]);
-      g.line(cx - 4, t + 11, cx + 4, t + 11, [220, 200, 150]);
-      for (const hy of [t + 22, t + 34]) g.fill(cx - 8, hy, 3, 2, [190, 170, 110]); // handles
+      g.line(cx - halfAt(t), t - 1, cx + halfAt(t), t - 1, ink);
+      g.line(cx - halfAt(t) + 1, t, cx + halfAt(t) - 1, t, C.lit);
+      // the lid panel, inset with a bevel
+      const pt = t + 6;
+      const pb = b - 6;
+      const ph = Math.max(3, halfAt(pb) - 3);
+      g.fill(cx - ph, pt, ph * 2 + 1, pb - pt, C.panel);
+      g.rect(cx - ph - 1, pt - 1, ph * 2 + 3, pb - pt + 2, C.dark);
+      g.line(cx - ph, pt, cx + ph, pt, C.dark);
+      g.line(cx - ph, pb - 1, cx + ph, pb - 1, C.lit);
+      // a cross on the lid
+      g.line(cx, pt + 3, cx, pt + 14, C.mark);
+      g.line(cx - 3, pt + 6, cx + 3, pt + 6, C.mark);
+      g.line(cx + 1, pt + 4, cx + 1, pt + 14, C.dark);
+      for (const hy of [pt + 20, pt + 26]) { g.pset(cx - ph + 1, hy, C.trim); g.pset(cx + ph - 1, hy, C.trim); } // handle studs
       g.line(l + 2, b, r - 2, b, ink);
+    },
+  };
+}
+
+// The vampire's coffin, lying on its side on two stone feet at the very end of the stage: black with purple
+// trim and a skull plate. Ollie up on it and grind its edge: the grind knocks the lid ajar and a flock of
+// bats pours out (see Game.startGrind and `fx.open`). Roll off the end and drop back to the street.
+const VAMP = { body: [52, 42, 70], lit: [104, 90, 140], dark: [24, 18, 38], trim: [150, 90, 200], bone: [236, 232, 240] };
+const BATS = 11;
+export function vampireCoffin({ x, w = 210, h = 46 }) {
+  const block = box({ x, w, h, landable: true, grindable: true });
+  block.surfaces[0].opens = true;
+  return {
+    ...block,
+    type: 'vampire-coffin',
+    draw(g, fx = {}) {
+      const open = fx.open ?? null; // seconds since a grind knocked the lid loose, or null: still shut
+      const [l, t, r, b] = [P(x), P(G - h), P(x + w) - 1, P(G) - 1];
+      const feet = 4;
+      const bot = b - feet;
+      const cut = (py) => Math.max(0, 4 - Math.min(py - t, bot - py)); // the chamfered corners
+      const LID = 5; // rows of the lid slab on top
+      // the coffin box: dark inside once the lid is off
+      for (let py = t; py <= bot; py++) {
+        const c = cut(py);
+        const lidRow = py < t + LID;
+        g.fill(l + c, py, r - l + 1 - c * 2, 1, open !== null && lidRow ? [14, 8, 22] : VAMP.body);
+        g.pset(l + c - 1, py, ink);
+        g.pset(r - c + 1, py, ink);
+      }
+      g.line(l + 4, bot + 1, r - 4, bot + 1, ink);
+      g.line(l + 4, bot, r - 4, bot, VAMP.dark);
+      g.line(l + 5, bot - 2, r - 5, bot - 2, VAMP.trim);
+      for (let px = l + 9; px < r - 6; px += 9) g.pset(px, bot - 5, VAMP.lit); // studs
+      // the skull plate
+      const cx = (l + r) >> 1;
+      const my = ((t + LID + bot) >> 1) + 1;
+      g.fill(cx - 3, my - 3, 7, 5, VAMP.bone);
+      g.fill(cx - 2, my + 2, 5, 2, VAMP.bone);
+      g.fill(cx - 2, my - 2, 2, 2, VAMP.dark);
+      g.fill(cx + 1, my - 2, 2, 2, VAMP.dark);
+      g.pset(cx, my, VAMP.dark);
+      g.pset(cx - 1, my + 3, VAMP.dark);
+      g.pset(cx + 1, my + 3, VAMP.dark);
+      // two stone feet
+      for (const fxp of [l + 8, r - 18]) { g.fill(fxp, bot + 1, 11, feet, STONE.body); g.rect(fxp - 1, bot + 1, 13, feet + 1, ink); g.line(fxp, bot + 1, fxp + 10, bot + 1, STONE.lit); }
+      // the lid: a slab with a lit top and a purple trim line. Shut, it sits flush on top; after the grind
+      // it slides off the far end (0.5s), tips over the edge and drops to the street.
+      const len = r - l - 7;
+      let lx = l + 4;
+      let ly = t;
+      if (open !== null) {
+        const slide = Math.min(1, open / 0.5);
+        lx += Math.round((1 - (1 - slide) * (1 - slide)) * (len * 0.8));
+        const fall = Math.max(0, open - 0.5);
+        ly = Math.min(b - LID + 1, t + Math.round(fall * fall * 150));
+      }
+      g.fill(lx, ly, len, LID, VAMP.body);
+      g.rect(lx - 1, ly - 1, len + 2, LID + 2, ink);
+      g.line(lx, ly, lx + len - 1, ly, VAMP.lit);
+      g.line(lx, ly + 2, lx + len - 1, ly + 2, VAMP.trim);
+      g.line(lx, ly + LID - 1, lx + len - 1, ly + LID - 1, VAMP.dark);
+      if (open === null) return;
+      // a red glow in the open box, then the bats pour out of it, fan out and flap away
+      if (open > 0.15) for (let px = l + 8; px < r - 8; px += 6) g.pset(px, t + 2, (fx.time || 0) * 6 % 2 < 1 ? [255, 60, 60] : [200, 30, 40]);
+      for (let i = 0; i < BATS; i++) {
+        const tt = open - 0.3 - i * 0.07;
+        if (tt <= 0) continue;
+        const ang = -Math.PI * (0.18 + 0.64 * (((i * 7) % BATS) / (BATS - 1))); // upward fan
+        const sp = 26 + (hash(i, 3) % 22);
+        const bx = Math.round(l + 20 + (i * 11) % 60 + Math.cos(ang) * sp * tt + Math.sin(tt * 6 + i) * 2);
+        const by = Math.round(t + 1 + Math.sin(ang) * sp * tt * 1.1);
+        const up = Math.floor((fx.time || 0) * 9 + i) % 2 === 0;
+        g.pset(bx, by, ink); g.pset(bx - 1, by, ink); g.pset(bx + 1, by, ink); // body
+        const wy = up ? by - 1 : by + 1;
+        g.pset(bx - 2, wy, ink); g.pset(bx - 3, up ? wy - 1 : wy + 1, ink);
+        g.pset(bx + 2, wy, ink); g.pset(bx + 3, up ? wy - 1 : wy + 1, ink);
+        g.pset(bx, by - 1, ink); // ears
+        g.pset(bx - 1, by - 1, [255, 60, 60]);
+      }
     },
   };
 }
@@ -292,7 +410,13 @@ export function mausoleum({ x, w = 230, h = 70 }) {
       const flick = Math.floor(Math.max(0, fx.time || 0) * 3) % 2;
       g.fill(dx + 4, b - 6, 4, 4, flick ? [120, 255, 170] : [80, 200, 130]);
       for (const cxp of [dx - 8, dx + dw + 6]) { g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.rect(cxp - 1, t + 5, 5, b - t - 4, ink); g.fill(cxp, t + 6, 3, b - t - 5, STONE.lit); g.line(cxp + 2, t + 6, cxp + 2, b - 1, STONE.dark); }
-      g.text('RIP', (l + r) >> 1, t + 6, STONE.dark, 1, 'center');
+      // a plain lintel plaque over the door with a small carved cross (no lettering over the brickwork)
+      const lx = dx - 4;
+      g.fill(lx, t + 6, dw + 8, 6, STONE.lit);
+      g.rect(lx - 1, t + 5, dw + 10, 8, ink);
+      g.fill(lx, t + 6, dw + 8, 6, STONE.lit);
+      g.fill(lx + (dw + 8) / 2 - 1, t + 7, 1, 4, STONE.dark);
+      g.fill(lx + (dw + 8) / 2 - 2, t + 8, 3, 1, STONE.dark);
       // a gargoyle crouched on the far corner of the roof
       const gx = r - 8;
       g.fill(gx, t - 9, 6, 6, STONE.body);

@@ -259,7 +259,7 @@ to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `ju
 (`Renderer.drawJunkSky`) with the `junk` palette; pieces are in `src/obstacles/junkyard.js`. The rival's cues:
 `node scripts/solve-rival.mjs 9 --write`. Timing windows: `node scripts/stage-windows.mjs 9`.
 
-**Stage 10: Haunted Night** (a graveyard, not a race). It opens once Stage 9 is finished, has its own top 5
+**Stage 10: Graveyard** (a graveyard, not a race). It opens once Stage 9 is finished, has its own top 5
 (`stage-10`) and Game Center board `stickflip.stage10`. Tombstones (stones, a
 grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
 295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
