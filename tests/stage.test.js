@@ -855,7 +855,7 @@ test('the Mega Ramp unlocks at 50,000 points once every stage is beaten', async 
   const { readFile } = await import('node:fs/promises');
   const src = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
   assert.match(src, /const SECRET_SCORE = 50000;/);
-  assert.match(src, /run\.total\(\) >= SECRET_SCORE && allBeaten\(\)/);
+  assert.match(src, /run\.total\(\) >= SECRET_SCORE && allCleared\(\)/);
 });
 
 // ------------------------------------------------------------ stage 2: Bench, Four Stair, Kicker Rail

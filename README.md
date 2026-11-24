@@ -277,7 +277,7 @@ off the kicker to clear the whole rail and land in the long bank that starts rig
 at its end, or grind over the curve and pop (or roll) off the end into the bank.
 Finish with a big air out of a tall quarter pipe; riding back down ends it. Finish
 any stage with at least 50,000 points in that run (`SECRET_SCORE` in `src/main.js`,
-before the no-bail bonus), after every stage has been beaten at least once, and you're taken there; its score counts toward the run
+before the no-bail bonus), after beating every stage at least once, and you're taken there; its score counts toward the run
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a moon
 look: a navy sky with white stars, a pixel Earth and two layers of far mountains, grey cratered rock for the

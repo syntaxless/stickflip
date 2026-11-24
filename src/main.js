@@ -90,8 +90,9 @@ const refreshScores = (stageIndex = runStage) =>
     .then((list) => (highScores = list));
 
 // The Mega Ramp: finish any stage with at least SECRET_SCORE points in
-// that one run (before the no-bail bonus), after you have beaten every stage
-// at least once, and you're taken there. It counts toward the run total like a stage.
+// that one run (before the no-bail bonus), once every stage has been beaten
+// at least once, and you're taken there. It counts toward the run total
+// like a stage.
 const SECRET_INDEX = LEVELS.length;
 const SECRET_SCORE = 50000;
 
@@ -112,14 +113,16 @@ const openNextStage = (i) => {
   unlocked = Math.max(unlocked, Math.min(LEVELS.length, i + 2));
   store.set('stages-unlocked', unlocked);
 };
-// Which stages have been beaten at least once (the Mega Ramp needs them all). Saves from before this
-// was tracked had to beat every stage below the highest one open, so those count.
-const beaten = new Set([...store.get('stages-beaten', []), ...Array.from({ length: unlocked - 1 }, (_, i) => i)]);
-const markBeaten = (i) => {
-  beaten.add(i);
-  store.set('stages-beaten', [...beaten]);
+// Stages beaten at least once (saved). Older saves had no list, but opening
+// stage N means stages 1..N-1 were finished, so seed from that.
+const cleared = new Set(
+  store.get('stages-cleared', Array.from({ length: unlocked - 1 }, (_, i) => i)).filter((i) => i >= 0 && i < LEVELS.length)
+);
+const markCleared = (i) => {
+  cleared.add(i);
+  store.set('stages-cleared', [...cleared]);
 };
-const allBeaten = () => LEVELS.every((_, i) => beaten.has(i));
+const allCleared = () => LEVELS.every((_, i) => cleared.has(i));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -276,9 +279,9 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
 function nextScreen() {
   if (levelIndex !== SECRET_INDEX) {
     openNextStage(levelIndex);
-    markBeaten(levelIndex);
+    markCleared(levelIndex);
   }
-  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE && allBeaten()) unlockSecret();
+  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE && allCleared()) unlockSecret();
   else finishRun();
 }
 
