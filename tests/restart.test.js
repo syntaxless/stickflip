@@ -229,6 +229,12 @@ test('bail and retry: a bail after crossing into the next section restarts there
       g.sk.y = g.groundAt(g.sk.x).y;
       g.update(STEP * 3);
       if (g.phase !== 'playing') continue; // fell into something right on the edge; nothing to check
+      if (secs[i + 1].requires) {
+        assert.equal(g.checkpoint.index, i, `${st.id}: without the ${secs[i + 1].requires} the next section is no checkpoint`);
+        g.stake = true; // with it in hand, it is
+        g.section = i;
+        g.update(STEP * 3);
+      }
       assert.equal(g.checkpoint.index, i + 1, `${st.id} section ${i + 1} -> ${i + 2}`);
       bailAndRetry(g, st, i + 1, `${st.id} crossing into ${i + 2}`, 'slam');
     }

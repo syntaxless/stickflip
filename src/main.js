@@ -113,7 +113,6 @@ const openNextStage = (i) => {
   unlocked = Math.max(unlocked, Math.min(LEVELS.length, i + 2));
   store.set('stages-unlocked', unlocked);
 };
-
 // Stages beaten at least once (saved). Older saves had no list, but opening
 // stage N means stages 1..N-1 were finished, so seed from that.
 const cleared = new Set(
@@ -619,7 +618,7 @@ function frame(now) {
       saveRun();
     }
     if (e.type === 'race') raceWon = { lead: e.lead, bonus: e.bonus };
-    if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score });
+    if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score, ...(e.stake && { stake: true }) });
     if (e.type === 'complete') {
       run.recordClear(slotOf(levelIndex), e.score);
       saveRun();

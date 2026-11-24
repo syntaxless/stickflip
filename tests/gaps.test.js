@@ -110,9 +110,6 @@ const SCRIPTS = {
   'coffin-hop': [[0.57, 'tap']], // a plain ollie lands on the coffin lid in the middle of the grave
   'grave-leap': [[0, 'cs'], [0.71, 'cr']],
   'pumpkin-hop': [[0.28, 'tap']], // land on the pumpkin and ride off its far side
-  'tomb-grind': [[0.5, 'tap'], [0.5, 'hold']],
-  'tomb-leap': [[0, 'cs'], [0.6, 'cr']],
-  'roof-drop-tomb': [[0.4, 'tap'], [1.4, 'tap']], // up onto the roof, then ollie off its end
   'gate-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'mansion-leap': [[0, 'cs'], [0.56, 'cr']],
   'vampire-grind': [[0.5, 'tap'], [0.5, 'hold']],

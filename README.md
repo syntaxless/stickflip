@@ -264,8 +264,11 @@ to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `ju
 grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
 295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
 pumpkin, PUMPKIN HOP, then a standing coffin), Lantern Gates (jump through for GHOST GATE / WILL-O-WISP; head
-above the bar is a bail), Mausoleum (ride, grind, drop off or fly the roof) and Mansion Gate (a kicker, a 320-wide moat
-and an arched fence: GATE GRIND, or MANSION LEAP). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
+above the bar is a bail), Vampire Coffin (grind it and the lid slides off, bats fly out: VAMPIRE GRIND), Mansion Gate (a kicker, a 320-wide moat
+and an arched fence: GATE GRIND, or MANSION LEAP; a wooden stake lies on the arch, grind the rail to pick it up) and
+Vampire Boss (10-8: he paces the street and bites from the side; land on his head with the stake and it is driven
+in: VAMPIRE SLAYER. Without the stake he throws you off, and a bail sends you back to 10-7 to fetch it, because 10-8
+only becomes the checkpoint with the stake in hand: `requires: 'stake'`). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
 `haunt` palette; pieces are in `src/obstacles/haunted.js`. Timing windows: `node scripts/stage-windows.mjs 10`.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
