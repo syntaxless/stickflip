@@ -597,9 +597,9 @@ export function vampireBoss({ x, amp = 90, period = 4.4 }) {
       }
       // the stake in his head (a hit) and blood
       if (dead !== null && dead < 1.0) {
-        // driven in at an angle: the butt up and to the right, the point buried in his heart; it drops as he crumbles
+        // driven in at an angle: the butt up and toward the rider (he skates in from the left), the point buried in his heart; it drops as he crumbles
         const fall = dead < 0.45 ? 0 : Math.min(ground - 4 - (hy + 14), Math.round((dead - 0.45) ** 2 * 120));
-        drawStakeAngled(g, cx + 11, hy + 9 + fall, cx - 1, hy + 19 + fall);
+        drawStakeAngled(g, cx - 11, hy + 9 + fall, cx + 1, hy + 19 + fall);
         if (dead < 0.12) g.fill(cx - 6, hy - 1, 13, 12, [255, 255, 255]); // the flash of the hit
       }
       if (dead !== null) drawBats(g, cx, t + 4, dead, time);
