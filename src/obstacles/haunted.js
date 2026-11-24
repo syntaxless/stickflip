@@ -597,7 +597,9 @@ export function vampireBoss({ x, amp = 90, period = 4.4 }) {
       }
       // the stake in his head (a hit) and blood
       if (dead !== null && dead < 1.0) {
-        drawStakeUp(g, cx, Math.min(ground - 4, hy + 3 + Math.round(dead * dead * 70))); // it drops as he crumbles
+        // driven in at an angle: the butt up and to the right, the point buried in his heart; it drops as he crumbles
+        const fall = dead < 0.45 ? 0 : Math.min(ground - 4 - (hy + 14), Math.round((dead - 0.45) ** 2 * 120));
+        drawStakeAngled(g, cx + 11, hy + 9 + fall, cx - 1, hy + 19 + fall);
         if (dead < 0.12) g.fill(cx - 6, hy - 1, 13, 12, [255, 255, 255]); // the flash of the hit
       }
       if (dead !== null) drawBats(g, cx, t + 4, dead, time);
@@ -610,6 +612,22 @@ export function vampireBoss({ x, amp = 90, period = 4.4 }) {
       }
     },
   };
+}
+
+// a wooden stake from its butt (bx, by) to its point (tx, ty), black-outlined; the last pixels are buried
+function drawStakeAngled(g, bx, by, tx, ty) {
+  const n = Math.max(Math.abs(tx - bx), Math.abs(ty - by));
+  const at = (i) => [Math.round(bx + ((tx - bx) * i) / n), Math.round(by + ((ty - by) * i) / n)];
+  for (let i = 0; i <= n - 2; i++) {
+    const [x, y] = at(i);
+    g.fill(x - 1, y - 1, 3, 3, ink);
+  }
+  for (let i = 0; i <= n - 2; i++) {
+    const [x, y] = at(i);
+    g.pset(x, y, i < 2 ? STK.dark : STK.body);
+    g.pset(x, y - 1, STK.lit);
+  }
+  g.pset(...at(0), STK.tip); // the cut end
 }
 
 // a wooden stake standing point-down (driven into something), its butt up
