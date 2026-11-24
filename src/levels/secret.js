@@ -5,7 +5,7 @@ import { WORLD } from '../config.js';
 // Drop in from a high deck and go fast up the kicker at a raised rainbow
 // rail. Ollie off the kicker to clear the whole rail and land in the long,
 // easy bank just past its end, or grind it and pop off the end into the
-// bank. Then finish with a big air out of a tall quarter pipe. Unlocked by a 25,000-point run on any stage (see SECRET_SCORE in main.js). On the moon: grey cratered rock under a navy, starry sky.
+// bank. Then finish with a big air out of a tall quarter pipe. Unlocked by a 50,000-point run on any stage once every stage has been beaten (see SECRET_SCORE in main.js). On the moon: grey cratered rock under a navy, starry sky.
 const G = WORLD.GROUND; // the street at the bottom
 const DECK = G - 300; // the rail deck
 const START = G - 500; // the drop-in deck

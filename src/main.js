@@ -90,10 +90,11 @@ const refreshScores = (stageIndex = runStage) =>
     .then((list) => (highScores = list));
 
 // The Mega Ramp: finish any stage with at least SECRET_SCORE points in
-// that one run (before the no-bail bonus) and you're taken there. It counts
-// toward the run total like a stage.
+// that one run (before the no-bail bonus), once every stage has been beaten
+// at least once, and you're taken there. It counts toward the run total
+// like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_SCORE = 25000;
+const SECRET_SCORE = 50000;
 
 // A run is one stage, plus the Mega Ramp when it's earned: two slots.
 const RUN_SLOTS = 2;
@@ -112,6 +113,17 @@ const openNextStage = (i) => {
   unlocked = Math.max(unlocked, Math.min(LEVELS.length, i + 2));
   store.set('stages-unlocked', unlocked);
 };
+
+// Stages beaten at least once (saved). Older saves had no list, but opening
+// stage N means stages 1..N-1 were finished, so seed from that.
+const cleared = new Set(
+  store.get('stages-cleared', Array.from({ length: unlocked - 1 }, (_, i) => i)).filter((i) => i >= 0 && i < LEVELS.length)
+);
+const markCleared = (i) => {
+  cleared.add(i);
+  store.set('stages-cleared', [...cleared]);
+};
+const allCleared = () => LEVELS.every((_, i) => cleared.has(i));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -266,8 +278,11 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
 
 // A stage is done: on to the Mega Ramp after a big enough run, or end the run.
 function nextScreen() {
-  if (levelIndex !== SECRET_INDEX) openNextStage(levelIndex);
-  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE) unlockSecret();
+  if (levelIndex !== SECRET_INDEX) {
+    openNextStage(levelIndex);
+    markCleared(levelIndex);
+  }
+  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE && allCleared()) unlockSecret();
   else finishRun();
 }
 
