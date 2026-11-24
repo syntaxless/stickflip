@@ -264,8 +264,11 @@ to jump through), Car Roof, Magnet Jump and the Finish Straight. The look is `ju
 grave mound, an obelisk), Crypt Fence (a coffin-lid kicker and an iron fence rail: FENCE GRIND), Open Grave (a
 295-wide grave with a coffin lid in it: COFFIN HOP, or a charged ollie, GRAVE LEAP), Pumpkin Patch (land on the
 pumpkin, PUMPKIN HOP, then a standing coffin), Lantern Gates (jump through for GHOST GATE / WILL-O-WISP; head
-above the bar is a bail), Mausoleum (ride, grind, drop off or fly the roof) and Mansion Gate (a kicker, a 320-wide moat
-and an arched fence: GATE GRIND, or MANSION LEAP). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
+above the bar is a bail), Vampire Coffin (grind it and the lid slides off, bats fly out: VAMPIRE GRIND), Mansion Gate (a kicker, a 320-wide moat
+and an arched fence: GATE GRIND, or MANSION LEAP; a wooden stake lies on the arch, grind the rail to pick it up) and
+Vampire Boss (10-8: he paces the street and bites from the side; land on his head with the stake and it is driven
+in: VAMPIRE SLAYER. Without the stake he throws you off, and a bail sends you back to 10-7 to fetch it, because 10-8
+only becomes the checkpoint with the stake in hand: `requires: 'stake'`). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
 `haunt` palette; pieces are in `src/obstacles/haunted.js`. Timing windows: `node scripts/stage-windows.mjs 10`.
 
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
@@ -273,8 +276,8 @@ a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ol
 off the kicker to clear the whole rail and land in the long bank that starts right
 at its end, or grind over the curve and pop (or roll) off the end into the bank.
 Finish with a big air out of a tall quarter pipe; riding back down ends it. Finish
-any stage with at least 25,000 points in that run (`SECRET_SCORE` in `src/main.js`,
-before the no-bail bonus) and you're taken there; its score counts toward the run
+any stage with at least 50,000 points in that run (`SECRET_SCORE` in `src/main.js`,
+before the no-bail bonus), after beating every stage at least once, and you're taken there; its score counts toward the run
 total. A blinking SECRET LEVEL UNLOCKED! banner (SECRET LEVEL AHEAD! on later runs)
 leads into it, its HUD says BONUS: MEGA RAMP, and it has its own look: a moon
 look: a navy sky with white stars, a pixel Earth and two layers of far mountains, grey cratered rock for the

@@ -92,6 +92,12 @@ export class Game {
     // replaces part of it with its own segments { x1, x2, y, landable, bail }.
     // Segments can be sloped ({ y1, y2 }: banks) or curved ({ qp }: a quarter pipe).
     this.groundSegs = level.obstacles.flatMap((o) => o.ground || []);
+    // Things to pick up (the vampire-slaying stake): { kind, x, y }.
+    this.pickups = level.obstacles.flatMap((o) => (o.pickup ? [o.pickup] : []));
+    // A boss (the vampire): paces to and fro on the street, deadly from the side, killed by a stomp on his head
+    // with the stake in hand. `boss` is { x, amp, period, hw, bw }; the head surface and body solid move with him.
+    const bo = level.obstacles.find((o) => o.boss);
+    this.boss = bo ? { ...bo.boss, head: this.surfaces.find((f) => f.bossHead), body: bo.solids.find((r) => r.boss) } : null;
     // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
     this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
@@ -118,6 +124,11 @@ export class Game {
     this.gapsDone = new Set(); // named gaps earned this attempt
     this.boomAt = null; // when the cop car blew up (game time), or null
     this.openAt = null; // when a grind knocked the vampire coffin's lid off (game time), or null
+    this.stake = !!cp.stake || !!this.sections[cp.index]?.requires; // carrying the stake (a checkpoint remembers it)
+    this.bossDeadAt = null; // when the vampire was staked (game time), or null
+    this.bossBlockAt = null; // when a stomp without the stake bounced off him
+    this.bossDx = 0; // how far he has paced from his post
+    this.updateBoss();
     this.dumpAt = null; // when the dump truck's bed was grounded and began to dump (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
     this.bailReason = null;
@@ -175,8 +186,54 @@ export class Game {
     const next = this.sections[this.section + 1];
     if (!next || this.sk.dir < 0 || this.sk.x < next.x) return;
     this.section += 1;
-    this.checkpoint = { index: this.section, score: this.score };
-    this.emit('checkpoint', { index: this.section, name: next.name, score: this.score });
+    // A section that needs the stake only becomes the checkpoint with it in hand: without it a bail
+    // sends you back for it (otherwise the boss would be a dead end).
+    if (next.requires === 'stake' && !this.stake) return;
+    this.checkpoint = { index: this.section, score: this.score, ...(this.stake && { stake: true }) };
+    this.emit('checkpoint', { index: this.section, name: next.name, score: this.score, stake: this.stake });
+  }
+
+  // The boss paces to and fro about his post; his head (a surface) and body (a solid) go with him. Staked,
+  // he is gone from the street.
+  updateBoss() {
+    const b = this.boss;
+    if (!b) return;
+    this.bossDx = this.bossDeadAt === null ? Math.sin((this.time * Math.PI * 2) / b.period) * b.amp : this.bossDx;
+    const away = this.bossDeadAt === null ? 0 : -1e6;
+    if (b.head) {
+      b.head.x1 = b.x + this.bossDx - b.hw + away;
+      b.head.x2 = b.x + this.bossDx + b.hw + away;
+    }
+    if (b.body) b.body.x = b.x + this.bossDx - b.bw + away;
+  }
+
+  // Picking things up: the stake floats on the rail; body anywhere near it takes it.
+  checkPickups() {
+    const s = this.sk;
+    for (const p of this.pickups) {
+      if (p.taken || this.stake) continue;
+      if (Math.abs(s.x - p.x) < 26 && p.y > s.y - PHYS.RIDER_HEIGHT - 20 && p.y < s.y + 8) {
+        this.stake = true;
+        this.emit('stake', { x: p.x, y: p.y });
+      }
+    }
+  }
+
+  // Landed on the vampire's head. With the stake: staked, a bounce off him and a big trick. Without: he
+  // throws you off.
+  stompBoss() {
+    const s = this.sk;
+    if (!this.stake) {
+      this.bossBlockAt = this.time;
+      this.emit('bossblock');
+      return this.bail('bitten');
+    }
+    this.bossDeadAt = this.time;
+    this.updateBoss();
+    this.emit('boss');
+    this.addTrick('VAMPIRE SLAYER', 1500);
+    s.flip = null;
+    this.takeOff(PHYS.POP_V * 0.85);
   }
 
   clampSpeed(v) {
@@ -509,6 +566,7 @@ export class Game {
     this.phaseTime += dt;
     if (this.hold) this.hold.dirT += dt;
     this.updateSeesaw(dt);
+    this.updateBoss();
     const s = this.sk;
     const fromX = s.x;
 
@@ -563,7 +621,7 @@ export class Game {
       if (hit) {
         // A slappy: ride straight into a low curb with the finger held and
         // the trucks slap up onto it, grinding with no ollie at all.
-        if (!hit.slappy || !this.hold) return this.bail('slam');
+        if (!hit.slappy || !this.hold) return this.bail(hit.reason || 'slam');
         this.hold.used = true;
         s.charge = null;
         s.x = Math.max(hit.slappy.x1, Math.min(hit.slappy.x2, s.x + s.dir * PHYS.NOSE));
@@ -594,6 +652,9 @@ export class Game {
     }
     if (this.phase === 'playing' && this.finishX !== null && s.x >= this.finishX) return this.finish(); // the finish line
     if (this.phase === 'playing') this.passHazards(fromX);
+    if (this.phase === 'playing') this.checkPickups();
+    // The vampire is staked: a beat to watch him go, then the stage is done.
+    if (this.phase === 'playing' && this.bossDeadAt !== null && s.mode === 'roll' && this.time - this.bossDeadAt > 1.4) return this.finish();
     if (this.phase === 'playing') this.checkSection();
   }
 
@@ -717,6 +778,7 @@ export class Game {
           if (this.hold) this.hold.used = true;
           return this.startGrind(surf, this.grindKey());
         }
+        if (surf.bossHead && !s.flip) return this.stompBoss();
         if (s.flip) return this.bail('flip');
         if (surf.landable) return this.land(surf);
         return this.bail('clipped');
@@ -735,7 +797,8 @@ export class Game {
     }
     if (s.y > WORLD.GROUND + PIT_DEPTH) return this.bail(s.poppedAt === null ? 'rolled' : 'gap');
 
-    if (this.hitSolid()) return this.bail('slam');
+    const hit = this.hitSolid();
+    if (hit) return this.bail(hit.reason || 'slam');
   }
 
   hitSolid() {
@@ -938,7 +1001,7 @@ export class Game {
     s.charge = null;
     s.manual = null;
     s.mode = 'bail';
-    const slam = reason === 'slam' || reason === 'wall';
+    const slam = reason === 'slam' || reason === 'wall' || reason === 'bitten';
     const vx = slam ? -s.dir * 110 : s.vx * 0.7;
     const vy = Math.min(s.vy, 0) - 640;
     s.bail = {

@@ -40,7 +40,7 @@ const cleared = (r, i) => r.g.phase === 'complete' || r.g.sk.x > (i === 6 ? haun
 test('stage 10 is Graveyard: eight checkpoints, no race, no turbo, its own palette and sky', () => {
   assert.equal(haunt.id, 'stage-10');
   assert.equal(haunt.name, 'Graveyard');
-  assert.deepEqual(names, ['Tombstones', 'Crypt Fence', 'Open Grave', 'Pumpkin Patch', 'Lantern Gates', 'Mausoleum', 'Mansion Gate', 'Vampire Coffin']);
+  assert.deepEqual(names, ['Tombstones', 'Crypt Fence', 'Open Grave', 'Pumpkin Patch', 'Lantern Gates', 'Vampire Coffin', 'Mansion Gate', 'Vampire Boss']);
   assert.equal(haunt.race, undefined);
   assert.ok(!haunt.boost);
   assert.equal(haunt.palette, 'haunt');
@@ -55,7 +55,7 @@ test('stage 10 follows the others: opens after stage 9, has no Game Center board
 
 test('stage 10 has named gap bonuses, each with a distinct id, 300+ points', () => {
   const mine = GAPS.filter((g) => g.stage === 'stage-10');
-  assert.ok(mine.length >= 8);
+  assert.ok(mine.length >= 7);
   assert.equal(new Set(mine.map((g) => g.id)).size, mine.length);
   assert.ok(mine.every((g) => g.points >= 300));
 });
@@ -116,11 +116,12 @@ test('10-5: an ollie through a lantern gate earns its bonus; head above the cros
   assert.equal(g.phase, 'bailed', 'head above the crossbar');
 });
 
-test('10-6: ride the mausoleum roof, grind its edge, drop off its end, or fly it', () => {
-  assert.ok(cleared(play(5, [[0.45, 'tap']], 5), 5));
-  assert.ok(play(5, [[0.5, 'tap'], [0.5, 'hold']], 5).earned.includes('TOMB GRIND'));
-  assert.ok(play(5, [[0, 'cs'], [0.6, 'cr']], 5).earned.includes('TOMB LEAP'));
-  assert.ok(play(5, [[0.4, 'tap'], [1.4, 'tap']], 5).earned.includes('ROOF DROP'));
+test('10-6: grinding the vampire coffin knocks its lid off and lets the bats out; ollie it or roll into it and you bail', () => {
+  const r = play(5, [[0.5, 'tap'], [0.5, 'hold']], 5);
+  assert.ok(r.earned.includes('VAMPIRE GRIND'), JSON.stringify(r.earned));
+  assert.notEqual(r.g.openAt, null, 'the lid came off');
+  assert.equal(play(5, [], 4).g.phase, 'bailed');
+  assert.equal(play(5, [[0.45, 'tap']], 5).g.openAt, null, 'riding it without a grind leaves the lid on');
 });
 
 test('10-7: lock the arched fence over the moat, or fly it with a charged ollie; a plain ollie falls short', () => {
@@ -130,12 +131,62 @@ test('10-7: lock the arched fence over the moat, or fly it with a charged ollie;
   assert.ok(!play(6, [[0.5, 'tap']], 5).earned.includes('MANSION LEAP'));
 });
 
-test('10-8: grinding the vampire coffin knocks its lid off and lets the bats out; ollie it or roll into it and you bail', () => {
-  const r = play(7, [[0.5, 'tap'], [0.5, 'hold']], 5);
-  assert.ok(r.earned.includes('VAMPIRE GRIND'), JSON.stringify(r.earned));
-  assert.notEqual(r.g.openAt, null, 'the lid came off');
-  assert.equal(play(7, [], 4).g.phase, 'bailed');
-  assert.equal(play(7, [[0.45, 'tap']], 5).g.openAt, null, 'riding it without a grind leaves the lid on');
+test('10-7: grinding the arched fence picks up the wooden stake; flying over it does not', () => {
+  assert.equal(play(6, [[0.5, 'tap'], [0.5, 'hold']], 5).g.stake, true);
+  assert.equal(play(6, [[0, 'cs'], [0.56, 'cr']], 5).g.stake, false);
+});
+
+// Ride 10-8 and jump at the vampire; `stake` says whether the rider starts with it. Returns the game.
+function boss(stake, at) {
+  const g = new Game(haunt, null, { index: 7, score: 0, ...(stake && { stake: true }) });
+  g.stake = stake; // (a checkpoint in 10-8 always carries it: take it away to test the block)
+  g.tap();
+  let t = 0;
+  while (t < 8 && g.phase === 'playing' && !g.bossDeadAt) {
+    if (g.sk.mode === 'roll' && g.sk.x > haunt.sections[7].x + at && !g.sk.flip) g.tap();
+    g.update(STEP);
+    t += STEP;
+  }
+  return g;
+}
+
+test('10-8: the vampire boss is killed by landing on his head with the stake; roll into him and he bites', () => {
+  assert.equal(haunt.sections[7].requires, 'stake');
+  assert.equal(new Game(haunt, null, { index: 7, score: 0 }).stake, true, 'a checkpoint here always has the stake');
+  assert.equal(play(7, [], 6).g.phase, 'bailed', 'rolling into him');
+  assert.equal(play(7, [], 6).g.bailReason, 'bitten');
+  // find an ollie spot that lands on his head (he paces, so some spot in the run-up does)
+  let killed = null;
+  for (let at = 150; at < 600 && !killed; at += 8) {
+    const g = boss(true, at);
+    if (g.bossDeadAt !== null) killed = g;
+  }
+  assert.ok(killed, 'some ollie lands on his head');
+  assert.ok(killed.combo.some((c) => c.name === 'VAMPIRE SLAYER') || killed.score >= 1500);
+  // the same jump without the stake only gets you bitten (and a taunt)
+  let blocked = false;
+  for (let at = 150; at < 600 && !blocked; at += 8) {
+    const g = boss(false, at);
+    if (g.bossBlockAt !== null) {
+      blocked = true;
+      assert.equal(g.phase, 'bailed');
+      assert.equal(g.bossDeadAt, null);
+    }
+  }
+  assert.ok(blocked, 'without the stake he shrugs you off');
+});
+
+test('without the stake the boss section does not become the checkpoint', () => {
+  const g = new Game(haunt, null, { index: 6, score: 0 });
+  g.sk.x = haunt.sections[7].x + 5;
+  g.checkSection();
+  assert.equal(g.checkpoint.index, 6, 'still 10-7');
+  const h = new Game(haunt, null, { index: 6, score: 0 });
+  h.stake = true;
+  h.sk.x = haunt.sections[7].x + 5;
+  h.checkSection();
+  assert.equal(h.checkpoint.index, 7);
+  assert.equal(h.checkpoint.stake, true);
 });
 
 const stubCtx = { createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} };
