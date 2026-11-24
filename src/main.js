@@ -90,10 +90,10 @@ const refreshScores = (stageIndex = runStage) =>
     .then((list) => (highScores = list));
 
 // The Mega Ramp: finish any stage with at least SECRET_SCORE points in
-// that one run (before the no-bail bonus) and you're taken there. It counts
-// toward the run total like a stage.
+// that one run (before the no-bail bonus), after you have beaten every stage
+// at least once, and you're taken there. It counts toward the run total like a stage.
 const SECRET_INDEX = LEVELS.length;
-const SECRET_SCORE = 25000;
+const SECRET_SCORE = 50000;
 
 // A run is one stage, plus the Mega Ramp when it's earned: two slots.
 const RUN_SLOTS = 2;
@@ -112,6 +112,14 @@ const openNextStage = (i) => {
   unlocked = Math.max(unlocked, Math.min(LEVELS.length, i + 2));
   store.set('stages-unlocked', unlocked);
 };
+// Which stages have been beaten at least once (the Mega Ramp needs them all). Saves from before this
+// was tracked had to beat every stage below the highest one open, so those count.
+const beaten = new Set([...store.get('stages-beaten', []), ...Array.from({ length: unlocked - 1 }, (_, i) => i)]);
+const markBeaten = (i) => {
+  beaten.add(i);
+  store.set('stages-beaten', [...beaten]);
+};
+const allBeaten = () => LEVELS.every((_, i) => beaten.has(i));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -266,8 +274,11 @@ function loadLevel(i, autoStart = false, entry = null, checkpoint = null) {
 
 // A stage is done: on to the Mega Ramp after a big enough run, or end the run.
 function nextScreen() {
-  if (levelIndex !== SECRET_INDEX) openNextStage(levelIndex);
-  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE) unlockSecret();
+  if (levelIndex !== SECRET_INDEX) {
+    openNextStage(levelIndex);
+    markBeaten(levelIndex);
+  }
+  if (levelIndex !== SECRET_INDEX && run.total() >= SECRET_SCORE && allBeaten()) unlockSecret();
   else finishRun();
 }
 
@@ -604,7 +615,7 @@ function frame(now) {
       saveRun();
     }
     if (e.type === 'race') raceWon = { lead: e.lead, bonus: e.bonus };
-    if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score });
+    if (e.type === 'checkpoint') store.set('checkpoint', { index: e.index, score: e.score, ...(e.stake && { stake: true }) });
     if (e.type === 'complete') {
       run.recordClear(slotOf(levelIndex), e.score);
       saveRun();

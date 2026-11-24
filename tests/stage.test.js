@@ -851,10 +851,11 @@ test('dumpster: the bag on the street is scenery, with no surface or solid to hi
   assert.deepEqual([bag.surfaces.length, bag.solids.length], [0, 0]);
 });
 
-test('the Mega Ramp unlocks at 25,000 points', async () => {
+test('the Mega Ramp unlocks at 50,000 points once every stage is beaten', async () => {
   const { readFile } = await import('node:fs/promises');
   const src = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.match(src, /const SECRET_SCORE = 25000;/);
+  assert.match(src, /const SECRET_SCORE = 50000;/);
+  assert.match(src, /run\.total\(\) >= SECRET_SCORE && allBeaten\(\)/);
 });
 
 // ------------------------------------------------------------ stage 2: Bench, Four Stair, Kicker Rail

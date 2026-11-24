@@ -462,3 +462,180 @@ export function mansion({ x }) {
     },
   };
 }
+
+// A wooden stake lying on the iron fence's arch (10-7): grind the rail, or fly through it, to pick it up. The
+// vampire in 10-8 can only be killed by landing on his head with it. `pickup` is read by Game.checkPickups.
+const STK = { lit: [214, 160, 104], body: [160, 104, 60], dark: [92, 56, 34], tip: [236, 220, 196] };
+function drawStake(g, cx, cy, angle = 0) {
+  // a stake lying slanted: a sharp point to the lower right, a flat butt to the upper left (cx, cy is its middle)
+  for (let i = -7; i <= 7; i++) {
+    const w = i > 3 ? Math.max(0, 7 - i) >> 1 : 1; // the point narrows to nothing
+    const x = cx + i;
+    const y = cy + (i >> 1) + angle;
+    g.fill(x, y - 1 - w + (w ? 0 : 1), 1, 3 + w * 0 + (w ? 0 : -1), ink);
+  }
+  for (let i = -7; i <= 7; i++) {
+    const x = cx + i;
+    const y = cy + (i >> 1) + angle;
+    g.pset(x, y - 1, i > 3 ? STK.tip : STK.lit);
+    g.pset(x, y, i > 5 ? STK.tip : STK.body);
+    if (i < 5) g.pset(x, y + 1, STK.dark);
+  }
+  g.pset(cx - 7, cy - 4 + angle, ink); // the cut butt end
+}
+export function stakePickup({ x, y }) {
+  return {
+    type: 'stake-pickup',
+    surfaces: [],
+    solids: [],
+    pickup: { kind: 'stake', x, y },
+    draw(g, fx = {}) {
+      if (fx.stake) return;
+      const t = fx.time || 0;
+      const bob = Math.round(Math.sin(t * 3) * 1);
+      const cx = P(x);
+      const cy = P(y) + bob;
+      // a pale glint round it so it reads from a distance
+      const tw = Math.abs(Math.floor(t * 4)) % 4;
+      const glow = [[255, 240, 190], [255, 220, 140]];
+      g.pset(cx - 9, cy - 5, glow[tw % 2]); g.pset(cx + 9, cy + 4, glow[(tw + 1) % 2]);
+      g.line(cx - 1, cy - 8, cx + 1, cy - 8, glow[tw % 2]); g.pset(cx, cy - 9, glow[tw % 2]); g.pset(cx, cy - 7, glow[tw % 2]);
+      drawStake(g, cx, cy);
+    },
+  };
+}
+
+// The vampire boss (10-8). He paces to and fro in the street; touch his side and he bites you. Land on his
+// head with the stake and it drives into him: a big trick, then he crumbles to dust and a flock of bats.
+// Without the stake he throws you off (and says so).
+const VB = { cape: [34, 24, 52], capeLit: [70, 54, 100], lining: [176, 24, 48], skin: [226, 218, 234], shade: [186, 172, 200], hair: [18, 12, 28], shirt: [240, 236, 244] };
+const HEAD_H = 96; // head top, above the street
+export function vampireBoss({ x, amp = 90, period = 4.4 }) {
+  const head = { x1: x - 30, x2: x + 30, y: G - HEAD_H, landable: false, grindable: false, bossHead: true };
+  const body = { x: x - 33, y: G - HEAD_H, w: 66, h: HEAD_H, reason: 'bitten', boss: true };
+  return {
+    type: 'vampire-boss',
+    surfaces: [head],
+    solids: [body],
+    boss: { x, amp, period, hw: 30, bw: 33 },
+    draw(g, fx = {}) {
+      const b = fx.boss || { dx: 0, deadFor: null, blockFor: null };
+      const time = fx.time || 0;
+      const cx = P(x + b.dx);
+      const t = P(G - HEAD_H);
+      const ground = P(G) - 1;
+      const dead = b.deadFor;
+      const scared = !!fx.stake && dead === null;
+      if (dead !== null && dead > 1.0) {
+        // all that is left: a little heap of dust with the stake standing in it, and the last bats flying off
+        for (let i = 0; i < 9; i++) g.pset(cx - 6 + ((i * 5) % 13), ground - (i % 3), i % 2 ? VB.shade : VB.cape);
+        drawStakeUp(g, cx, ground - 4);
+        drawBats(g, cx, t + 8, dead - 1.0 + 1.0, time);
+        return;
+      }
+      // rows of the cape/body, drawn first with an outline
+      const rows = [];
+      const hem = Math.round(Math.sin(time * 5) * 1);
+      for (let r = 10; r < 32; r++) rows.push([t + r, 6 + ((r - 10) * 0.55) | 0]);
+      const keep = dead === null ? 1 : Math.max(0, 1 - dead / 1.0); // a stabbed vampire crumbles away from the top down
+      const cut = Math.round(t + 32 * (1 - keep)); // rows above this are gone
+      const live = (y) => y >= cut;
+      for (const [y, hw] of rows) if (live(y)) g.fill(cx - hw - 1, y, hw * 2 + 3, 1, ink);
+      // the collar flaring up behind the head
+      for (let r = 3; r < 11; r++) {
+        const y = t + r;
+        const hw = 5 + ((r - 3) >> 1) + 1;
+        if (live(y)) { g.fill(cx - hw - 1, y, hw * 2 + 3, 1, ink); }
+      }
+      for (let r = 3; r < 11; r++) {
+        const y = t + r;
+        const hw = 5 + ((r - 3) >> 1) + 1;
+        if (live(y)) { g.fill(cx - hw, y, hw * 2 + 1, 1, VB.cape); g.fill(cx - hw + 1, y, 1, 1, VB.lining); g.fill(cx + hw - 1, y, 1, 1, VB.lining); }
+      }
+      for (const [y, hw] of rows) {
+        if (!live(y)) continue;
+        g.fill(cx - hw, y, hw * 2 + 1, 1, VB.cape);
+        g.pset(cx - hw, y, VB.capeLit);
+        g.pset(cx + hw, y, VB.capeLit);
+        if (y >= t + 28 + hem) g.fill(cx - hw + 1, y, hw * 2 - 1, 1, VB.lining); // the red lining at the hem
+        if ((y - t) % 4 === 0 && y < t + 28) g.pset(cx - 2 + (((y - t) >> 2) % 3), y, VB.capeLit); // folds
+      }
+      // shirt front, brooch, and the claws raised either side
+      for (let r = 12; r < 26; r++) if (live(t + r)) g.fill(cx - 1, t + r, 3, 1, VB.shirt);
+      if (live(t + 13)) { g.pset(cx, t + 13, VB.lining); g.pset(cx, t + 14, VB.lining); }
+      const rise = Math.round(Math.sin(time * 3) * 1);
+      for (const sd of [-1, 1]) {
+        const hx = cx + sd * 13;
+        const hy = t + 17 + rise * sd;
+        if (!live(hy)) continue;
+        g.fill(hx - 1, hy, 3, 3, ink);
+        g.fill(hx, hy + 1, 1, 1, VB.skin);
+        g.pset(hx, hy - 1, VB.skin); g.pset(hx + sd, hy - 1, VB.skin); g.pset(hx - sd, hy, VB.skin); // claws
+        g.line(cx + sd * 8, t + 14, hx, hy + 1, ink);
+      }
+      // the head
+      const hy = t;
+      if (live(hy + 6)) {
+        g.rect(cx - 6, hy - 1, 13, 12, ink);
+        g.fill(cx - 5, hy, 11, 10, VB.skin);
+        g.fill(cx - 5, hy, 11, 3, VB.hair); // slicked hair
+        g.pset(cx - 5, hy + 3, VB.hair); g.pset(cx + 5, hy + 3, VB.hair);
+        g.fill(cx - 1, hy + 3, 3, 1, VB.skin); g.pset(cx, hy + 3, VB.hair); // the widow's peak
+        g.pset(cx - 6, hy + 5, VB.skin); g.pset(cx + 6, hy + 5, VB.skin); g.pset(cx - 7, hy + 4, ink); g.pset(cx + 7, hy + 4, ink); // pointed ears
+        g.line(cx - 4, hy + 4, cx - 2, hy + 5, ink); g.line(cx + 4, hy + 4, cx + 2, hy + 5, ink); // brows, slanting
+        if (scared) {
+          // the stake in your hand: his eyes go wide, white round the red, and a sweat drop runs
+          g.fill(cx - 4, hy + 5, 3, 3, [255, 255, 255]); g.fill(cx + 2, hy + 5, 3, 3, [255, 255, 255]);
+          g.pset(cx - 3, hy + 6, [230, 30, 50]); g.pset(cx + 3, hy + 6, [230, 30, 50]);
+          g.pset(cx + 7, hy + 2 + (Math.floor(time * 6) % 3), [150, 210, 255]);
+        } else {
+          g.fill(cx - 4, hy + 5, 2, 2, [255, 40, 50]); g.fill(cx + 3, hy + 5, 2, 2, [255, 40, 50]);
+        }
+        g.pset(cx, hy + 7, VB.shade); // nose
+        g.line(cx - 2, hy + 8, cx + 2, hy + 8, ink); // mouth
+        g.pset(cx - 2, hy + 9, VB.shirt); g.pset(cx + 2, hy + 9, VB.shirt); // fangs
+      }
+      // the stake in his head (a hit) and blood
+      if (dead !== null && dead < 1.0) {
+        drawStakeUp(g, cx, hy + 3);
+        if (dead < 0.12) g.fill(cx - 6, hy - 1, 13, 12, [255, 255, 255]); // the flash of the hit
+      }
+      if (dead !== null) drawBats(g, cx, t + 4, dead, time);
+      // the taunt when a stomp without the stake bounced off him
+      if (b.blockFor !== null && dead === null) {
+        const text = 'NEED A STAKE!';
+        const w = g.textWidth ? g.textWidth(text) : 60;
+        g.fill(cx - (w >> 1) - 3, hy - 17, w + 6, 11, ink);
+        g.text(text, cx, hy - 15, [255, 214, 224], 1, 'center');
+      }
+    },
+  };
+}
+
+// a wooden stake standing point-down (driven into something), its butt up
+function drawStakeUp(g, cx, tipY) {
+  g.fill(cx - 2, tipY - 12, 5, 8, ink);
+  g.fill(cx - 1, tipY - 11, 3, 7, STK.body);
+  g.line(cx - 1, tipY - 11, cx - 1, tipY - 5, STK.lit);
+  g.line(cx + 1, tipY - 11, cx + 1, tipY - 5, STK.dark);
+  g.pset(cx, tipY - 4, ink); g.pset(cx, tipY - 3, STK.tip);
+  g.pset(cx, tipY - 12, STK.dark);
+}
+
+function drawBats(g, cx, y0, age, time) {
+  for (let i = 0; i < 9; i++) {
+    const tt = age - i * 0.05;
+    if (tt <= 0) continue;
+    const ang = -Math.PI * (0.12 + 0.76 * (((i * 5) % 9) / 8));
+    const sp = 30 + (hash(i, 9) % 24);
+    const bx = Math.round(cx + Math.cos(ang) * sp * tt + Math.sin(tt * 6 + i) * 2);
+    const by = Math.round(y0 + Math.sin(ang) * sp * tt * 1.2);
+    const up = Math.floor(time * 9 + i) % 2 === 0;
+    g.pset(bx, by, ink); g.pset(bx - 1, by, ink); g.pset(bx + 1, by, ink);
+    const wy = up ? by - 1 : by + 1;
+    g.pset(bx - 2, wy, ink); g.pset(bx - 3, up ? wy - 1 : wy + 1, ink);
+    g.pset(bx + 2, wy, ink); g.pset(bx + 3, up ? wy - 1 : wy + 1, ink);
+    g.pset(bx, by - 1, ink);
+    g.pset(bx - 1, by - 1, [255, 60, 60]);
+  }
+}

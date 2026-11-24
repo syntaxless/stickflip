@@ -188,6 +188,12 @@ export class Renderer {
           this.specials.push({ text: `${e.name} +${e.points}`, kind: e.kind, age: 0 });
           if (this.specials.length > 3) this.specials.shift();
           break;
+        case 'stake':
+          this.specials.push({ text: 'GOT THE STAKE!', kind: 'item', age: 0 });
+          break;
+        case 'boss':
+          this.sparks(e.x, e.y, 24);
+          break;
         case 'bail': {
           const pool = (e.reason === 'gap' || e.reason === 'rolled') && game?.level.obstacles.find((o) => o.splash && e.x >= o.splash.x1 - 20 && e.x <= o.splash.x2 + 20);
           if (pool && (e.reason === 'gap' || pool.splash.kind === 'lava')) this.splash(e.x, pool.splash.y, pool.splash.kind);
@@ -255,7 +261,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt, stake: game.stake, boss: { dx: game.bossDx, deadFor: game.bossDeadAt === null ? null : game.time - game.bossDeadAt, blockFor: game.bossBlockAt === null ? null : game.time - game.bossBlockAt } });
     if (game.rival) {
       this.trackRival(game);
       this.rivalSay = rivalWords(game);
@@ -342,7 +348,7 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam, g);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt, stake: game.stake, boss: { dx: game.bossDx, deadFor: game.bossDeadAt === null ? null : game.time - game.bossDeadAt, blockFor: game.bossBlockAt === null ? null : game.time - game.bossBlockAt } });
     if (game.rival) {
       this.trackRival(game);
       this.rivalSay = rivalWords(game);
@@ -1301,6 +1307,7 @@ export class Renderer {
     const total = opts.total ?? game.score;
     g.text(`TOTAL ${pad(total)}`, R, 4, red, 1, 'right');
     if (game.phase === 'playing') this.drawSpeed(game, R, 15);
+    if (game.stake) this.drawStakeIcon(g, R, 26);
     if (game.rival) this.drawRace(game, L, R);
     // After a retry the rider stands ready for a moment before rolling off.
     if (game.phase === 'playing' && game.wait > 0) {
@@ -1380,6 +1387,15 @@ export class Renderer {
       if (i < n) g.fill(bx + i * 4, y, 3, 7, red);
       else g.rect(bx + i * 4, y, 3, 7, red);
     }
+  }
+
+  // The wooden stake you are carrying: a small icon with its name, under the speed bar.
+  drawStakeIcon(g, right, y) {
+    g.text('STAKE', right - 40, y, red, 1, 'right');
+    const x = right - 38;
+    g.fill(x, y + 2, 25, 3, red);
+    g.fill(x + 25, y + 3, 2, 1, red);
+    g.fill(x - 2, y + 1, 2, 5, red);
   }
 
   blink(rate = 3) {

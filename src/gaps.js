@@ -84,10 +84,7 @@ export const GAPS = [
   { id: 'coffin-hop', stage: 'stage-10', section: 2, name: 'COFFIN HOP', points: 300, from: [140, 300], to: [390, 500], on: 'land' },
   { id: 'grave-leap', stage: 'stage-10', section: 2, name: 'GRAVE LEAP', points: 450, from: [140, 300], to: [595, 960], on: 'land' },
   { id: 'pumpkin-hop', stage: 'stage-10', section: 3, name: 'PUMPKIN HOP', points: 300, from: [150, 330], to: [330, 430], on: 'land' },
-  { id: 'tomb-grind', stage: 'stage-10', section: 5, name: 'TOMB GRIND', points: 400, from: null, to: [360, 590], on: 'grind' },
-  { id: 'tomb-leap', stage: 'stage-10', section: 5, name: 'TOMB LEAP', points: 500, from: [150, 360], to: [590, 960], on: 'land' },
-  { id: 'roof-drop-tomb', stage: 'stage-10', section: 5, name: 'ROOF DROP', points: 350, from: [360, 590], to: [590, 960], on: 'land' },
   { id: 'gate-grind', stage: 'stage-10', section: 6, name: 'GATE GRIND', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
   { id: 'mansion-leap', stage: 'stage-10', section: 6, name: 'MANSION LEAP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
-  { id: 'vampire-grind', stage: 'stage-10', section: 7, name: 'VAMPIRE GRIND', points: 500, from: null, to: [360, 570], on: 'grind' },
+  { id: 'vampire-grind', stage: 'stage-10', section: 5, name: 'VAMPIRE GRIND', points: 500, from: null, to: [360, 570], on: 'grind' },
 ];

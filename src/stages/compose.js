@@ -28,7 +28,7 @@ export function stage({ id, name, sections, extra = [], starts = {}, race = null
     const hi = i === sections.length - 1 ? Infinity : dx + SECTION_W;
     for (const o of level.obstacles) obstacles.push(shift(o, dx, lo, hi));
     for (const c of level.cues || []) cues.push({ ...c, x: c.x + dx });
-    marks.push({ name: level.name, x: dx, ...(i in starts && { start: starts[i] }) });
+    marks.push({ name: level.name, x: dx, ...(level.requires && { requires: level.requires }), ...(i in starts && { start: starts[i] }) });
   });
   return {
     id,
@@ -70,6 +70,8 @@ export function shift(o, dx, lo = -Infinity, hi = Infinity) {
     surfaces,
     solids: o.solids.map((r) => ({ ...r, x: r.x + dx, ...(r.slappy && { slappy: moved.get(r.slappy) ?? moveX(r.slappy, dx) }) })),
     hazards: (o.hazards || []).map((h) => ({ ...h, x: h.x + dx })),
+    ...(o.pickup && { pickup: { ...o.pickup, x: o.pickup.x + dx } }),
+    ...(o.boss && { boss: { ...o.boss, x: o.boss.x + dx } }),
     ground,
     // regions the renderer looks up by world x (splash on a bail, dirt-filled gap)
     ...(o.splash && { splash: { ...o.splash, x1: o.splash.x1 + dx, x2: o.splash.x2 + dx } }),
