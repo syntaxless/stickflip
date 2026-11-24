@@ -1391,7 +1391,7 @@ export class Renderer {
 
   // The wooden stake you are carrying: a small icon with its name, under the speed bar.
   drawStakeIcon(g, right, y) {
-    g.text('STAKE', right - 40, y, red, 1, 'right');
+    g.text('STAKE', right - 44, y, red, 1, 'right');
     const x = right - 38;
     g.fill(x, y + 2, 25, 3, red);
     g.fill(x + 25, y + 3, 2, 1, red);

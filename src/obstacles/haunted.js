@@ -597,7 +597,7 @@ export function vampireBoss({ x, amp = 90, period = 4.4 }) {
       }
       // the stake in his head (a hit) and blood
       if (dead !== null && dead < 1.0) {
-        drawStakeUp(g, cx, hy + 3);
+        drawStakeUp(g, cx, Math.min(ground - 4, hy + 3 + Math.round(dead * dead * 70))); // it drops as he crumbles
         if (dead < 0.12) g.fill(cx - 6, hy - 1, 13, 12, [255, 255, 255]); // the flash of the hit
       }
       if (dead !== null) drawBats(g, cx, t + 4, dead, time);
