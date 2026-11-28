@@ -4,6 +4,7 @@ import { PAL, RES } from './pixel.js';
 import { INITIALS } from '../leaderboard.js';
 import { PoseBlender, drawFigure, drawBoard, boardPitch, makeTransform } from './stickman.js';
 import { drawSticker, loserSpot } from './sticker.js';
+import { drawGumball, CANDY } from '../obstacles/candy.js';
 import { squashOf, RAG_SIZE } from '../ragdoll.js';
 
 // Pixel-art renderer. The game world is 960x540 units; it is drawn into a
@@ -103,7 +104,10 @@ const HELL_SUN = [[255, 214, 120], [255, 170, 70]];
 const FROST_BANDS = [[146, 182, 232], [164, 196, 238], [182, 208, 242], [200, 220, 246], [216, 232, 250], [232, 243, 253]];
 const FROST = { far: [156, 176, 222], near: [118, 140, 192], cap: [250, 252, 255], pine: [44, 84, 96], pineLit: [78, 122, 128], pineSnow: [236, 244, 252] };
 // The stages with a sky of their own (a level flag each; the picture is drawXSky).
-const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk', 'haunt'];
+const THEMED_SKIES = ['hell', 'frost', 'beach', 'junk', 'haunt', 'candy'];
+// Candy Land (Stage 11): a pastel pink-to-blue sky, cotton candy clouds, minty hills, and lollipops and candy canes
+// standing on the horizon.
+const CANDY_BANDS = [[255, 170, 208], [255, 190, 220], [255, 208, 230], [255, 226, 238], [238, 234, 252], [214, 236, 252]];
 // Boardwalk (Stage 8): a bright seaside sky, a strip of sea on the horizon, a pier with a Ferris wheel,
 // a row of palms, gulls and a few puffs of cloud.
 const BEACH_BANDS = [[70, 160, 250], [96, 180, 255], [126, 200, 255], [158, 218, 255], [190, 232, 255], [220, 244, 255]];
@@ -261,7 +265,8 @@ export class Renderer {
     g.oy = -cam.y;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
-    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt, stake: game.stake, boss: { dx: game.bossDx, deadFor: game.bossDeadAt === null ? null : game.time - game.bossDeadAt, blockFor: game.bossBlockAt === null ? null : game.time - game.bossBlockAt } });
+    for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt, gameTime: game.time, done: game.phase === 'complete' ? game.phaseTime : null, stake: game.stake, boss: { dx: game.bossDx, deadFor: game.bossDeadAt === null ? null : game.time - game.bossDeadAt, blockFor: game.bossBlockAt === null ? null : game.time - game.bossBlockAt } });
+    if (game.ball) this.drawChaseBall(g, game);
     if (game.rival) {
       this.trackRival(game);
       this.rivalSay = rivalWords(game);
@@ -322,6 +327,20 @@ export class Renderer {
     const x = Math.max(0, Math.min(Math.round((game.width - WORLD.W) / S), Math.round(fx / S) - lead));
     const y = Math.min(0, fy - (game.level.camTop ?? 330));
     return { x, y: Math.round(y / S) };
+  }
+
+  // The giant gumball chasing the rider (Stage 11): it rolls along the ground, turning as it goes, with a shadow and
+  // a puff of sugar dust at its foot. Once the chase is over it slows to a stop.
+  drawChaseBall(g, game) {
+    const c = game.level.chase;
+    const b = game.ball;
+    const r = Math.round(c.r / 3);
+    const cx = Math.round(b.x / 3);
+    const ground = game.groundAt(b.x).y;
+    const cy = Math.round(ground / 3) - r;
+    for (let dx = -r; dx <= r; dx += 1) g.pset(cx + dx, cy + r, [0, 0, 0]); // contact shadow
+    drawGumball(g, cx, cy, r, b.rot);
+    if (!b.gone && Math.random() < 0.5) this.particles.push({ kind: 'dust', x: b.x + c.r * 0.3, y: ground, vx: 90 + Math.random() * 120, vy: -60 - Math.random() * 100, life: 0.3 });
   }
 
   // Whether the rival leads. The first time he pulls ahead in a run he laughs back at the player for
@@ -827,6 +846,73 @@ export class Renderer {
         const wx = x + ms + Math.round(t * (3 + row * 2));
         const n = hash(Math.floor(wx / 9) + row * 7, 61) % 7;
         if (n < 2) g.pset(x, horizon - 1 - row * 2 - (n % 2), HAUNT.mist);
+      }
+    }
+  }
+
+  // Candy Land's sky: pink deepening to pale blue at the horizon, drifting cotton candy clouds, two rows of minty
+  // hills, and big lollipops and candy canes standing along the horizon (slowly scrolling, so they stay behind the rider).
+  drawCandySky(g, cam, horizon) {
+    const shiftOf = (factor) => Math.round((cam.px ?? cam.x) * factor) - (cam.left || 0);
+    g.ox = 0;
+    const t = this.time;
+    const bandH = [22, 24, 22, 20, 18, 14];
+    let y = horizon;
+    for (let i = CANDY_BANDS.length - 1; i >= 0; i--) {
+      const h = i === 0 ? 600 : bandH[i];
+      g.fill(0, y - h, g.w, h, CANDY_BANDS[i]);
+      if (i > 0) for (let x = 0; x < g.w; x++) if ((x + i) % 2 === 0) g.pset(x, y - h, CANDY_BANDS[i]);
+      y -= h;
+    }
+    g.fill(0, horizon, g.w, 160, CANDY_BANDS[CANDY_BANDS.length - 1]);
+    // cotton candy clouds: lumpy puffs, pink on the underside
+    for (let i = 0; i < 7; i++) {
+      const cw = 130;
+      const cx = (((i * 61 + 14 - shiftOf(0.05) - Math.round(t * 2)) % (cw * 3)) + cw * 3) % (cw * 3) - 30;
+      const cy = 20 + (hash(i, 17) % 54);
+      for (const [dx, dy, r] of [[0, 0, 7], [9, -3, 9], [20, 0, 7], [-9, 2, 5], [28, 3, 5]]) g.circle(cx + dx, cy + dy, r, [255, 255, 255], true);
+      g.fill(cx - 14, cy + 6, 46, 3, [255, 214, 232]);
+      g.fill(cx - 12, cy + 9, 42, 2, [255, 176, 212]);
+    }
+    // far minty hills with sprinkles
+    const hs = shiftOf(0.1);
+    for (let x = 0; x < g.w; x++) {
+      const wx = x + hs;
+      const top = horizon - 14 - Math.round(10 * Math.sin(wx / 31) + 6 * Math.sin(wx / 13 + 1));
+      g.fill(x, top, 1, horizon - top + 70, [168, 232, 206]);
+      g.pset(x, top, [118, 200, 170]);
+      if (hash(wx >> 1, 3) % 17 === 0) g.pset(x, top + 4 + (hash(wx, 5) % 6), [255, 150, 190]);
+    }
+    // lollipops and candy canes: one every so often along the horizon, the nearer layer a little faster
+    for (const [factor, cell, tall, salt] of [[0.18, 120, 42, 31], [0.32, 150, 30, 77]]) {
+      const sh = shiftOf(factor);
+      for (let tile = Math.floor(sh / cell) - 1; tile * cell - sh < g.w + cell; tile++) {
+        const h = hash(tile, salt);
+        const bx = tile * cell - sh + (h % 40);
+        const th = tall + (h >> 5) % 22;
+        const kind = (h >> 9) % 3;
+        if (kind === 2) {
+          // a candy cane: a striped stem with a hook
+          for (let i = 0; i < th; i++) {
+            const c = Math.floor(i / 4) % 2 ? [255, 255, 255] : [255, 160, 190];
+            g.fill(bx, horizon - i, 3, 1, c);
+          }
+          for (let a = 0; a < 12; a++) {
+            const hx = bx + 1 + Math.round(Math.sin((a / 11) * Math.PI) * 6);
+            const hy = horizon - th - Math.round(Math.cos((a / 11) * Math.PI) * -4) + 4;
+            g.fill(hx - 1, hy - a, 3, 1, a % 4 < 2 ? [255, 255, 255] : [255, 160, 190]);
+          }
+        } else {
+          g.fill(bx, horizon - th, 2, th, [255, 246, 238]);
+          const r = 8 + (h >> 13) % 5;
+          const cols = kind ? [[168, 208, 255], [255, 255, 255]] : [[255, 170, 204], [255, 255, 255]]; // paler than the obstacles, so they stay behind
+          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+            const d = Math.hypot(dx, dy);
+            if (d > r) continue;
+            const ang = Math.atan2(dy, dx) + d * 0.5;
+            g.pset(bx + 1 + dx, horizon - th - r + dy, d > r - 1 ? [214, 150, 190] : Math.sin(ang * 2) > 0 ? cols[0] : cols[1]);
+          }
+        }
       }
     }
   }

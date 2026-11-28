@@ -78,7 +78,7 @@ export class Game {
   constructor(level, entry = null, checkpoint = null, opts = {}) {
     this.level = level;
     this.isRival = !!opts.rival;
-    this.finishX = level.race?.finishX ?? null; // crossing this x finishes the stage (a race has a finish line)
+    this.finishX = level.race?.finishX ?? level.finishX ?? null; // crossing this x finishes the stage (a race has a finish line)
     this.rival = level.race && !this.isRival ? new Rival(Game, level) : null;
     this.raceResult = null; // { won, lead, bonus } once the race is decided
     this.entry = entry;
@@ -100,6 +100,9 @@ export class Game {
     this.boss = bo ? { ...bo.boss, head: this.surfaces.find((f) => f.bossHead), body: bo.solids.find((r) => r.boss) } : null;
     // Things to pass through, like a ring of fire: { x, top, bottom, reason, trick, points }.
     this.hazards = level.obstacles.flatMap((o) => o.hazards || []);
+    // Spinning lollipop bars (a hazard with `spin`): see checkSpinners. Belts carry you (or, sticky, hold you back).
+    this.spinners = this.hazards.filter((h) => h.spin);
+    this.belts = level.obstacles.flatMap((o) => o.belts || []);
     this.baseSpeed = level.speed || PHYS.ROLL_SPEED;
     this.speedReturn = level.speedReturn ?? PHYS.SPEED_RETURN; // how fast the speed drifts back to cruising
     this.gravity = PHYS.GRAVITY * (level.gravity ?? 1); // the moon (Mega Ramp) is floaty
@@ -128,6 +131,7 @@ export class Game {
     this.bossDeadAt = null; // when the vampire was staked (game time), or null
     this.bossBlockAt = null; // when a stomp without the stake bounced off him
     this.bossDx = 0; // how far he has paced from his post
+    this.ball = null; // the giant gumball chasing you (Stage 11): { x, rot, gone } once it is rolling, see updateChase
     this.updateBoss();
     this.dumpAt = null; // when the dump truck's bed was grounded and began to dump (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
@@ -234,6 +238,59 @@ export class Game {
     this.addTrick('VAMPIRE SLAYER', 1500);
     s.flip = null;
     this.takeOff(PHYS.POP_V * 0.85);
+  }
+
+  // The giant gumball (levels with `chase`: { from, until, gap, pace, r }). It starts rolling `gap` behind you as
+  // you cross `from` and rolls at `pace` times the cruising speed, so it gains while you are slowed (sticky
+  // caramel, braking) and loses ground when you take a turbo (a rail grind or a named gap). Let it catch you and
+  // it flattens you; once you pass `until` it loses interest and rolls to a stop.
+  updateChase(dt) {
+    const c = this.level.chase;
+    if (!c) return;
+    const s = this.sk;
+    if (!this.ball) {
+      if (s.x < c.from || s.x >= c.until) return;
+      this.ball = { x: s.x - c.gap, rot: 0, gone: false, v: this.baseSpeed * c.pace };
+    }
+    const b = this.ball;
+    if (!b.gone && s.x >= c.until) b.gone = true;
+    if (b.gone) b.v = Math.max(0, b.v - 380 * dt);
+    b.x += b.v * dt;
+    b.rot += (b.v * dt) / c.r;
+    if (b.gone || s.dir < 0) return;
+    // flattened: the ball's front reaches you while your feet are below its top
+    const top = this.groundAt(b.x).y - 2 * c.r;
+    if (b.x + c.r * 0.7 >= s.x && s.y > top + 14) this.bail('squashed');
+  }
+
+  // Spinning lollipop bars: hit by an arm or its lollipop and you are thrown off. The angle is
+  // `phase + w * time`, the same one the renderer draws.
+  checkSpinners() {
+    const s = this.sk;
+    for (const h of this.spinners) {
+      const { cy, r, w, phase } = h.spin;
+      if (Math.abs(s.x - h.x) > r + 30) continue;
+      const a = phase + w * this.time;
+      for (let k = 0; k < 2; k++) {
+        const tx = h.x + Math.cos(a + k * Math.PI) * r;
+        const ty = cy + Math.sin(a + k * Math.PI) * r;
+        const lx = tx - h.x;
+        const ly = ty - cy;
+        const len2 = lx * lx + ly * ly;
+        // sample the rider's body from his feet to the top of his head, and the nose of the board
+        for (const [px, py, pad] of [[s.x, s.y - 4, 10], [s.x, s.y - 20, 10], [s.x, s.y - 36, 10], [s.x, s.y - 52, 10], [s.x + s.dir * PHYS.NOSE, s.y - 2, 8]]) {
+          const t = Math.max(0, Math.min(1, ((px - h.x) * lx + (py - cy) * ly) / len2));
+          if (Math.hypot(px - (h.x + lx * t), py - (cy + ly * t)) < pad + (t > 0.85 ? 9 : 0)) return this.bail(h.reason || 'slam');
+        }
+      }
+    }
+  }
+
+  // Conveyor belts and sticky caramel: the street under you moves (or holds you back) by `v` px/s.
+  beltPush() {
+    const s = this.sk;
+    for (const b of this.belts) if (s.x >= b.x1 && s.x < b.x2) return b.v;
+    return 0;
   }
 
   clampSpeed(v) {
@@ -595,6 +652,7 @@ export class Game {
       if (s.charge) s.charge.t += dt;
       this.updateSpeed(dt);
       s.x += s.vx * dt;
+      if (!s.support && this.belts.length && !s.ramp) s.x += this.beltPush() * dt; // the street carries you (or sticks)
       if (s.support && (s.x > s.support.x2 || s.x < s.support.x1)) {
         s.mode = 'air';
         s.vy = 0;
@@ -652,6 +710,8 @@ export class Game {
     }
     if (this.phase === 'playing' && this.finishX !== null && s.x >= this.finishX) return this.finish(); // the finish line
     if (this.phase === 'playing') this.passHazards(fromX);
+    if (this.phase === 'playing' && this.spinners.length) this.checkSpinners();
+    if (this.phase === 'playing' || this.phase === 'ready') this.updateChase(this.phase === 'playing' ? dt : 0);
     if (this.phase === 'playing') this.checkPickups();
     // The vampire is staked: a beat to watch him go, then the stage is done.
     if (this.phase === 'playing' && this.bossDeadAt !== null && s.mode === 'roll' && this.time - this.bossDeadAt > 1.4) return this.finish();
@@ -666,7 +726,7 @@ export class Game {
     const s = this.sk;
     if (s.dir < 0) return;
     for (const h of this.hazards) {
-      if (fromX >= h.x || s.x < h.x) continue;
+      if (h.spin || fromX >= h.x || s.x < h.x) continue;
       const head = s.y - PHYS.RIDER_HEIGHT;
       if (head < h.top) return this.bail(h.reason);
       if (head < h.bottom) {
@@ -1001,7 +1061,7 @@ export class Game {
     s.charge = null;
     s.manual = null;
     s.mode = 'bail';
-    const slam = reason === 'slam' || reason === 'wall' || reason === 'bitten';
+    const slam = reason === 'slam' || reason === 'wall' || reason === 'bitten' || reason === 'squashed';
     const vx = slam ? -s.dir * 110 : s.vx * 0.7;
     const vy = Math.min(s.vy, 0) - 640;
     s.bail = {

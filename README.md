@@ -271,6 +271,20 @@ in: VAMPIRE SLAYER. Without the stake he throws you off, and a bail sends you ba
 only becomes the checkpoint with the stake in hand: `requires: 'stake'`). The look is `haunt: true` (`Renderer.drawHauntSky`) with the
 `haunt` palette; pieces are in `src/obstacles/haunted.js`. Timing windows: `node scripts/stage-windows.mjs 10`.
 
+**Stage 11: Candy Land** (not a race; a chase and a finale). It opens once Stage 10 is finished and has its own top 5
+(`stage-11`). The ground is laid out from a hand-drawn sketch: a high sugar shelf and a kicker up to a platform with a candy cane
+rail (Sugar Start), a pit with a lower far side (Gumdrop Gap: GUMDROP LEAP), a long rail and stairs down with a handrail
+(Long Rail: CANDY HANDRAIL), a low lane (Licorice Lane), a ridge and a second, wider pit with an arched cane over it (Fudge
+Ridge: FUDGE GRIND, or a charged ollie), then rolling hills. From 11-6 a giant gumball rolls after you (`chase` in
+`src/stages/stage11.js`, `Game.updateChase`): it holds a steady pace, sticky caramel and braking let it gain, a rail grind or
+named gap kicks the turbo in and stretches the lead (CARAMEL SKIP, HILL GRIND), and if it catches you it flattens you. It gives
+up at the machine room (11-8: conveyors and a spinning lollipop bar to time, `Game.checkSpinners`), and 11-9 ends at an
+animated candy machine: ride the conveyor into its dispenser (`finishAt`) for a gumball and confetti (`finale: true` holds the
+score screen for a few seconds). The look is `candy: true` (`Renderer.drawCandySky`) with the `candy` palette; pieces are in
+`src/obstacles/candy.js`. Mega Ramp's unlock still wants stages 1-10 only. **Game Center:** the board `stickflip.stage11`
+must be created in App Store Connect first; until then the stage has `gameCenter: false` (remove it, and `OPTED_OUT` in
+`tests/gamecenter.test.js`, when the board exists).
+
 **Secret level: Mega Ramp.** Side-scrolling, about three screens wide: drop in from
 a high deck and fly off the kicker at a raised, gently curved "rainbow" rail. Ollie
 off the kicker to clear the whole rail and land in the long bank that starts right
@@ -461,7 +475,7 @@ What's different in the app:
 
 - Always landscape, full screen, iPhone only.
 - Posts to the same Supabase leaderboard as the live site, plus one Game Center
-  leaderboard per stage: `stickflip.stage1` through `stickflip.stage10`, opened from a
+  leaderboard per stage: `stickflip.stage1` through `stickflip.stage10` (`stage11` once its board exists, see Stage 11), opened from a
   GAME CENTER button on the high-score table. Create all ten (score type: integer,
   high to low) in App Store Connect with exactly those IDs.
 - Haptics on pops, landings, grinds, bails and level clears (`src/native.js` +

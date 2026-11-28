@@ -113,6 +113,12 @@ const SCRIPTS = {
   'gate-grind': [[0.5, 'tap'], [0.5, 'hold']],
   'mansion-leap': [[0, 'cs'], [0.56, 'cr']],
   'vampire-grind': [[0.5, 'tap'], [0.5, 'hold']],
+  'cane-grind': [[1.02, 'tap'], [1.02, 'hold']],
+  'gumdrop-leap': [[0, 'cs'], [0.48, 'cr']],
+  'handrail-grind': [[0.14, 'tap'], [0.14, 'hold']], // from the top of the stairs, down the candy handrail
+  'fudge-grind': [[0.68, 'tap'], [0.68, 'hold']], // onto the arched cane over the second pit
+  'caramel-skip': [[0.1, 'tap'], [0.1, 'hold']], // up onto the cane hung over the caramel
+  'hill-grind': [[0.1, 'tap'], [0.1, 'hold']],
 };
 
 test('gap config is well formed: unique ids, real stages and sections, a script for each', () => {

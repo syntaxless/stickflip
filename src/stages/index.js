@@ -10,7 +10,8 @@ import stage7 from './stage7.js';
 import stage8 from './stage8.js';
 import stage9 from './stage9.js';
 import stage10 from './stage10.js';
+import stage11 from './stage11.js';
 import { SECRET } from '../levels/index.js';
 
-export const STAGES = [stage1, stage2, stage3, stage4, stage5, stage6, stage7, stage8, stage9, stage10];
+export const STAGES = [stage1, stage2, stage3, stage4, stage5, stage6, stage7, stage8, stage9, stage10, stage11];
 export { SECRET };

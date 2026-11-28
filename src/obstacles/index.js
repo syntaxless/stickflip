@@ -21,3 +21,4 @@ export { snowman, iceBlock, icePond, skiGate, cabin, snowRail, summitFlag } from
 export { sandDune, sandcastle, boardRail, seaGap, ropeRail, beachCart, deckChair, beachBall, surfRack, bunting, lifeguardTower, pierSign } from './boardwalk.js';
 export { tireHill, tireStack, appliance, carWreck, sludgePit, steelBeam, wreckBall } from './junkyard.js';
 export { gravestone, graveMound, fenceRail, openGrave, pumpkin, coffinUp, vampireCoffin, vampireBoss, stakePickup, lanternGate, mausoleum, mansion } from './haunted.js';
+export { terrain, caneRail, caneSlope, gumdropBlock, belt, spinner, candyMachine, drawGumball, CANDY } from './candy.js';
