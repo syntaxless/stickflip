@@ -87,4 +87,11 @@ export const GAPS = [
   { id: 'gate-grind', stage: 'stage-10', section: 6, name: 'GATE GRIND', points: 500, from: [150, 330], to: [400, 640], on: 'grind' },
   { id: 'mansion-leap', stage: 'stage-10', section: 6, name: 'MANSION LEAP', points: 600, from: [150, 330], to: [630, 960], on: 'land' },
   { id: 'vampire-grind', stage: 'stage-10', section: 5, name: 'VAMPIRE GRIND', points: 500, from: null, to: [360, 570], on: 'grind' },
+  // ---- Stage 11 (Candy Land)
+  { id: 'cane-grind', stage: 'stage-11', section: 0, name: 'CANE GRIND', points: 300, from: null, to: [620, 860], on: 'grind' },
+  { id: 'gumdrop-leap', stage: 'stage-11', section: 1, name: 'GUMDROP LEAP', points: 400, from: [240, 340], to: [580, 960], on: 'land' },
+  { id: 'handrail-grind', stage: 'stage-11', section: 2, name: 'CANDY HANDRAIL', points: 450, from: null, to: [600, 900], on: 'grind' },
+  { id: 'fudge-grind', stage: 'stage-11', section: 4, name: 'FUDGE GRIND', points: 500, from: null, to: [540, 700], on: 'grind' },
+  { id: 'caramel-skip', stage: 'stage-11', section: 5, name: 'CARAMEL SKIP', points: 400, from: null, to: [300, 520], on: 'grind' },
+  { id: 'hill-grind', stage: 'stage-11', section: 6, name: 'HILL GRIND', points: 400, from: null, to: [260, 470], on: 'grind' },
 ];

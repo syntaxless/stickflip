@@ -18,7 +18,7 @@ const SECTION_W = WORLD.W; // a multiple of 3, so sections line up with the pixe
 // `tail`: extra length past the last section's screen, for a last obstacle that doesn't fit on it.
 // `race`: { finishAt } makes it a race (see rival.js): the finish line stands at that x of the
 // last section, and the sections' `cues` (the rival's inputs) are laid along with them.
-export function stage({ id, name, sections, extra = [], starts = {}, race = null, tail = 0, ...rest }) {
+export function stage({ id, name, sections, extra = [], starts = {}, race = null, tail = 0, finishAt = null, ...rest }) {
   const obstacles = [...extra];
   const marks = [];
   const cues = [];
@@ -36,6 +36,7 @@ export function stage({ id, name, sections, extra = [], starts = {}, race = null
     sections: marks,
     obstacles,
     width: sections.length * SECTION_W + tail,
+    ...(finishAt !== null && { finishX: (sections.length - 1) * SECTION_W + finishAt }),
     ...(race && { race: { cues, ...race, finishX: (sections.length - 1) * SECTION_W + race.finishAt } }),
     ...rest,
   };
@@ -70,6 +71,7 @@ export function shift(o, dx, lo = -Infinity, hi = Infinity) {
     surfaces,
     solids: o.solids.map((r) => ({ ...r, x: r.x + dx, ...(r.slappy && { slappy: moved.get(r.slappy) ?? moveX(r.slappy, dx) }) })),
     hazards: (o.hazards || []).map((h) => ({ ...h, x: h.x + dx })),
+    ...(o.belts && { belts: o.belts.map((b) => ({ ...b, x1: b.x1 + dx, x2: b.x2 + dx })) }),
     ...(o.pickup && { pickup: { ...o.pickup, x: o.pickup.x + dx } }),
     ...(o.boss && { boss: { ...o.boss, x: o.boss.x + dx } }),
     ground,

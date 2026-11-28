@@ -122,7 +122,8 @@ const markCleared = (i) => {
   cleared.add(i);
   store.set('stages-cleared', [...cleared]);
 };
-const allCleared = () => LEVELS.every((_, i) => cleared.has(i));
+// The Mega Ramp wants stages 1-10 beaten (the original ten): later stages are extras and don't gate it.
+const allCleared = () => LEVELS.slice(0, 10).every((_, i) => cleared.has(i));
 
 // End-of-run screens drawn over the game:
 //   { type: 'entry', score, letters, pos, t }  typing initials for a new high score
@@ -130,6 +131,7 @@ const allCleared = () => LEVELS.every((_, i) => cleared.has(i));
 //   { type: 'select', t }                      the stage list
 let screen = null;
 const RACE_BEAT = 1.6; // seconds on the beaten rival before the score screen
+const FINALE_BEAT = 3; // seconds of confetti at the candy machine before the score screen
 let raceBeat = 0;
 let raceWon = null; // { lead, bonus } once a race is won, until the run's end screen has shown it
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '; // a space allows shorter names
@@ -628,6 +630,7 @@ function frame(now) {
       }
       // A race won: the camera cuts to the beaten rival for a moment ("HOW‽") before the score screen.
       if (game.rival && game.raceResult?.won) raceBeat = RACE_BEAT;
+      else if (game.level.finale) raceBeat = FINALE_BEAT; // the confetti and the gumball, then the score screen
       else flip = true;
     }
   }

@@ -63,6 +63,9 @@ const PALETTES = {
   junk: { ...BASE, sky: [198, 168, 130], red: [128, 0, 8], ground: [118, 106, 96], kerb: [150, 136, 122], crack: [80, 70, 62], fleck: [150, 136, 120], grass: [96, 98, 50], blade: [150, 142, 64], shade: [64, 64, 36], dirt: [118, 72, 46], dirtLight: [146, 94, 58], dirtDark: [80, 48, 32], stone: [150, 150, 158], stoneDark: [92, 92, 102] },
   // Haunted Night: a twilight purple sky (light text, the top is dark), a pale stone path for a surface, sickly
   // green turf for the "grass" layer, dark soil under it with bone-pale stones.
+  // Candy Land: a pastel pink sky (dark red text reads on it), pale pink icing for a surface with sugar flecks,
+  // minty frosting for the "grass" and chocolate for the earth, with a few white sugar lumps.
+  candy: { ...BASE, sky: [255, 200, 224], red: [150, 0, 56], ground: [255, 170, 204], kerb: [255, 214, 232], crack: [214, 96, 150], fleck: [255, 236, 246], grass: [110, 214, 176], blade: [170, 240, 206], shade: [60, 150, 124], dirt: [112, 66, 48], dirtLight: [146, 90, 62], dirtDark: [76, 44, 36], stone: [255, 244, 236], stoneDark: [214, 188, 176] },
   haunt: { ...BASE, sky: [92, 64, 140], red: [255, 150, 170], ground: [112, 102, 130], kerb: [140, 130, 160], crack: [72, 64, 90], fleck: [138, 128, 156], grass: [58, 96, 66], blade: [96, 150, 80], shade: [34, 60, 44], dirt: [74, 52, 60], dirtLight: [98, 70, 76], dirtDark: [46, 32, 40], stone: [190, 184, 170], stoneDark: [120, 114, 104] },
   site: { ...BASE, sky: [224, 224, 224], red: [170, 0, 0], ground: [150, 150, 150], kerb: [178, 178, 178], crack: [118, 118, 118], fleck: [196, 196, 196], far: [208, 210, 218], near: [196, 198, 208], window: [214, 216, 224] },
 };
