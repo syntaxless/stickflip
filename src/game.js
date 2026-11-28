@@ -108,6 +108,7 @@ export class Game {
     this.gravity = PHYS.GRAVITY * (level.gravity ?? 1); // the moon (Mega Ramp) is floaty
     this.popScale = level.popScale ?? 1; // and its ollies are a little softer, so they don't fly off the screen
     this.width = level.width || WORLD.W; // wider levels scroll
+    this.introDone = false; // the gumball's intro has played (once per Game: a retry after a bail does not replay it)
     this.reset();
     this.rival?.place(this.checkpoint);
   }
@@ -131,7 +132,10 @@ export class Game {
     this.bossDeadAt = null; // when the vampire was staked (game time), or null
     this.bossBlockAt = null; // when a stomp without the stake bounced off him
     this.bossDx = 0; // how far he has paced from his post
-    this.ball = null; // the giant gumball chasing you (Stage 11): { x, rot, gone } once it is rolling, see updateChase
+    this.intro = null; // { t, dur, fromX } while the gumball's intro plays (see startIntro)
+    this.threat = 0; // 0..1: how close the gumball is (drives the shake, the warning flash and the beeps)
+    this.warnAt = 0; // game time of the next warning beep
+    this.ball = null; // the giant gumball chasing you (Stage 11): { x, rot, gone, v, lift } once it is rolling, see updateChase
     this.updateBoss();
     this.dumpAt = null; // when the dump truck's bed was grounded and began to dump (game time), or null
     this.events = []; // for the renderer: popups, sparks, sounds
@@ -244,23 +248,85 @@ export class Game {
   // you cross `from` and rolls at `pace` times the cruising speed, so it gains while you are slowed (sticky
   // caramel, braking) and loses ground when you take a turbo (a rail grind or a named gap). Let it catch you and
   // it flattens you; once you pass `until` it loses interest and rolls to a stop.
-  updateChase(dt) {
+  updateChase(dt, fromX = null) {
     const c = this.level.chase;
     if (!c) return;
     const s = this.sk;
     if (!this.ball) {
       if (s.x < c.from || s.x >= c.until) return;
-      this.ball = { x: s.x - c.gap, rot: 0, gone: false, v: this.baseSpeed * c.pace };
+      // Riding across the start of the chase for the first time: the gumball breaks loose and rolls in (once).
+      if (c.intro && !this.introDone && fromX !== null && fromX < c.from && s.mode === 'roll') return this.startIntro();
+      this.ball = { x: s.x - c.gap, rot: 0, gone: false, v: this.baseSpeed * c.pace, lift: 0 };
     }
     const b = this.ball;
     if (!b.gone && s.x >= c.until) b.gone = true;
     if (b.gone) b.v = Math.max(0, b.v - 380 * dt);
     b.x += b.v * dt;
     b.rot += (b.v * dt) / c.r;
+    // how close it is: 0 beyond `warn`, 1 at the point of being caught. The beeps come faster the closer it gets.
+    const gap = s.x - b.x;
+    this.threat = b.gone ? 0 : Math.max(0, Math.min(1, (c.warn - gap) / (c.warn - c.r * 0.9)));
+    if (this.threat > 0 && this.time >= this.warnAt) {
+      this.emit('chasewarn', { threat: this.threat });
+      this.warnAt = this.time + 0.85 - 0.7 * this.threat;
+    }
     if (b.gone || s.dir < 0) return;
     // flattened: the ball's front reaches you while your feet are below its top
-    const top = this.groundAt(b.x).y - 2 * c.r;
-    if (b.x + c.r * 0.7 >= s.x && s.y > top + 14) this.bail('squashed');
+    const top = this.ballGroundY(b.x) - 2 * c.r;
+    if (b.x + c.r * 0.7 >= s.x && s.y > top + 14) {
+      this.emit('squash');
+      this.bail('squashed');
+    }
+  }
+
+  // The intro: the rider skids to a stop, the screen shakes, and the gumball breaks loose, drops in from above and
+  // the left, bounces along the hills and rolls up behind him. A tap skips it. Then the chase is on.
+  startIntro() {
+    const c = this.level.chase;
+    const s = this.sk;
+    this.intro = { t: 0, dur: c.intro, fromX: s.x - 360 };
+    this.ball = { x: this.intro.fromX, rot: 0, gone: false, v: 0, lift: 400 };
+    this.emit('rumble');
+  }
+
+  runIntro(dt) {
+    const c = this.level.chase;
+    const s = this.sk;
+    const it = this.intro;
+    it.t += dt;
+    // the rider skids to a halt
+    this.speed = Math.max(0, this.speed - this.cruise * 4.5 * dt);
+    s.vx = this.speed;
+    s.x += s.vx * dt;
+    s.y = this.groundAt(s.x).y;
+    // the ball: down from the sky in the first half second, a couple of bounces, then rolling in faster and faster
+    const k = Math.min(1, it.t / it.dur);
+    const b = this.ball;
+    const target = s.x - c.gap;
+    b.x = it.fromX + (target - it.fromX) * (k * k * 0.55 + k * 0.45);
+    const fall = Math.min(1, it.t / 0.55);
+    b.lift = 400 * (1 - fall * fall) + (it.t > 0.55 ? 150 * Math.abs(Math.sin((it.t - 0.55) * 4.2)) * Math.exp(-(it.t - 0.55) * 1.9) : 0);
+    b.v = (target - it.fromX) / it.dur;
+    b.rot += (b.v * dt) / c.r;
+    this.threat = 0.6 + 0.4 * k;
+    if (this.time >= this.warnAt) {
+      this.emit('chasewarn', { threat: this.threat });
+      this.warnAt = this.time + 0.3;
+    }
+    if (it.t >= it.dur) this.endIntro();
+  }
+
+  endIntro() {
+    const c = this.level.chase;
+    const s = this.sk;
+    const b = this.ball;
+    this.intro = null;
+    this.introDone = true;
+    b.x = s.x - c.gap;
+    b.lift = 0;
+    b.v = this.baseSpeed * c.pace;
+    this.speed = this.cruise; // and off you go
+    s.vx = this.speed;
   }
 
   // Spinning lollipop bars: hit by an arm or its lollipop and you are thrown off. The angle is
@@ -341,6 +407,21 @@ export class Game {
     return FLAT;
   }
 
+  // How far (world units) the camera swings back to the left during the intro, to show the gumball coming.
+  get introPan() {
+    if (!this.intro) return 0;
+    const { t, dur } = this.intro;
+    const e = (x) => x * x * (3 - 2 * x);
+    return 340 * e(Math.min(1, Math.max(0, Math.min(t / 0.4, (dur - t) / 0.7))));
+  }
+
+  // The street under the gumball: it rolls straight across a pit (at the height of the far lip).
+  ballGroundY(x) {
+    let y = this.groundAt(x).y;
+    for (let n = 0; y > WORLD.GROUND + 100 && n < 100; n++) y = this.groundAt(x + 20 * (n + 1)).y;
+    return y;
+  }
+
   emit(type, data = {}) {
     this.events.push({ type, x: this.sk.x, y: this.sk.y, ...data });
   }
@@ -398,6 +479,7 @@ export class Game {
 
   skaterTap() {
     const s = this.sk;
+    if (this.intro) return this.endIntro(); // a tap skips the gumball's intro
     if (s.mode === 'roll') {
       this.ollie(1);
     } else if (s.mode === 'grind') {
@@ -645,6 +727,7 @@ export class Game {
       return;
     }
 
+    if (this.intro) return this.runIntro(dt);
     if (s.manual && s.mode !== 'roll') this.endManual(); // rolled off an edge
     if (s.mode !== 'roll' && !s.manual && this.speed > this.cruise * PHYS.SPEED_MAX) this.easeCarry(dt);
     if (s.mode === 'roll') {
@@ -711,7 +794,7 @@ export class Game {
     if (this.phase === 'playing' && this.finishX !== null && s.x >= this.finishX) return this.finish(); // the finish line
     if (this.phase === 'playing') this.passHazards(fromX);
     if (this.phase === 'playing' && this.spinners.length) this.checkSpinners();
-    if (this.phase === 'playing' || this.phase === 'ready') this.updateChase(this.phase === 'playing' ? dt : 0);
+    if (this.phase === 'playing' || this.phase === 'ready') this.updateChase(this.phase === 'playing' ? dt : 0, fromX);
     if (this.phase === 'playing') this.checkPickups();
     // The vampire is staked: a beat to watch him go, then the stage is done.
     if (this.phase === 'playing' && this.bossDeadAt !== null && s.mode === 'roll' && this.time - this.bossDeadAt > 1.4) return this.finish();

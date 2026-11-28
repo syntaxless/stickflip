@@ -184,3 +184,104 @@ test('every checkpoint of stage 11 draws (sky, terrain, ball) at several camera 
   }
   setPalette('normal');
 });
+
+// ---- the gumball's intro and warnings
+
+// Rides 11-5 with the grind onto the arched cane and on across the start of the chase (a natural crossing).
+function intoTheChase(tmax = 8) {
+  const g = new Game(candy, null, { index: 4, score: 0 });
+  g.tap();
+  const q = [[0.68, 'tap'], [0.68, 'hold']];
+  let t = 0;
+  const log = { started: null, ended: null, g };
+  while (t < tmax && g.phase === 'playing') {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true);
+    }
+    g.update(STEP);
+    t += STEP;
+    if (g.intro && log.started === null) log.started = t;
+    if (!g.intro && log.started !== null && log.ended === null) log.ended = t;
+    if (log.ended !== null) break;
+  }
+  return log;
+}
+
+test('the gumball intro: crossing into 11-6 for the first time stops the rider while the ball drops in, then hands control back with the ball right behind', () => {
+  const r = intoTheChase();
+  assert.ok(r.started !== null, 'the intro started');
+  assert.ok(Math.abs(r.ended - r.started - candy.chase.intro) < 0.05, 'it lasts the set time');
+  const g = r.g;
+  assert.equal(g.phase, 'playing');
+  assert.equal(g.introDone, true);
+  assert.equal(Math.round(g.sk.x - g.ball.x), candy.chase.gap, 'the ball is the usual gap behind');
+  assert.equal(g.speed, g.cruise, 'and the rider is off at full speed');
+  assert.ok(g.sk.x < candy.chase.from + 200, 'he was held where the chase began');
+});
+
+test('the gumball intro: a tap skips it, a retry from the checkpoint does not replay it, and spawning at 11-6 has none', () => {
+  const g = new Game(candy, null, { index: 4, score: 0 });
+  g.tap();
+  const q = [[0.68, 'tap'], [0.68, 'hold']];
+  let t = 0;
+  while (t < 8 && g.phase === 'playing' && !g.intro) {
+    while (q.length && q[0][0] <= t + 1e-9) {
+      const [, k] = q.shift();
+      if (k === 'tap') g.tap();
+      else g.setHold(true);
+    }
+    g.update(STEP);
+    t += STEP;
+  }
+  assert.ok(g.intro, 'it is playing');
+  for (let i = 0; i < 60; i++) g.update(STEP);
+  assert.ok(g.intro);
+  g.tap(); // skip
+  assert.equal(g.intro, null);
+  assert.equal(g.introDone, true);
+  // die, retry from 11-6: no intro, the ball is simply there behind him
+  g.bail('squashed');
+  g.checkpoint = { index: 5, score: 0 };
+  g.restartStage = Game.prototype.restartStage;
+  g.reset();
+  g.start(true);
+  for (let i = 0; i < 120; i++) g.update(STEP);
+  assert.equal(g.intro, null);
+  assert.ok(g.ball);
+  const fresh = new Game(candy, null, { index: 5, score: 0 });
+  fresh.tap();
+  for (let i = 0; i < 120; i++) fresh.update(STEP);
+  assert.equal(fresh.intro, null, 'a fresh spawn at 11-6 has no intro either');
+});
+
+test('the gumball warnings: beeps start when it is within reach and come faster the closer it gets', () => {
+  const g = new Game(candy, null, { index: 5, score: 0 });
+  g.tap();
+  const times = [];
+  let t = 0;
+  let squashed = false;
+  while (t < 8 && g.phase === 'playing') {
+    g.setHold(true); // brake: let it catch up
+    g.hold.dir = 'down';
+    g.hold.dirT = 1;
+    g.sk.charge = g.sk.charge || { t: 0 };
+    g.update(STEP);
+    t += STEP;
+    for (const e of g.drainEvents()) {
+      if (e.type === 'chasewarn') times.push({ t, threat: e.threat });
+      if (e.type === 'squash') squashed = true;
+    }
+  }
+  assert.ok(squashed, 'it caught him');
+  assert.ok(times.length >= 3, `${times.length} warnings`);
+  const gaps = times.slice(1).map((x, i) => x.t - times[i].t);
+  assert.ok(gaps[0] > gaps[gaps.length - 1] + 0.1, `the beeps speed up: ${gaps.map((x) => x.toFixed(2)).join(' ')}`);
+  assert.ok(times[times.length - 1].threat > times[0].threat);
+  // far ahead, nothing is heard
+  const calm = new Game(candy, null, { index: 3, score: 0 });
+  calm.tap();
+  for (let i = 0; i < 240; i++) calm.update(STEP);
+  assert.equal(calm.threat, 0);
+});

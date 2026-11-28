@@ -79,6 +79,13 @@ const SOUNDS = {
   // gravel pouring out: a quick rattle of low beeps sliding down
   dump: () => [0, 1, 2, 3, 4, 5, 6, 7].forEach((i) => beep(190 - i * 12, 0.035, { to: 150 - i * 12, at: i * 0.055 })),
   stake: () => [1047, 1319, 1568, 2093].forEach((f, i) => beep(f, 0.06, { at: i * 0.07 })),
+  // the gumball: a low rumble when it breaks loose, and warning beeps that rise and come faster as it closes in
+  rumble: () => [0, 1, 2, 3, 4, 5].forEach((i) => beep(90 - i * 6, 0.12, { to: 55, at: i * 0.1 })),
+  chasewarn: (e) => {
+    beep(150 + 330 * e.threat, 0.05);
+    if (e.threat > 0.6) beep(110 + 220 * e.threat, 0.05, { at: 0.07 });
+  },
+  squash: () => beep(300, 0.3, { to: 40 }),
   bail: () => beep(440, 0.45, { to: 60 }),
   complete: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => beep(f, 0.08, { at: i * 0.09 })),
 };
