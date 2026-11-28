@@ -309,7 +309,7 @@ function swirl(g, cx, cy, r, rot, [c1, c2]) {
 
 // The giant gumball: a shaded pink ball with a black outline, swirled stripes that turn as it rolls (`rot`) and a
 // shine. (cx, cy) is the centre and r the radius, in pixels.
-export function drawGumball(g, cx, cy, r, rot = 0, tint = 0) {
+export function drawGumball(g, cx, cy, r, rot = 0, tint = 0, angry = false) {
   const [base, lit, dark] = [[CANDY.pink, CANDY.pinkLit, CANDY.pinkDark], [CANDY.blue, [200, 232, 255], CANDY.blueDark]][tint % 2];
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
@@ -332,6 +332,29 @@ export function drawGumball(g, cx, cy, r, rot = 0, tint = 0) {
   // the shine
   for (const [sx, sy] of [[-0.5, -0.55], [-0.42, -0.62], [-0.58, -0.45], [-0.5, -0.47]]) g.pset(cx + Math.round(sx * r), cy + Math.round(sy * r), CANDY.white);
   g.fill(cx - Math.round(r * 0.55), cy - Math.round(r * 0.62), 3, 2, CANDY.white);
+  if (angry) angryFace(g, cx, cy, r);
+}
+
+// The chasing gumball's face (it does not turn with the ball): two glaring eyes with heavy brows slanting in, and a
+// wide zigzag mouth of teeth, all on the side that faces you.
+function angryFace(g, cx, cy, r) {
+  const u = Math.max(1, Math.round(r / 14));
+  const fx = cx + Math.round(r * 0.3);
+  for (const [ex, sg] of [[fx - 3 * u, 1], [fx + 4 * u, -1]]) {
+    const ey = cy - Math.round(r * 0.18);
+    g.fill(ex - u, ey - u, 3 * u, 2 * u, CANDY.white);
+    g.rect(ex - u, ey - u, 3 * u, 2 * u, ink);
+    g.fill(ex + (sg > 0 ? u : 0), ey, u, u, [230, 20, 40]);
+    // the brow: slants down towards the middle
+    for (let i = -2 * u; i <= 2 * u; i++) g.fill(ex + i, ey - 2 * u - 1 + Math.round(sg * (i / 2)), 1, u + 1, ink);
+  }
+  const my = cy + Math.round(r * 0.3);
+  const mw = 5 * u;
+  g.fill(fx - mw, my - u, mw * 2 + 1, 4 * u, ink);
+  for (let i = -mw + 1; i < mw; i += 2 * u) {
+    g.fill(i + fx, my - u + 1, u + 1, 2 * u, CANDY.white); // top teeth
+    g.fill(i + fx + u, my + u, u + 1, 2 * u - 1, CANDY.white); // bottom teeth
+  }
 }
 
 // ------------------------------------------------------------ the machine

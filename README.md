@@ -277,7 +277,7 @@ rail (Sugar Start), a pit with a lower far side (Gumdrop Gap: GUMDROP LEAP), a l
 (Long Rail: CANDY HANDRAIL), a low lane (Licorice Lane), a ridge and a second, wider pit with an arched cane over it (Fudge
 Ridge: FUDGE GRIND, or a charged ollie), then rolling hills. From 11-6 a giant gumball rolls after you (`chase` in
 `src/stages/stage11.js`, `Game.updateChase`): it holds a steady pace, sticky caramel and braking let it gain, a rail grind or
-named gap kicks the turbo in and stretches the lead (CARAMEL SKIP, HILL GRIND), and if it catches you it flattens you. It gives
+named gap kicks the turbo in and stretches the lead (CARAMEL SKIP, HILL GRIND), and if it catches you it flattens you. It has an angry face and warns you: the first time you ride into 11-6 the rider skids to a stop while the camera swings back and the gumball drops in and bounces up behind him (a tap skips it; it is not replayed on retries), and during the chase the screen shakes, the left edge flashes red, GUMBALL! blinks and low beeps speed up as it closes in. It gives
 up at the machine room (11-8: conveyors and a spinning lollipop bar to time, `Game.checkSpinners`), and 11-9 ends at an
 animated candy machine: ride the conveyor into its dispenser (`finishAt`) for a gumball and confetti (`finale: true` holds the
 score screen for a few seconds). The look is `candy: true` (`Renderer.drawCandySky`) with the `candy` palette; pieces are in

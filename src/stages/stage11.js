@@ -19,7 +19,7 @@ export default stage({
   id: 'stage-11',
   name: 'Candy Land',
   sections: [start, gap, stairs, lane, ridge, run, hills, floor, machine],
-  chase: { from: 5 * SECTION + 40, until: 7 * SECTION, gap: 300, pace: 1.05, r: 84 }, // the gumball (see Game.updateChase)
+  chase: { from: 5 * SECTION + 40, until: 7 * SECTION, gap: 210, pace: 1.06, r: 92, warn: 340, intro: 2.4 }, // the gumball (see Game.updateChase)
   finishAt: 740, // the dispenser mouth
   tail: 120, // room for the machine's far side
   finale: true, // a beat of confetti before the score screen (see main.js)

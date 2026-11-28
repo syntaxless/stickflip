@@ -261,8 +261,11 @@ export class Renderer {
     // Wide levels scroll: the camera follows the skater (and rises with big airs).
     const cam = this.camera(game);
     this.cam = cam; // main.js extends the ground past the game's edges from here
-    g.ox = -cam.x;
-    g.oy = -cam.y;
+    // the gumball's rumble shakes the picture (the HUD stays still)
+    const quake = game.phase === 'playing' ? (game.intro ? 1.6 : game.threat > 0.3 ? game.threat * 1.4 : 0) : 0;
+    const [jx, jy] = quake ? [Math.round((Math.random() - 0.5) * 2 * quake), Math.round((Math.random() - 0.5) * 2 * quake)] : [0, 0];
+    g.ox = -cam.x + jx;
+    g.oy = -cam.y + jy;
     this.drawSkyline(g, game, cam);
     this.drawBackground(game, cam);
     for (const o of game.level.obstacles) o.draw(g, { time: this.time, tilt: game.tilt, boom: game.boomAt === null ? null : game.time - game.boomAt, dump: game.dumpAt === null ? null : game.time - game.dumpAt, open: game.openAt === null ? null : game.time - game.openAt, gameTime: game.time, done: game.phase === 'complete' ? game.phaseTime : null, stake: game.stake, boss: { dx: game.bossDx, deadFor: game.bossDeadAt === null ? null : game.time - game.bossDeadAt, blockFor: game.bossBlockAt === null ? null : game.time - game.bossBlockAt } });
@@ -274,9 +277,11 @@ export class Renderer {
     } // behind the player
     this.drawSkater(game);
     this.drawParticles();
+    if (game.intro && game.intro.t > 0.15) this.drawBubble(g, '!', Math.round(game.sk.x / 3) - 3, Math.round(game.sk.y / 3) - 40); // he has heard it
     g.ox = 0;
     g.oy = 0;
     const inset = Math.ceil(opts.inset || 0);
+    if (game.level.chase) this.drawChaseWarning(g, game, inset);
     this.drawPopups(inset);
     this.drawSpecials(inset);
     this.drawHud(game, opts, inset);
@@ -306,7 +311,7 @@ export class Renderer {
       if (p && (p.life -= dt) <= 0) this.popups[k] = null;
     }
     // Bails and the level-end box use the middle of the screen: clear the way.
-    if (game.phase !== 'playing') {
+    if (game.phase !== 'playing' || game.intro) {
       this.popups = { bank: null };
       this.specials = [];
     }
@@ -318,7 +323,7 @@ export class Renderer {
     // The race is decided: cut to the rival (at the finish line if he won), who says his piece.
     const cut = rivalWords(game) ? game.rival.game.sk : null;
     const s = cut || game.sk;
-    const fx = s.mode === 'bail' && s.bail ? s.bail.x : s.x;
+    const fx = (s.mode === 'bail' && s.bail ? s.bail.x : s.x) - (game.introPan || 0);
     const fy = s.mode === 'bail' && s.bail ? s.bail.y : s.y;
     // Look ahead the way the rider is going (back to the left after a quarter pipe).
     // The rider is drawn snapped to a whole pixel (see snap), and so is the lead,
@@ -330,17 +335,47 @@ export class Renderer {
   }
 
   // The giant gumball chasing the rider (Stage 11): it rolls along the ground, turning as it goes, with a shadow and
-  // a puff of sugar dust at its foot. Once the chase is over it slows to a stop.
+  // a puff of sugar dust at its foot, and an angry face (it keeps looking at you). In its intro it drops in from the
+  // sky and bounces (`lift`).
   drawChaseBall(g, game) {
     const c = game.level.chase;
     const b = game.ball;
     const r = Math.round(c.r / 3);
     const cx = Math.round(b.x / 3);
-    const ground = game.groundAt(b.x).y;
-    const cy = Math.round(ground / 3) - r;
-    for (let dx = -r; dx <= r; dx += 1) g.pset(cx + dx, cy + r, [0, 0, 0]); // contact shadow
-    drawGumball(g, cx, cy, r, b.rot);
-    if (!b.gone && Math.random() < 0.5) this.particles.push({ kind: 'dust', x: b.x + c.r * 0.3, y: ground, vx: 90 + Math.random() * 120, vy: -60 - Math.random() * 100, life: 0.3 });
+    const ground = game.ballGroundY(b.x);
+    const lift = Math.round((b.lift || 0) / 3);
+    const cy = Math.round(ground / 3) - r - lift;
+    const shadow = Math.max(2, Math.round(r * (1 - Math.min(0.6, lift / 140))));
+    for (let dx = -shadow; dx <= shadow; dx += 1) g.pset(cx + dx, Math.round(ground / 3) - 1, [0, 0, 0]); // contact shadow, shrinking as it flies
+    drawGumball(g, cx, cy, r, b.rot, 0, true);
+    if (!b.gone && !lift && Math.random() < 0.7) this.particles.push({ kind: 'dust', x: b.x + c.r * 0.3, y: ground, vx: 90 + Math.random() * 160, vy: -60 - Math.random() * 140, life: 0.35 });
+  }
+
+  // Warnings while the gumball closes in: red flashing bars down the left edge (the way it comes from), and GUMBALL!
+  // blinking at the top when it is close. In the intro, WATCH OUT!
+  drawChaseWarning(g, game, inset) {
+    if (game.phase !== 'playing') return;
+    const t = game.intro ? 1 : game.threat;
+    if (t <= 0.05) return;
+    const on = Math.floor(this.time * (3 + t * 9)) % 2 === 0;
+    const w = Math.round(4 + t * 14);
+    const hot = [255, 36, 72];
+    if (on || t > 0.85) {
+      // a bar down the left edge, thickest and most solid at the screen's edge, fading out in a dither
+      for (let x = 0; x < w; x++) {
+        const dens = 1 - x / w;
+        for (let y = 0; y < RES.H - 12; y++) if (x < 2 || ((x * 5 + y * 3) % 8) / 8 < dens) g.pset(inset + x, y, hot);
+      }
+    }
+    if (game.intro) {
+      if (on) {
+        g.text('WATCH OUT!', RES.W / 2 + 1, 31, ink, 3, 'center');
+        g.text('WATCH OUT!', RES.W / 2, 30, hot, 3, 'center');
+      }
+    } else if (t > 0.5 && on) {
+      g.text('GUMBALL!', RES.W / 2 + 1, 31, ink, 2, 'center');
+      g.text('GUMBALL!', RES.W / 2, 30, hot, 2, 'center');
+    }
   }
 
   // Whether the rival leads. The first time he pulls ahead in a run he laughs back at the player for
